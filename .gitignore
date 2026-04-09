@@ -1,0 +1,52 @@
+# ============================================
+# Logistics API Platform - Git Ignore
+# ============================================
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+.venv/
+env/
+
+# === Java ===
+*.class
+*.jar
+*.war
+*.ear
+target/
+*.iml
+.idea/
+out/
+
+# === Environment & Secrets ===
+.env
+*.local
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Logs ===
+*.log
+logs/
+
+# === Temp ===
+tmp/
+temp/
