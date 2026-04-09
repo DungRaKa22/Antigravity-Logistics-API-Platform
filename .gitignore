@@ -50,3 +50,6 @@ logs/
 # === Temp ===
 tmp/
 temp/
+
+# Project docs
+*.docx
