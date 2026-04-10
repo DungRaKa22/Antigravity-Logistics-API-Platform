@@ -18,7 +18,7 @@ Xây dựng một **hệ sinh thái vận chuyển khép kín** theo mô hình *
 
 ### Mục tiêu
 - [ ] Thiết kế hoàn chỉnh Database Schema trên SQL Server
-- [ ] Tạo các bảng dữ liệu: Users, Orders, ShippingRates, OrderStatus, Partners
+- [ ] Tạo các bảng dữ liệu: NguoiDung, DonHang, BangGia, LichSu_TrangThai, DoiTac, KhuVuc
 - [ ] Chèn dữ liệu mẫu (seed data) cho bảng khu vực, bảng cước phí
 - [ ] Thiết lập môi trường phát triển (Python, Java, SQL Server)
 
@@ -144,9 +144,9 @@ Xây dựng một **hệ sinh thái vận chuyển khép kín** theo mô hình *
 
 | Mã | Trạng thái | Mô tả |
 |----|-----------|-------|
-| 1 | `PENDING` | Chờ lấy hàng |
-| 2 | `PICKED_UP` | Đã lấy hàng |
-| 3 | `IN_TRANSIT` | Đang vận chuyển |
-| 4 | `DELIVERED` | Giao thành công |
-| 5 | `CANCELLED` | Đã hủy |
-| 6 | `RETURNED` | Hoàn trả |
+| 1 | `CHO_LAY_HANG` | Chờ lấy hàng |
+| 2 | `DA_LAY_HANG` | Đã lấy hàng |
+| 3 | `DANG_VAN_CHUYEN` | Đang vận chuyển |
+| 4 | `GIAO_THANH_CONG` | Giao thành công |
+| 5 | `DA_HUY` | Đã hủy |
+| 6 | `HOAN_TRA` | Hoàn trả |

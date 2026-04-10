@@ -2,21 +2,21 @@
 
 > **Bắt đầu**: 2026-04-07  
 > **Cập nhật lần cuối**: 2026-04-09  
-> **Trạng thái tổng**: 🟡 Đang lên kế hoạch
+> **Trạng thái tổng**: 🟢 Phase 1 hoàn thành — Sẵn sàng Phase 2
 
 ---
 
 ## Tổng quan tiến độ
 
 ```
-Phase 1 - Database & Setup      [████████░░]  80%
+Phase 1 - Database & Setup      [██████████] 100%
 Phase 2 - Backend API Core      [░░░░░░░░░░]   0%
 Phase 3 - Client Web            [░░░░░░░░░░]   0%
 Phase 4 - Desktop App           [░░░░░░░░░░]   0%
 Phase 5 - Integration & Test    [░░░░░░░░░░]   0%
 Phase 6 - Docs & Deploy         [░░░░░░░░░░]   0%
 ─────────────────────────────────────────────
-TỔNG THỂ                        [█░░░░░░░░░]  13%
+TỔNG THỂ                        [██░░░░░░░░]  17%
 ```
 
 ---
@@ -29,14 +29,14 @@ TỔNG THỂ                        [█░░░░░░░░░]  13%
 | 1.2 | Cài đặt SQL Server | ✅ Xong | 2026-04-09 | 2026-04-09 | SQL Server 2022 Developer |
 | 1.3 | Cài đặt JDK 17+ | ✅ Xong | 2026-04-09 | 2026-04-09 | JDK 21.0.9 LTS |
 | 1.4 | Khởi tạo cấu trúc thư mục dự án | ✅ Xong | 2026-04-09 | 2026-04-09 | 10 thư mục + config files |
-| 1.5 | Khởi tạo Git repository | ⚠️ Blocked | - | - | Git chưa cài, cần cài Git |
+| 1.5 | Khởi tạo Git repository | ✅ Xong | 2026-04-09 | 2026-04-09 | Git 2.53.0 + GitHub remote + push OK |
 | 1.6 | Thiết kế Database Schema | ✅ Xong | 2026-04-07 | 2026-04-09 | 6 bảng, xem `database_schema.md` |
 | 1.7 | Viết script `init_database.sql` | ✅ Xong | 2026-04-09 | 2026-04-09 | 6 bảng + indexes + triggers + SP |
 | 1.8 | Viết script `seed_data.sql` | ✅ Xong | 2026-04-09 | 2026-04-09 | 20 areas, 9 rates, 4 users, 4 orders |
 | 1.9 | Test kết nối Python → SQL Server | ✅ Xong | 2026-04-09 | 2026-04-09 | pyodbc + Windows Auth |
-| 1.10 | Test kết nối Java → SQL Server | ⬜ Chưa | - | - | Script sẵn, cần JDBC driver |
+| 1.10 | Test kết nối Java → SQL Server | ✅ Xong | 2026-04-09 | 2026-04-09 | JDBC 13.2.1 + Windows Auth (integratedSecurity) |
 
-**Trạng thái Phase 1**: 🔄 Đang thực hiện (8/10 hoàn thành)
+**Trạng thái Phase 1**: ✅ Hoàn thành (10/10)
 
 ---
 
@@ -152,6 +152,10 @@ TỔNG THỂ                        [█░░░░░░░░░]  13%
 |------|---------|-----------------|
 | 2026-04-07 | Khởi tạo kế hoạch dự án, tạo folder memory | - |
 | 2026-04-09 | Cập nhật kế hoạch frontend: bổ sung Alpine.js, CSS Design System, SPA routing | - |
+| 2026-04-09 | **Phase 1 hoàn thành**: cấu trúc dự án, DB schema, seed data, test kết nối Python+Java | - |
+| 2026-04-09 | Cài Git 2.53.0, init repo, push lên GitHub (private) | - |
+| 2026-04-09 | Xóa file .docx khỏi Git tracking, thêm *.docx vào .gitignore | - |
+| 2026-04-10 | **Việt hóa SQL**: đổi tên bảng/cột/trạng thái/vai trò sang tiếng Việt, tạo lại DB | - |
 
 ---
 

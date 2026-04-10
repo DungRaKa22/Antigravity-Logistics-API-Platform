@@ -19,7 +19,10 @@
 
 | # | Ngày | Vấn đề | Giải pháp | Trạng thái |
 |---|------|--------|-----------|-----------|
-| - | - | - | - | - |
+| 1 | 2026-04-09 | Filtered indexes (WHERE clause) gây lỗi `QUOTED_IDENTIFIER` khi INSERT | Tạo lại indexes không dùng WHERE filter | ✅ Đã sửa |
+| 2 | 2026-04-09 | Python print emoji gây lỗi `UnicodeEncodeError` trên Windows console | Set `PYTHONIOENCODING=utf-8` trước khi chạy | ✅ Đã sửa |
+| 3 | 2026-04-09 | Java JDBC `integratedSecurity` cần file `mssql-jdbc_auth` DLL | Thêm `-Djava.library.path=...\auth\x64` khi chạy | ✅ Đã sửa |
+| 4 | 2026-04-09 | Git push lần đầu bị timeout HTTP 408 | Push lại lần 2 thành công | ✅ Đã sửa |
 
 ---
 
@@ -40,6 +43,18 @@
 - [RESTful API Design Best Practices](https://restfulapi.net/)
 - [SQL Server Documentation](https://learn.microsoft.com/en-us/sql/sql-server/)
 - [Java Swing Tutorial](https://docs.oracle.com/javase/tutorial/uiswing/)
+- [Alpine.js Documentation](https://alpinejs.dev/)
+
+---
+
+## Thông tin Repository
+
+| Mục | Giá trị |
+|-----|---------|
+| GitHub URL | https://github.com/DungRaKa22/Antigravity-Logistics-API-Platform |
+| Branch chính | `main` |
+| Visibility | Private |
+| Commits | 3+ (init, remove .docx, Việt hóa SQL) |
 
 ---
 
@@ -55,3 +70,33 @@
 | 6 | Google Fonts (Inter) + Font Awesome | Typography & icon hiện đại, chuyên nghiệp, dùng qua CDN | 2026-04-09 |
 | 7 | SPA-like hash routing (tự viết) | Điều hướng trang không reload, UX mượt, không cần thư viện router | 2026-04-09 |
 | 8 | CSS Design System (Variables) | Quản lý theme/color/spacing tập trung, dễ maintain, responsive | 2026-04-09 |
+| 9 | Windows Authentication cho SQL Server | Máy dev dùng Windows Auth (không cần sa password) | 2026-04-09 |
+| 10 | GitHub private repo | Quản lý source code, backup, collaboration | 2026-04-09 |
+| 11 | **Việt hóa SQL hoàn toàn** | Tên bảng/cột/trạng thái/vai trò bằng tiếng Việt không dấu, dễ hiểu cho đề tài VN | 2026-04-10 |
+
+### Bảng ánh xạ tên (Cũ → Mới)
+
+| Tên cũ (English) | Tên mới (Việt hóa) |
+|---|---|
+| `Users` | `NguoiDung` |
+| `Partners` | `DoiTac` |
+| `Areas` | `KhuVuc` |
+| `ShippingRates` | `BangGia` |
+| `Orders` | `DonHang` |
+| `OrderStatusHistory` | `LichSu_TrangThai` |
+
+| Trạng thái cũ | Trạng thái mới |
+|---|---|
+| `PENDING` | `CHO_LAY_HANG` |
+| `PICKED_UP` | `DA_LAY_HANG` |
+| `IN_TRANSIT` | `DANG_VAN_CHUYEN` |
+| `DELIVERED` | `GIAO_THANH_CONG` |
+| `CANCELLED` | `DA_HUY` |
+| `RETURNED` | `HOAN_TRA` |
+
+| Vai trò cũ | Vai trò mới |
+|---|---|
+| `CUSTOMER` | `KHACHHANG` |
+| `STAFF` | `NHANVIEN` |
+| `ADMIN` | `QUANTRI` |
+

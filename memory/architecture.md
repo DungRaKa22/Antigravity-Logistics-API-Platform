@@ -50,14 +50,14 @@
                   │   📦 DATA TIER    │
                   │   SQL Server      │
                   │                   │
-                  │  ┌─────────────┐  │
-                  │  │   Users     │  │
-                  │  │   Orders    │  │
-                  │  │   Areas     │  │
-                  │  │   Rates     │  │
-                  │  │   Partners  │  │
-                  │  │   Logs      │  │
-                  │  └─────────────┘  │
+                  │  ┌──────────────┐  │
+                  │  │ NguoiDung    │  │
+                  │  │ DonHang      │  │
+                  │  │ KhuVuc       │  │
+                  │  │ BangGia      │  │
+                  │  │ DoiTac       │  │
+                  │  │ LichSu_TT   │  │
+                  │  └──────────────┘  │
                   │                   │
                   └───────────────────┘
 ```
@@ -151,12 +151,12 @@ Server kiểm tra:
 ```
 
 ### Phân quyền
-| Role | Quyền |
-|------|-------|
-| `CUSTOMER` | Tạo đơn, tra cứu đơn của mình |
-| `PARTNER` | Tạo đơn hàng loạt, tra cứu đơn của partner |
-| `STAFF` | Xem/cập nhật tất cả đơn, quản lý bảng giá |
-| `ADMIN` | Toàn quyền + quản lý users/partners |
+| Vai trò | Quyền |
+|---------|-------|
+| `KHACHHANG` | Tạo đơn, tra cứu đơn của mình |
+| Đối tác (DoiTac) | Tạo đơn hàng loạt, tra cứu đơn của đối tác |
+| `NHANVIEN` | Xem/cập nhật tất cả đơn, quản lý bảng giá |
+| `QUANTRI` | Toàn quyền + quản lý người dùng/đối tác |
 
 ---
 

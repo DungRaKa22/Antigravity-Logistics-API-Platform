@@ -8,15 +8,13 @@ import java.sql.*;
 
 public class TestConnection {
     
-    // Cấu hình kết nối - điều chỉnh theo môi trường
+    // Cấu hình kết nối - Windows Authentication
     private static final String SERVER = "localhost";
     private static final String DATABASE = "LogisticsDB";
-    private static final String USERNAME = "sa";
-    private static final String PASSWORD = "YourStrongPassword123!";
     
     private static final String CONNECTION_URL = String.format(
-        "jdbc:sqlserver://%s:1433;databaseName=%s;user=%s;password=%s;encrypt=true;trustServerCertificate=true;",
-        SERVER, DATABASE, USERNAME, PASSWORD
+        "jdbc:sqlserver://%s:1433;databaseName=%s;integratedSecurity=true;encrypt=true;trustServerCertificate=true;",
+        SERVER, DATABASE
     );
 
     public static void main(String[] args) {
