@@ -156,6 +156,7 @@ TỔNG THỂ                        [██░░░░░░░░]  17%
 | 2026-04-09 | Cài Git 2.53.0, init repo, push lên GitHub (private) | - |
 | 2026-04-09 | Xóa file .docx khỏi Git tracking, thêm *.docx vào .gitignore | - |
 | 2026-04-10 | **Việt hóa SQL**: đổi tên bảng/cột/trạng thái/vai trò sang tiếng Việt, tạo lại DB | - |
+| 2026-04-13 | **Tích hợp OSRM + Nominatim**: Cập nhật kế hoạch tính cước theo khoảng cách thực tế, thêm cột vi_do/kinh_do vào KhuVuc, khoang_cach_km/phuong_thuc_tinh vào DonHang | - |
 
 ---
 

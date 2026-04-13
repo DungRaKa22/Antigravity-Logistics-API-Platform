@@ -32,9 +32,10 @@ Xây dựng một **hệ sinh thái vận chuyển khép kín** theo mô hình *
 ## Giai đoạn 2: Backend API Core (Tuần 3-5)
 
 ### Mục tiêu
-- [ ] Khởi tạo dự án Python (Flask hoặc FastAPI)
-- [ ] Xây dựng module xác thực (Authentication) - API Key / Token
-- [ ] API Tính phí vận chuyển (`POST /api/shipping/calculate`)
+- [ ] Khởi tạo dự án Python (Flask)
+- [ ] Xây dựng module xác thực (Authentication) - API Key
+- [ ] Tích hợp OSRM + Nominatim cho tính cước theo khoảng cách
+- [ ] API Tính phí vận chuyển (`POST /api/shipping/calculate`) — OSRM + fallback zone
 - [ ] API Tạo vận đơn (`POST /api/orders`)
 - [ ] API Tra cứu vận đơn (`GET /api/orders/{tracking_code}`)
 - [ ] API Cập nhật trạng thái (`PUT /api/orders/{id}/status`)
@@ -46,6 +47,7 @@ Xây dựng một **hệ sinh thái vận chuyển khép kín** theo mô hình *
 ### Tiêu chí hoàn thành
 - ✅ Tất cả API endpoints hoạt động và test được qua Postman
 - ✅ Xác thực API Key hoạt động chính xác
+- ✅ OSRM tính khoảng cách chính xác, fallback zone hoạt động khi OSRM lỗi
 - ✅ Trả về đúng format JSON với status code phù hợp
 - ✅ Có tài liệu API rõ ràng
 

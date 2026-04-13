@@ -30,7 +30,13 @@
 │  │  ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐  │     │
 │  │  │  Auth   │ │ Shipping │ │  Orders  │ │ Partners  │  │     │
 │  │  │ Module  │ │ Calculator│ │  CRUD   │ │  Manager  │  │     │
-│  │  └─────────┘ └──────────┘ └──────────┘ └───────────┘  │     │
+│  │  └─────────┘ └────┬─────┘ └──────────┘ └───────────┘  │     │
+│  │                    │                                    │     │
+│  │              ┌─────▼──────────────────────────────┐    │     │
+│  │              │   🗺️ Dịch vụ Bên ngoài (External) │    │     │
+│  │              │   • Nominatim (Geocoding)          │    │     │
+│  │              │   • OSRM (Routing / Khoảng cách)   │    │     │
+│  │              └────────────────────────────────────┘    │     │
 │  │                                                         │     │
 │  │  ┌──────────────────────────────────────────────────┐  │     │
 │  │  │           Middleware Layer                        │  │     │
@@ -73,11 +79,36 @@ Browser (JS Fetch)
     → Python API nhận request
     → Validate API Key
     → Validate dữ liệu đầu vào
-    → Tính phí vận chuyển
+    → Tính phí vận chuyển (OSRM + Nominatim)
     → Tạo mã tracking (unique)
-    → INSERT INTO Orders (SQL Server)
-    → Return JSON response {tracking_code, fee, status}
+    → INSERT INTO DonHang (SQL Server)
+    → Return JSON response {ma_van_don, phi, trang_thai}
     → Browser hiển thị kết quả
+```
+
+### Luồng tính phí vận chuyển thông minh (OSRM)
+```
+Địa chỉ gửi + Địa chỉ nhận
+    │
+    ▼
+┌──────────────┐
+│  Nominatim   │── Geocoding: Địa chỉ → Tọa độ (lat/lng)
+└──────┬───────┘
+       ▼
+┌──────────────┐
+│    OSRM      │── Routing: Tọa độ A → Tọa độ B → Khoảng cách (km)
+└──────┬───────┘
+       ▼
+┌──────────────────────────────────────┐
+│          CÔNG THỨC TÍNH CƯỚC        │
+│                                      │
+│  phi = phi_co_ban                   │
+│      + (khoang_cach_km × phi_moi_km)│
+│      + (trong_luong_kg × phi_theo_kg)│
+│                                      │
+│  Fallback: Nếu OSRM lỗi → dùng     │
+│  bảng giá zone (BangGia)            │
+└──────────────────────────────────────┘
 ```
 
 ### Luồng 2: Nhân viên cập nhật trạng thái qua Desktop

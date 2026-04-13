@@ -73,6 +73,7 @@
 | 9 | Windows Authentication cho SQL Server | Máy dev dùng Windows Auth (không cần sa password) | 2026-04-09 |
 | 10 | GitHub private repo | Quản lý source code, backup, collaboration | 2026-04-09 |
 | 11 | **Việt hóa SQL hoàn toàn** | Tên bảng/cột/trạng thái/vai trò bằng tiếng Việt không dấu, dễ hiểu cho đề tài VN | 2026-04-10 |
+| 12 | **OSRM + Nominatim** cho tính cước | Tính phí theo khoảng cách thực tế (km), miễn phí, open source, hybrid fallback zone | 2026-04-13 |
 
 ### Bảng ánh xạ tên (Cũ → Mới)
 

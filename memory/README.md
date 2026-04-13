@@ -20,16 +20,17 @@
 - **Loại**: Đồ án tốt nghiệp / Dự án thực hành
 - **Mô hình**: API-First, Client-Server, 3-Tier Architecture
 - **Ngày bắt đầu**: 2026-04-07
-- **Trạng thái**: 🟡 Đang lên kế hoạch
+- **Trạng thái**: 🟢 Phase 1 hoàn thành — Đang triển khai Phase 2
 
 ## 🛠️ Tech Stack
 
 | Layer | Công nghệ |
 |---|---|
-| Backend API | Python (Flask / FastAPI) |
+| Backend API | Python (Flask) |
 | Frontend Web | HTML / CSS / JavaScript (Vanilla) + Alpine.js |
 | Desktop App | Java Swing |
-| Database | SQL Server |
+| Database | SQL Server 2022 |
+| Tính cước thông minh | OSRM (tính khoảng cách km) + Nominatim (geocoding) |
 | API Testing | Postman |
 | Version Control | Git |
 

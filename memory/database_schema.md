@@ -88,7 +88,7 @@ CREATE TABLE DoiTac (
 
 ## Bảng 3: KhuVuc (Khu vực)
 
-> Danh mục khu vực giao hàng, dùng để tính phí cước.
+> Danh mục khu vực giao hàng, dùng để tính phí cước và geocoding.
 
 | Cột | Kiểu dữ liệu | Ràng buộc | Mô tả |
 |-----|--------------|-----------|-------|
@@ -97,6 +97,8 @@ CREATE TABLE DoiTac (
 | `tinh_thanh` | NVARCHAR(100) | NOT NULL | Tỉnh / Thành phố |
 | `ma_vung` | VARCHAR(10) | UNIQUE | Mã vùng (VD: HN01, HCM02) |
 | `loai_vung` | INT | NOT NULL | Loại vùng: 1=Nội thành, 2=Ngoại thành, 3=Liên tỉnh |
+| `vi_do` | DECIMAL(10,7) | NULL | Vĩ độ (latitude) - từ Nominatim |
+| `kinh_do` | DECIMAL(10,7) | NULL | Kinh độ (longitude) - từ Nominatim |
 
 ```sql
 CREATE TABLE KhuVuc (
@@ -105,6 +107,8 @@ CREATE TABLE KhuVuc (
     tinh_thanh      NVARCHAR(100)   NOT NULL,
     ma_vung         VARCHAR(10)     UNIQUE,
     loai_vung       INT             NOT NULL,
+    vi_do           DECIMAL(10,7)   NULL,    -- Latitude
+    kinh_do         DECIMAL(10,7)   NULL,    -- Longitude
     CONSTRAINT CK_KhuVuc_LoaiVung CHECK (loai_vung IN (1, 2, 3))
 );
 ```
@@ -164,8 +168,10 @@ CREATE TABLE BangGia (
 | `ma_khuvuc_nhan` | INT | FK → KhuVuc | Khu vực nhận |
 | `trong_luong_kg` | DECIMAL(5,2) | NOT NULL | Trọng lượng (kg) |
 | `mo_ta_hang_hoa` | NVARCHAR(500) | NULL | Mô tả hàng hóa |
+| `khoang_cach_km` | DECIMAL(8,2) | NULL | Khoảng cách (km) - từ OSRM |
 | `phi_van_chuyen` | DECIMAL(12,2) | NOT NULL | Phí vận chuyển (VND) |
 | `tien_thu_ho` | DECIMAL(12,2) | DEFAULT 0 | Tiền thu hộ COD (VND) |
+| `phuong_thuc_tinh` | VARCHAR(10) | DEFAULT 'ZONE' | Cách tính: 'OSRM' hoặc 'ZONE' (fallback) |
 | `trang_thai` | VARCHAR(20) | NOT NULL, DEFAULT 'CHO_LAY_HANG' | Trạng thái đơn |
 | `ghi_chu` | NVARCHAR(500) | NULL | Ghi chú thêm |
 | `ngay_tao` | DATETIME | DEFAULT GETDATE() | Ngày tạo đơn |
@@ -187,8 +193,10 @@ CREATE TABLE DonHang (
     ma_khuvuc_nhan      INT             REFERENCES KhuVuc(ma_khu_vuc),
     trong_luong_kg      DECIMAL(5,2)    NOT NULL,
     mo_ta_hang_hoa      NVARCHAR(500)   NULL,
+    khoang_cach_km      DECIMAL(8,2)    NULL,        -- Từ OSRM
     phi_van_chuyen      DECIMAL(12,2)   NOT NULL,
     tien_thu_ho         DECIMAL(12,2)   DEFAULT 0,
+    phuong_thuc_tinh    VARCHAR(10)     DEFAULT 'ZONE', -- 'OSRM' hoặc 'ZONE'
     trang_thai          VARCHAR(20)     NOT NULL DEFAULT 'CHO_LAY_HANG',
     ghi_chu             NVARCHAR(500)   NULL,
     ngay_tao            DATETIME        DEFAULT GETDATE(),
@@ -288,11 +296,40 @@ INSERT INTO BangGia (vung_gui, vung_nhan, phi_co_ban, phi_theo_kg, mo_ta) VALUES
 
 ## Công thức tính phí vận chuyển
 
+### Cách 1: Tính theo khoảng cách thực tế (OSRM) — Ưu tiên
 ```
-phi_van_chuyen = phi_co_ban + (trong_luong_kg × phi_theo_kg)
+Địa chỉ gửi → Nominatim → tọa độ A (lat1, lng1)
+Địa chỉ nhận → Nominatim → tọa độ B (lat2, lng2)
+OSRM route(A, B) → khoang_cach_km
+
+phi_van_chuyen = phi_co_ban
+               + (khoang_cach_km × phi_moi_km)
+               + (trong_luong_kg × phi_theo_kg)
 ```
 
-Ví dụ: Gửi 2.5 kg từ Nội thành → Liên tỉnh:
+Ví dụ: Gửi 2.5 kg từ Hoàn Kiếm (HN) → Hải Dương, OSRM trả về 60.3 km:
+```
+phi_co_ban   = 15,000
+phi_khoang_cach = 60.3 × 300 = 18,090
+phi_trong_luong = 2.5 × 3,000 = 7,500
+→ Tổng = 15,000 + 18,090 + 7,500 = 40,590 VND
+```
+
+### Cách 2: Tính theo vùng (Fallback) — Khi OSRM không khả dụng
+```
+phi_van_chuyen = phi_co_ban + (trong_luong_kg × phi_theo_kg)
+             (Tra bảng BangGia theo vung_gui và vung_nhan)
+```
+
+Ví dụ: Gửi 2.5 kg từ Nội thành → Liên tỉnh (zone 1 → 3):
 ```
 = 30,000 + (2.5 × 5,000) = 30,000 + 12,500 = 42,500 VND
 ```
+
+### Dịch vụ bên ngoài (External APIs)
+
+| Dịch vụ | URL | Chức năng |
+|---------|-----|----------|
+| Nominatim | `https://nominatim.openstreetmap.org/search` | Geocoding: địa chỉ → tọa độ (lat/lng) |
+| OSRM | `https://router.project-osrm.org/route/v1/driving/` | Routing: tọa độ A → B → khoảng cách km |
+

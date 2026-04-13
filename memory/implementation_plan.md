@@ -34,13 +34,14 @@ hyperProject/
 │   │   ├── __init__.py
 │   │   ├── config.py        # Cấu hình DB, Secret Key
 │   │   ├── models.py        # ORM Models
-│   │   ├── routes/
-│   │   │   ├── auth.py      # API xác thực
-│   │   │   ├── orders.py    # API đơn hàng
-│   │   │   ├── shipping.py  # API tính phí
-│   │   │   └── partners.py  # API đối tác
-│   │   ├── services/        # Business logic
-│   │   └── utils/           # Tiện ích
+│   ├── routes/
+│   │   ├── auth.py      # API xác thực
+│   │   ├── orders.py    # API đơn hàng
+│   │   ├── shipping.py  # API tính phí (OSRM + Nominatim)
+│   │   └── partners.py  # API đối tác
+│   ├── services/        # Business logic
+│   │   └── osrm_service.py  # OSRM + Nominatim client
+│   └── utils/           # Tiện ích
 │   ├── requirements.txt
 │   └── run.py
 ├── frontend/                # 🌐 Web Client (HTML/CSS/JS + Alpine.js)
@@ -94,17 +95,31 @@ Thứ tự ưu tiên:
 4. Module xác thực: API Key validation middleware
 ```
 
-### 2.2 API Nghiệp vụ chính (Tuần 4)
+### 2.2 Tích hợp OSRM + Nominatim (Tuần 4)
 ```
 Thứ tự ưu tiên:
-1. POST /api/shipping/calculate   → Tính phí vận chuyển
+1. Tạo module osrm_service.py:
+   - nominatim_geocode(địa_chỉ) → {lat, lng}
+   - osrm_route(lat1, lng1, lat2, lng2) → {khoảng_cách_km, thời_gian_phut}
+   - tinh_phi_van_chuyen(dia_chi_gui, dia_chi_nhan, trong_luong) → {phi, km}
+2. Cấu hình URL các dịch vụ:
+   - Nominatim: https://nominatim.openstreetmap.org/search
+   - OSRM:      https://router.project-osrm.org/route/v1/driving/
+3. Xử lý fallback: OSRM lỗi → dùng bảng giá zone (BangGia)
+4. Cache kết quả geocoding để giảm API calls
+```
+
+### 2.3 API Nghiệp vụ chính (Tuần 4-5)
+```
+Thứ tự ưu tiên:
+1. POST /api/shipping/calculate   → Tính phí vận chuyển (OSRM + fallback zone)
 2. POST /api/orders               → Tạo vận đơn mới
 3. GET  /api/orders/{tracking}    → Tra cứu vận đơn
 4. GET  /api/orders               → Danh sách đơn hàng (phân trang)
 5. PUT  /api/orders/{id}/status   → Cập nhật trạng thái
 ```
 
-### 2.3 API Mở rộng + Tài liệu (Tuần 5)
+### 2.4 API Mở rộng + Tài liệu (Tuần 5)
 ```
 1. POST /api/partners/register    → Đăng ký đối tác
 2. GET  /api/partners/api-key     → Lấy/Refresh API Key
@@ -282,3 +297,5 @@ Kịch bản test:
 | Java Swing UI không đẹp | 🟡 Trung bình | Sử dụng FlatLaf Look & Feel |
 | Thời gian không đủ | 🔴 Cao | Ưu tiên Backend API → Web → Desktop, cắt giảm tính năng phụ |
 | Xung đột dữ liệu đồng thời | 🟡 Trung bình | Sử dụng Transaction + Optimistic Locking |
+| OSRM/Nominatim demo server chậm hoặc lỗi | 🟡 Trung bình | Fallback về bảng giá zone (BangGia), cache kết quả |
+| Geocoding sai vị trí cho địa chỉ Việt Nam | 🟡 Trung bình | Cho chọn khu vực từ danh sách + gợi ý địa chỉ |

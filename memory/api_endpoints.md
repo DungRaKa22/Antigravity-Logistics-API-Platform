@@ -108,29 +108,57 @@ POST /api/auth/login
 POST /api/shipping/calculate
 Headers: X-API-Key: <api_key>
 ```
-**Body:**
+**Body (Cách 1 — theo địa chỉ, dùng OSRM):**
 ```json
 {
-  "sender_area_id": 1,
-  "receiver_area_id": 6,
-  "weight_kg": 2.5
+  "diachi_gui": "Số 1, Hoàn Kiếm, Hà Nội",
+  "diachi_nhan": "Số 50, TP Hải Dương, Hải Dương",
+  "trong_luong_kg": 2.5
 }
 ```
-**Response (200):**
+**Body (Cách 2 — theo khu vực, fallback):**
+```json
+{
+  "ma_khuvuc_gui": 1,
+  "ma_khuvuc_nhan": 14,
+  "trong_luong_kg": 2.5
+}
+```
+**Response (200) — Khi OSRM thành công:**
 ```json
 {
   "success": true,
-  "message": "Tính phí thành công",
+  "message": "Tính phí thành công (OSRM)",
   "data": {
-    "from_area": "Quận Hoàn Kiếm, Hà Nội",
-    "to_area": "TP. Hải Dương, Hải Dương",
-    "from_zone": 1,
-    "to_zone": 3,
-    "weight_kg": 2.5,
-    "base_fee": 30000,
-    "weight_fee": 12500,
-    "total_fee": 42500,
-    "estimated_days": "2-3 ngày"
+    "khu_vuc_gui": "Quận Hoàn Kiếm, Hà Nội",
+    "khu_vuc_nhan": "TP. Hải Dương, Hải Dương",
+    "khoang_cach_km": 60.3,
+    "trong_luong_kg": 2.5,
+    "phi_co_ban": 15000,
+    "phi_khoang_cach": 18090,
+    "phi_trong_luong": 7500,
+    "tong_phi": 40590,
+    "phuong_thuc_tinh": "OSRM",
+    "thoi_gian_du_kien": "1-2 ngày"
+  }
+}
+```
+**Response (200) — Khi fallback zone:**
+```json
+{
+  "success": true,
+  "message": "Tính phí thành công (Zone)",
+  "data": {
+    "khu_vuc_gui": "Quận Hoàn Kiếm, Hà Nội",
+    "khu_vuc_nhan": "TP. Hải Dương, Hải Dương",
+    "vung_gui": 1,
+    "vung_nhan": 3,
+    "trong_luong_kg": 2.5,
+    "phi_co_ban": 30000,
+    "phi_trong_luong": 12500,
+    "tong_phi": 42500,
+    "phuong_thuc_tinh": "ZONE",
+    "thoi_gian_du_kien": "2-3 ngày"
   }
 }
 ```
