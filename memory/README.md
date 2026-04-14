@@ -28,14 +28,14 @@
 |---|---|
 | Backend API | Python (Flask) |
 | Frontend Web | HTML / CSS / JavaScript (Vanilla) + Alpine.js |
-| Desktop App | Java Swing |
 | Database | SQL Server 2022 |
 | Tính cước thông minh | OSRM (tính khoảng cách km) + Nominatim (geocoding) |
 | API Testing | Postman |
-| Version Control | Git |
+| Version Control | Git + GitHub |
 
 ## 👥 Đối tượng sử dụng
 
-1. **Khách hàng cá nhân** → Tạo đơn thủ công qua Web Portal
+1. **Khách hàng cá nhân** → Tạo đơn, tra cứu qua Web
 2. **Đối tác (Sàn TMĐT)** → Tích hợp tự động qua RESTful API
-3. **Nhân viên điều phối** → Quản lý qua Desktop App (Java Swing)
+3. **Nhân viên điều phối** → Quản lý qua trang Admin (Web)
+4. **Quản trị viên** → Toàn quyền + quản lý users/partners (Web)

@@ -2,27 +2,29 @@
 
 ---
 
-## Sơ đồ kiến trúc tổng thể (3-Tier)
+## Sơ đồ kiến trúc tổng thể (2-Tier Web)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    CLIENT / PRESENTATION TIER                   │
 │                                                                 │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐ │
-│  │  🌐 Web App  │  │ 🖥️ Desktop  │  │  🔗 Partner Systems    │ │
-│  │  (HTML/CSS/  │  │ (Java Swing) │  │  (3rd Party E-com)     │ │
-│  │  JS+Alpine)  │  │              │  │                        │ │
-│  │              │  │  Kết nối     │  │  Gọi RESTful API       │ │
-│  │  Gọi API    │  │  trực tiếp   │  │  tự động (M2M)          │ │
-│  │  qua Fetch  │  │  JDBC → DB   │  │                         │ │
-│  └──────┬───────┘  └──────┬───────┘  └───────────┬────────────┘ │
-│         │                 │                       │              │
-└─────────┼─────────────────┼───────────────────────┼──────────────┘
-          │                 │                       │
-          │  HTTP/JSON      │  JDBC                 │  HTTP/JSON
-          │                 │                       │
-┌─────────┼─────────────────┼───────────────────────┼──────────────┐
-│         ▼                 │                       ▼              │
+│  ┌─────────────────────────────┐  ┌────────────────────────────┐│
+│  │  🌐 Web App (SPA)          │  │  🔗 Partner Systems        ││
+│  │  HTML/CSS/JS + Alpine.js   │  │  (Sàn TMĐT, 3rd Party)     ││
+│  │                             │  │                            ││
+│  │  👤 Khách hàng:             │  │  Gọi RESTful API           ││
+│  │     Tạo đơn, tra cứu, TT  │  │  tự động (M2M)             ││
+│  │  👨‍💼 Nhân viên:             │  │                            ││
+│  │     Dashboard, QL đơn hàng │  │                            ││
+│  │  🔑 Quản trị viên:         │  │                            ││
+│  │     Toàn quyền + QL users  │  │                            ││
+│  └──────────┬──────────────────┘  └────────────┬───────────────┘│
+│             │                                  │                │
+└─────────────┼──────────────────────────────────┼────────────────┘
+              │  HTTP/JSON (Fetch API)            │  HTTP/JSON
+              │                                  │
+┌─────────────┼──────────────────────────────────┼────────────────┐
+│             ▼                                  ▼                │
 │  ┌─────────────────────────────────────────────────────────┐     │
 │  │              🐍 SERVICE TIER - Python API               │     │
 │  │                  (Flask / FastAPI)                       │     │
@@ -111,14 +113,15 @@ Browser (JS Fetch)
 └──────────────────────────────────────┘
 ```
 
-### Luồng 2: Nhân viên cập nhật trạng thái qua Desktop
+### Luồng 2: Nhân viên cập nhật trạng thái qua Web Admin
 ```
-Java Swing App
-    → Nhân viên chọn đơn hàng trên JTable
-    → Chọn trạng thái mới (ComboBox)
-    → JDBC: UPDATE Orders SET status = ? WHERE id = ?
-    → Refresh JTable
-    → (Tùy chọn) Gọi API webhook/notification
+Web Admin (trang quản lý)
+    → Nhân viên đăng nhập (vai_tro = NHANVIEN)
+    → Vào trang admin/orders.html → Xem danh sách đơn
+    → Chọn đơn → Chọn trạng thái mới
+    → Fetch: PUT /api/orders/{id}/status
+    → API cập nhật DB + thêm lịch sử
+    → Refresh danh sách đơn hàng
 ```
 
 ### Luồng 3: Đối tác tích hợp tự động
@@ -146,11 +149,11 @@ Bất kỳ Client nào
 
 | Từ | Đến | Phương thức | Giao thức |
 |----|-----|------------|-----------|
-| Web Client | Python API | Fetch API / AJAX | HTTP/JSON |
+| Web App (Khách) | Python API | Fetch API | HTTP/JSON |
+| Web App (Admin) | Python API | Fetch API | HTTP/JSON |
 | Partner System | Python API | HTTP Client | HTTP/JSON |
 | Python API | SQL Server | pyodbc / SQLAlchemy | TCP/SQL |
-| Desktop App | SQL Server | JDBC | TCP/SQL |
-| Desktop App | Python API | HttpURLConnection (tùy chọn) | HTTP/JSON |
+| Python API | OSRM/Nominatim | requests | HTTP/JSON |
 
 ---
 

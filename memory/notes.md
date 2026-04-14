@@ -65,7 +65,7 @@
 | 1 | Dùng SQL Server | Yêu cầu đề cương, phù hợp môi trường học thuật | 2026-04-07 |
 | 2 | API-First Architecture | Cho phép đa nền tảng client kết nối | 2026-04-07 |
 | 3 | HTML/CSS/JS thuần (không framework nặng) | Yêu cầu đề cương, tập trung vào kiến thức nền | 2026-04-07 |
-| 4 | Java Swing cho Desktop | Yêu cầu đề cương, phù hợp với sinh viên CNPM | 2026-04-07 |
+| 4 | ~~Java Swing cho Desktop~~ → **Loại bỏ** | Gộp quản lý vào Web, giảm phức tạp, 1 app duy nhất | 2026-04-14 |
 | 5 | Bổ sung **Alpine.js** cho frontend | Nhẹ (~15KB CDN), reactivity tốt, không cần build, giữ tinh thần JS thuần | 2026-04-09 |
 | 6 | Google Fonts (Inter) + Font Awesome | Typography & icon hiện đại, chuyên nghiệp, dùng qua CDN | 2026-04-09 |
 | 7 | SPA-like hash routing (tự viết) | Điều hướng trang không reload, UX mượt, không cần thư viện router | 2026-04-09 |
@@ -74,6 +74,7 @@
 | 10 | GitHub private repo | Quản lý source code, backup, collaboration | 2026-04-09 |
 | 11 | **Việt hóa SQL hoàn toàn** | Tên bảng/cột/trạng thái/vai trò bằng tiếng Việt không dấu, dễ hiểu cho đề tài VN | 2026-04-10 |
 | 12 | **OSRM + Nominatim** cho tính cước | Tính phí theo khoảng cách thực tế (km), miễn phí, open source, hybrid fallback zone | 2026-04-13 |
+| 13 | **Web Admin thay Desktop** | Gộp quản lý (dashboard, đơn hàng, giá cước, users) vào web với phân quyền NHANVIEN/QUANTRI | 2026-04-14 |
 
 ### Bảng ánh xạ tên (Cũ → Mới)
 
