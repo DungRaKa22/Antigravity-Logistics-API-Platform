@@ -1,4 +1,4 @@
-"""
+7"""
 Script test kết nối Python → SQL Server
 Chạy: python test_connection.py
 

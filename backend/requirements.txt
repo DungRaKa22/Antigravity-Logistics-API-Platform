@@ -10,9 +10,11 @@ flask-cors==5.0.1
 pyodbc==5.2.0
 SQLAlchemy==2.0.40
 
-# Security
-bcrypt==4.3.0
+# Security (Werkzeug and PyJWT)
 python-dotenv==1.1.0
+PyJWT==2.10.1
 
 # Utilities
 marshmallow==3.26.1
+openpyxl==3.1.5
+requests==2.32.3
