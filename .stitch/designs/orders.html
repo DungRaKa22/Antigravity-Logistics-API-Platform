@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Danh sách vận đơn | ANTIGRAVITY EXPRESS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        @font-face {
+            font-family: 'UberMove';
+            src: system-ui; /* Fallback for local simulation */
+        }
+        body {
+            font-family: 'UberMoveText', system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#e1dfdf",
+                        "background": "#f9f9f9",
+                        "mute": "#afafaf",
+                        "tertiary": "#000000",
+                        "on-secondary-container": "#636262",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed-variant": "#474747",
+                        "surface-variant": "#e2e2e2",
+                        "canvas-softer": "#f3f3f3",
+                        "on-tertiary-fixed": "#1b1b1b",
+                        "secondary": "#5e5e5e",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-container-high": "#e8e8e8",
+                        "on-tertiary-container": "#848484",
+                        "surface-bright": "#f9f9f9",
+                        "primary-container": "#1b1b1b",
+                        "tertiary-fixed": "#e2e2e2",
+                        "tertiary-container": "#1b1b1b",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#e2e2e2",
+                        "primary": "#000000",
+                        "surface-container-highest": "#e2e2e2",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "black-elevated": "#282828",
+                        "on-tertiary": "#ffffff",
+                        "surface-dim": "#dadada",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "on-secondary-fixed-variant": "#464747",
+                        "inverse-primary": "#c6c6c6",
+                        "on-primary-container": "#848484",
+                        "inverse-surface": "#303030",
+                        "surface-container": "#eeeeee",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "on-background": "#1b1b1b",
+                        "on-secondary": "#ffffff",
+                        "hairline-mid": "#4b4b4b",
+                        "canvas-soft": "#efefef",
+                        "on-surface-variant": "#4c4546",
+                        "secondary-fixed-dim": "#c7c6c6",
+                        "error": "#ba1a1a",
+                        "on-surface": "#1b1b1b",
+                        "secondary-fixed": "#e4e2e2",
+                        "on-tertiary-fixed-variant": "#474747",
+                        "ink": "#000000",
+                        "canvas": "#ffffff",
+                        "surface-container-low": "#f3f3f3",
+                        "surface-tint": "#5e5e5e",
+                        "surface-pressed": "#e2e2e2",
+                        "outline": "#7e7576",
+                        "on-primary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#1b1b1b",
+                        "error-container": "#ffdad6",
+                        "surface": "#f9f9f9",
+                        "outline-variant": "#cfc4c5",
+                        "body": "#5e5e5e",
+                        "on-dark": "#ffffff",
+                        "link": "#0000ee"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "xs": "6px",
+                        "xxs": "4px",
+                        "md": "12px",
+                        "lg": "16px",
+                        "3xl": "32px",
+                        "xl": "20px",
+                        "section-margin": "64px",
+                        "2xl": "24px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["UberMoveText, system-ui, sans-serif"],
+                        "body-lg": ["UberMoveText, system-ui, sans-serif"],
+                        "display-lg": ["UberMove, system-ui, sans-serif"],
+                        "body-sm-strong": ["UberMoveText, system-ui, sans-serif"],
+                        "body-md-strong": ["UberMoveText, system-ui, sans-serif"],
+                        "display-sm": ["UberMove, system-ui, sans-serif"],
+                        "display-md": ["UberMove, system-ui, sans-serif"],
+                        "caption": ["UberMoveText, system-ui, sans-serif"],
+                        "button-large": ["UberMoveText, system-ui, sans-serif"],
+                        "body-md": ["UberMoveText, system-ui, sans-serif"],
+                        "display-xxl": ["UberMove, system-ui, sans-serif"],
+                        "display-xl": ["UberMove, system-ui, sans-serif"],
+                        "button-md": ["UberMoveText, system-ui, sans-serif"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "24px", "fontWeight": "500"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                        "body-sm-strong": ["14px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "body-md-strong": ["16px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "display-sm": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+                        "display-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "caption": ["12px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "button-large": ["18px", {"lineHeight": "24px", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-xxl": ["52px", {"lineHeight": "64px", "fontWeight": "700"}],
+                        "display-xl": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                        "button-md": ["16px", {"lineHeight": "20px", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-canvas text-ink antialiased">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-canvas border-b border-hairline-mid/20 h-16">
+<div class="flex justify-between items-center h-full px-lg md:px-section-margin w-full max-w-full mx-auto">
+<div class="flex items-center gap-3xl">
+<span class="font-display-md text-display-md tracking-tighter text-primary">ANTIGRAVITY EXPRESS</span>
+<div class="hidden md:flex items-center gap-xl">
+<a class="font-body-md-strong text-body-md-strong text-secondary hover:text-primary transition-colors" href="#">Tạo vận đơn</a>
+<a class="font-body-md-strong text-body-md-strong text-primary border-b-2 border-primary pb-1" href="#">Đơn hàng</a>
+<a class="font-body-md-strong text-body-md-strong text-secondary hover:text-primary transition-colors" href="#">Khách hàng</a>
+<a class="font-body-md-strong text-body-md-strong text-secondary hover:text-primary transition-colors" href="#">Báo cáo</a>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<button class="flex items-center justify-center p-xxs">
+<span class="material-symbols-outlined text-primary" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</div>
+</nav>
+<main class="pt-32 pb-section-margin px-lg md:px-section-margin max-w-[1440px] mx-auto min-h-screen">
+<!-- Header Section -->
+<header class="flex flex-col md:flex-row md:items-end justify-between gap-xl mb-3xl">
+<div>
+<h1 class="font-display-xl text-display-xl tracking-tight mb-xxs">Danh sách vận đơn</h1>
+<p class="font-body-md text-secondary">Tổng cộng 1,248 đơn hàng</p>
+</div>
+<button class="bg-primary text-on-primary px-3xl py-md rounded-full font-button-md text-button-md hover:bg-black-elevated transition-colors self-start md:self-auto flex items-center gap-sm">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+                Tạo vận đơn mới
+            </button>
+</header>
+<!-- Search & Filter Bar -->
+<section class="mb-3xl flex flex-col gap-xl">
+<div class="relative w-full">
+<span class="absolute left-lg top-1/2 -translate-y-1/2 material-symbols-outlined text-secondary" data-icon="search">search</span>
+<input class="w-full h-14 bg-canvas-soft border-none focus:ring-2 focus:ring-primary pl-3xl pr-lg font-body-md rounded-none" placeholder="Tìm kiếm mã vận đơn, người nhận..." type="text"/>
+</div>
+<div class="flex flex-wrap items-center gap-sm">
+<button class="bg-primary text-on-primary px-2xl py-sm rounded-full font-body-sm-strong transition-all">Tất cả</button>
+<button class="bg-canvas-soft text-ink px-2xl py-sm rounded-full font-body-sm-strong hover:bg-surface-pressed transition-all">Chờ lấy hàng</button>
+<button class="bg-canvas-soft text-ink px-2xl py-sm rounded-full font-body-sm-strong hover:bg-surface-pressed transition-all">Đang vận chuyển</button>
+<button class="bg-canvas-soft text-ink px-2xl py-sm rounded-full font-body-sm-strong hover:bg-surface-pressed transition-all">Giao thành công</button>
+<button class="bg-canvas-soft text-ink px-2xl py-sm rounded-full font-body-sm-strong hover:bg-surface-pressed transition-all">Đã hủy</button>
+</div>
+</section>
+<!-- Data Table -->
+<section class="w-full overflow-x-auto bg-canvas">
+<table class="w-full text-left border-collapse min-w-[1000px]">
+<thead>
+<tr class="border-b border-hairline-mid/10">
+<th class="py-lg pr-lg font-body-sm-strong text-secondary uppercase tracking-wider">Mã vận đơn</th>
+<th class="py-lg px-lg font-body-sm-strong text-secondary uppercase tracking-wider">Ngày tạo</th>
+<th class="py-lg px-lg font-body-sm-strong text-secondary uppercase tracking-wider">Người nhận</th>
+<th class="py-lg px-lg font-body-sm-strong text-secondary uppercase tracking-wider">Số điện thoại</th>
+<th class="py-lg px-lg font-body-sm-strong text-secondary uppercase tracking-wider">Địa chỉ giao</th>
+<th class="py-lg px-lg font-body-sm-strong text-secondary uppercase tracking-wider">Cước phí</th>
+<th class="py-lg px-lg font-body-sm-strong text-secondary uppercase tracking-wider">Thu hộ (COD)</th>
+<th class="py-lg pl-lg font-body-sm-strong text-secondary uppercase tracking-wider">Trạng thái</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-hairline-mid/10">
+<!-- Row 1 -->
+<tr class="hover:bg-canvas-soft/50 transition-colors">
+<td class="py-xl pr-lg font-body-md-strong text-ink">AGV-92841</td>
+<td class="py-xl px-lg font-body-md text-secondary">24/10/2023</td>
+<td class="py-xl px-lg font-body-md-strong">Lê Hồng Phong</td>
+<td class="py-xl px-lg font-body-md text-secondary">090 123 4567</td>
+<td class="py-xl px-lg font-body-md text-secondary">Q.1, TP. Hồ Chí Minh</td>
+<td class="py-xl px-lg font-body-md">25,000đ</td>
+<td class="py-xl px-lg font-body-md-strong">1,250,000đ</td>
+<td class="py-xl pl-lg">
+<span class="inline-flex items-center px-lg py-xs rounded-full bg-[#E3F2FD] text-[#1565C0] font-body-sm-strong text-[12px] whitespace-nowrap">
+<span class="w-1.5 h-1.5 rounded-full bg-[#1565C0] mr-sm"></span>
+                                Đang vận chuyển
+                            </span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-canvas-soft/50 transition-colors">
+<td class="py-xl pr-lg font-body-md-strong text-ink">AGV-92842</td>
+<td class="py-xl px-lg font-body-md text-secondary">24/10/2023</td>
+<td class="py-xl px-lg font-body-md-strong">Trần Minh Tâm</td>
+<td class="py-xl px-lg font-body-md text-secondary">091 888 7766</td>
+<td class="py-xl px-lg font-body-md text-secondary">Q. Ninh Kiều, Cần Thơ</td>
+<td class="py-xl px-lg font-body-md">35,000đ</td>
+<td class="py-xl px-lg font-body-md-strong">0đ</td>
+<td class="py-xl pl-lg">
+<span class="inline-flex items-center px-lg py-xs rounded-full bg-[#FFF9C4] text-[#F9A825] font-body-sm-strong text-[12px] whitespace-nowrap">
+<span class="w-1.5 h-1.5 rounded-full bg-[#F9A825] mr-sm"></span>
+                                Chờ lấy hàng
+                            </span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-canvas-soft/50 transition-colors">
+<td class="py-xl pr-lg font-body-md-strong text-ink">AGV-92843</td>
+<td class="py-xl px-lg font-body-md text-secondary">23/10/2023</td>
+<td class="py-xl px-lg font-body-md-strong">Nguyễn Thị Hoa</td>
+<td class="py-xl px-lg font-body-md text-secondary">094 555 4433</td>
+<td class="py-xl px-lg font-body-md text-secondary">Hoàn Kiếm, Hà Nội</td>
+<td class="py-xl px-lg font-body-md">42,000đ</td>
+<td class="py-xl px-lg font-body-md-strong">450,000đ</td>
+<td class="py-xl pl-lg">
+<span class="inline-flex items-center px-lg py-xs rounded-full bg-primary text-on-primary font-body-sm-strong text-[12px] whitespace-nowrap">
+<span class="w-1.5 h-1.5 rounded-full bg-on-primary mr-sm"></span>
+                                Thành công
+                            </span>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-canvas-soft/50 transition-colors">
+<td class="py-xl pr-lg font-body-md-strong text-ink">AGV-92844</td>
+<td class="py-xl px-lg font-body-md text-secondary">23/10/2023</td>
+<td class="py-xl px-lg font-body-md-strong">Đặng Văn Lâm</td>
+<td class="py-xl px-lg font-body-md text-secondary">033 222 1100</td>
+<td class="py-xl px-lg font-body-md text-secondary">Sơn Trà, Đà Nẵng</td>
+<td class="py-xl px-lg font-body-md">30,000đ</td>
+<td class="py-xl px-lg font-body-md-strong">0đ</td>
+<td class="py-xl pl-lg">
+<span class="inline-flex items-center px-lg py-xs rounded-full bg-[#FFEBEE] text-[#C62828] font-body-sm-strong text-[12px] whitespace-nowrap">
+<span class="w-1.5 h-1.5 rounded-full bg-[#C62828] mr-sm"></span>
+                                Đã hủy
+                            </span>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-canvas-soft/50 transition-colors">
+<td class="py-xl pr-lg font-body-md-strong text-ink">AGV-92845</td>
+<td class="py-xl px-lg font-body-md text-secondary">22/10/2023</td>
+<td class="py-xl px-lg font-body-md-strong">Phạm Tuấn Anh</td>
+<td class="py-xl px-lg font-body-md text-secondary">077 444 9988</td>
+<td class="py-xl px-lg font-body-md text-secondary">Q.7, TP. Hồ Chí Minh</td>
+<td class="py-xl px-lg font-body-md">25,000đ</td>
+<td class="py-xl px-lg font-body-md-strong">2,300,000đ</td>
+<td class="py-xl pl-lg">
+<span class="inline-flex items-center px-lg py-xs rounded-full bg-primary text-on-primary font-body-sm-strong text-[12px] whitespace-nowrap">
+<span class="w-1.5 h-1.5 rounded-full bg-on-primary mr-sm"></span>
+                                Thành công
+                            </span>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<!-- Pagination -->
+<footer class="mt-3xl flex items-center justify-between">
+<span class="font-body-sm text-secondary">Hiển thị 5 trên 1,248 vận đơn</span>
+<div class="flex items-center gap-sm">
+<button class="px-2xl py-sm border border-hairline-mid/20 rounded-full font-body-sm-strong hover:bg-canvas-soft transition-all">Trước</button>
+<div class="flex items-center gap-xxs px-md">
+<span class="w-8 h-8 flex items-center justify-center bg-primary text-on-primary rounded-full text-body-sm-strong">1</span>
+<span class="w-8 h-8 flex items-center justify-center text-ink rounded-full text-body-sm hover:bg-canvas-soft cursor-pointer">2</span>
+<span class="w-8 h-8 flex items-center justify-center text-ink rounded-full text-body-sm hover:bg-canvas-soft cursor-pointer">3</span>
+</div>
+<button class="px-2xl py-sm border border-hairline-mid/20 rounded-full font-body-sm-strong hover:bg-canvas-soft transition-all">Sau</button>
+</div>
+</footer>
+</main>
+<!-- Global Footer -->
+<footer class="bg-primary text-on-primary w-full mt-auto">
+<div class="flex flex-col md:flex-row justify-between items-center py-3xl px-lg md:px-section-margin w-full max-w-[1440px] mx-auto">
+<div class="flex flex-col gap-sm items-center md:items-start mb-xl md:mb-0">
+<span class="font-display-sm text-display-sm text-on-primary">ANTIGRAVITY EXPRESS</span>
+<p class="font-body-sm text-on-secondary-container">© 2024 ANTIGRAVITY EXPRESS. All rights reserved.</p>
+</div>
+<div class="flex gap-xl">
+<a class="font-body-sm text-on-secondary-container hover:text-on-primary hover:underline transition-all" href="#">Merchant Support</a>
+<a class="font-body-sm text-on-secondary-container hover:text-on-primary hover:underline transition-all" href="#">Privacy Policy</a>
+<a class="font-body-sm text-on-secondary-container hover:text-on-primary hover:underline transition-all" href="#">Terms of Service</a>
+</div>
+</div>
+</footer>
+<script>
+        // Simple filter button interaction
+        const filterBtns = document.querySelectorAll('.flex.wrap.items-center button');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => {
+                    b.classList.remove('bg-primary', 'text-on-primary');
+                    b.classList.add('bg-canvas-soft', 'text-ink');
+                });
+                btn.classList.add('bg-primary', 'text-on-primary');
+                btn.classList.remove('bg-canvas-soft', 'text-ink');
+            });
+        });
+    </script>
+</body></html>

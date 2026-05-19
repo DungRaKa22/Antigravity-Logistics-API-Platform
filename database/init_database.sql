@@ -14,90 +14,127 @@ GO
 USE LogisticsDB;
 GO
 
--- 1. Bảng Users (Quản lý Tài khoản Đa phân quyền)
-CREATE TABLE Users (
-    UserID INT IDENTITY(1,1) PRIMARY KEY,
-    Username VARCHAR(100) NOT NULL UNIQUE,
-    PasswordHash VARCHAR(255) NOT NULL,
-    FullName NVARCHAR(255) NOT NULL,
-    Role VARCHAR(20) NOT NULL CHECK (Role IN ('SHOP', 'ADMIN', 'PARTNER')),
-    CreatedAt DATETIME DEFAULT GETDATE()
+-- 1. Bảng NguoiDung (Quản lý Tài khoản Đa phân quyền)
+CREATE TABLE NguoiDung (
+    MaNguoiDung INT IDENTITY(1,1) PRIMARY KEY,
+    TenDangNhap VARCHAR(100) NOT NULL UNIQUE,
+    MatKhau VARCHAR(255) NOT NULL,
+    HoTen NVARCHAR(255) NOT NULL,
+    VaiTro VARCHAR(20) NOT NULL CHECK (VaiTro IN ('KHACHHANG', 'QUANTRI', 'DOITAC')),
+    SoTaiKhoan VARCHAR(50) NULL,
+    TenNganHang NVARCHAR(100) NULL,
+    ChuTaiKhoan NVARCHAR(100) NULL,
+    NgayTao DATETIME DEFAULT GETDATE()
 );
 GO
 
--- 2. Bảng AddressBook (Sổ địa chỉ thông minh)
-CREATE TABLE AddressBook (
-    AddressID INT IDENTITY(1,1) PRIMARY KEY,
-    UserID INT NOT NULL,
-    ContactName NVARCHAR(255) NOT NULL,
-    ContactPhone VARCHAR(20) NOT NULL,
-    FullAddress NVARCHAR(500) NOT NULL,
-    Latitude DECIMAL(10, 6),
-    Longitude DECIMAL(10, 6),
-    CONSTRAINT FK_AddressBook_Users FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE
+-- 2. Bảng SoDiaChi (Sổ địa chỉ thông minh)
+CREATE TABLE SoDiaChi (
+    MaDiaChi INT IDENTITY(1,1) PRIMARY KEY,
+    MaNguoiDung INT NOT NULL,
+    TenLienHe NVARCHAR(255) NOT NULL,
+    SoDienThoai VARCHAR(20) NOT NULL,
+    DiaChiChiTiet NVARCHAR(500) NOT NULL,
+    ViDo DECIMAL(10, 6),
+    KinhDo DECIMAL(10, 6),
+    CONSTRAINT FK_SoDiaChi_NguoiDung FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung) ON DELETE CASCADE
 );
 GO
 
--- 3. Bảng Orders (Quản lý Vận đơn)
-CREATE TABLE Orders (
-    OrderID VARCHAR(50) PRIMARY KEY, -- Ví dụ: AG-883921
-    Sender_UserID INT NOT NULL,
-    ReceiverName NVARCHAR(255) NOT NULL,
-    ReceiverPhone VARCHAR(20) NOT NULL,
-    ReceiverAddress NVARCHAR(500) NOT NULL,
-    WeightGram INT NOT NULL,
-    DistanceKm DECIMAL(10, 2),
-    ShippingFee DECIMAL(18, 2) NOT NULL,
-    CodAmount DECIMAL(18, 2) NOT NULL DEFAULT 0,
-    CurrentStatus VARCHAR(50) NOT NULL CHECK (CurrentStatus IN ('PENDING', 'PICKED_UP', 'DELIVERING', 'DELIVERED', 'RETURNED')),
-    CreatedAt DATETIME DEFAULT GETDATE(),
-    CONSTRAINT FK_Orders_Sender FOREIGN KEY (Sender_UserID) REFERENCES Users(UserID)
+-- 3. Bảng GoiDichVu (Danh mục các gói dịch vụ giao hàng)
+CREATE TABLE GoiDichVu (
+    MaGoi INT IDENTITY(1,1) PRIMARY KEY,
+    TenGoi VARCHAR(50) NOT NULL, -- Ví dụ: STANDARD, EXPRESS
+    GiaKhoiDiem DECIMAL(18, 2) NOT NULL,
+    GiaMoiKm DECIMAL(18, 2) NOT NULL
 );
 GO
 
--- 4. Bảng TrackingHistory (Lịch sử Hành trình)
-CREATE TABLE TrackingHistory (
-    HistoryID INT IDENTITY(1,1) PRIMARY KEY,
-    OrderID VARCHAR(50) NOT NULL,
-    StatusCode VARCHAR(50) NOT NULL CHECK (StatusCode IN ('PENDING', 'PICKED_UP', 'DELIVERING', 'DELIVERED', 'RETURNED')),
-    LocationInfo NVARCHAR(500),
-    UpdatedBy_AdminID INT NOT NULL,
-    Timestamp DATETIME DEFAULT GETDATE(),
-    CONSTRAINT FK_TrackingHistory_Orders FOREIGN KEY (OrderID) REFERENCES Orders(OrderID) ON DELETE CASCADE,
-    CONSTRAINT FK_TrackingHistory_Admin FOREIGN KEY (UpdatedBy_AdminID) REFERENCES Users(UserID)
+-- 4. Bảng DonHang (Quản lý Vận đơn)
+CREATE TABLE DonHang (
+    MaDonHang VARCHAR(50) PRIMARY KEY, -- Ví dụ: AG-883921
+    MaNguoiGui INT NOT NULL,
+    MaGoi INT NOT NULL,
+    TenNguoiNhan NVARCHAR(255) NOT NULL,
+    SoDienThoaiNhan VARCHAR(20) NOT NULL,
+    DiaChiNhan NVARCHAR(500) NOT NULL,
+    
+    -- Kích thước & Khối lượng
+    TrongLuongGram INT NOT NULL,
+    ChieuDaiCM INT NULL,
+    ChieuRongCM INT NULL,
+    ChieuCaoCM INT NULL,
+    TrongLuongQuyDoiGram INT NULL,
+    
+    -- Hàng hóa & Bảo hiểm
+    MoTaHangHoa NVARCHAR(500) NOT NULL,
+    GiaTriKhaiBao DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    PhiBaoHiem DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    
+    -- Phí vận chuyển
+    KhoangCachKm DECIMAL(10, 2),
+    PhiVanChuyen DECIMAL(18, 2) NOT NULL,
+    TienThuHoCOD DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    
+    -- Cờ nghiệp vụ
+    QuyenKiemTra VARCHAR(50) NOT NULL DEFAULT 'KHONG_XEM' CHECK (QuyenKiemTra IN ('KHONG_XEM', 'XEM_KHONG_THU', 'THU_HANG')),
+    GiaoMotPhan BIT NOT NULL DEFAULT 0,
+    HinhThucLayHang VARCHAR(50) NOT NULL DEFAULT 'TU_MANG_RA_BUU_CUC' CHECK (HinhThucLayHang IN ('TU_MANG_RA_BUU_CUC', 'NHAN_VIEN_DEN_LAY')),
+    
+    TrangThaiHienTai VARCHAR(50) NOT NULL CHECK (TrangThaiHienTai IN ('CHO_LAY_HANG', 'DA_LAY_HANG', 'DANG_VAN_CHUYEN', 'GIAO_THANH_CONG', 'DA_HUY', 'HOAN_TRA')),
+    NgayTao DATETIME DEFAULT GETDATE(),
+    
+    CONSTRAINT FK_DonHang_NguoiGui FOREIGN KEY (MaNguoiGui) REFERENCES NguoiDung(MaNguoiDung),
+    CONSTRAINT FK_DonHang_GoiDichVu FOREIGN KEY (MaGoi) REFERENCES GoiDichVu(MaGoi)
 );
 GO
 
--- 5. Bảng Reconciliations (Đối soát Tài chính COD)
-CREATE TABLE Reconciliations (
-    ReconID INT IDENTITY(1,1) PRIMARY KEY,
-    OrderID VARCHAR(50) NOT NULL UNIQUE,
-    Shop_UserID INT NOT NULL,
-    TotalCollected DECIMAL(18, 2) NOT NULL,
-    FeeDeducted DECIMAL(18, 2) NOT NULL,
-    FinalPayout DECIMAL(18, 2) NOT NULL,
-    ReconStatus VARCHAR(50) NOT NULL CHECK (ReconStatus IN ('UNPAID', 'PAID')),
-    CreatedAt DATETIME DEFAULT GETDATE(),
-    ProcessedAt DATETIME,
-    CONSTRAINT FK_Recon_Orders FOREIGN KEY (OrderID) REFERENCES Orders(OrderID),
-    CONSTRAINT FK_Recon_Shop FOREIGN KEY (Shop_UserID) REFERENCES Users(UserID)
+-- 5. Bảng LichSu_TrangThai (Lịch sử Hành trình)
+CREATE TABLE LichSu_TrangThai (
+    MaLichSu INT IDENTITY(1,1) PRIMARY KEY,
+    MaDonHang VARCHAR(50) NOT NULL,
+    MaTrangThai VARCHAR(50) NOT NULL CHECK (MaTrangThai IN ('CHO_LAY_HANG', 'DA_LAY_HANG', 'DANG_VAN_CHUYEN', 'GIAO_THANH_CONG', 'DA_HUY', 'HOAN_TRA')),
+    ThongTinViTri NVARCHAR(500),
+    MaNhanVienCapNhat INT NOT NULL,
+    ThoiGian DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_LichSu_DonHang FOREIGN KEY (MaDonHang) REFERENCES DonHang(MaDonHang) ON DELETE CASCADE,
+    CONSTRAINT FK_LichSu_NhanVien FOREIGN KEY (MaNhanVienCapNhat) REFERENCES NguoiDung(MaNguoiDung)
 );
 GO
 
--- 6. Bảng ApiKeys (Quản lý Đối tác B2B)
-CREATE TABLE ApiKeys (
-    KeyID INT IDENTITY(1,1) PRIMARY KEY,
-    Partner_UserID INT NOT NULL,
-    ApiKeyString VARCHAR(64) NOT NULL UNIQUE,
-    IsActive BIT DEFAULT 1,
-    CreatedAt DATETIME DEFAULT GETDATE(),
-    CONSTRAINT FK_ApiKeys_Partner FOREIGN KEY (Partner_UserID) REFERENCES Users(UserID) ON DELETE CASCADE
+-- 6. Bảng DoiSoat (Đối soát Tài chính COD)
+CREATE TABLE DoiSoat (
+    MaDoiSoat INT IDENTITY(1,1) PRIMARY KEY,
+    MaDonHang VARCHAR(50) NOT NULL UNIQUE,
+    MaKhachHang INT NOT NULL,
+    TongTienThu DECIMAL(18, 2) NOT NULL,
+    PhiVanChuyenTru DECIMAL(18, 2) NOT NULL,
+    PhiBaoHiemTru DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    PhiHoanTraTru DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    PhiGiaoMotPhanTru DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    ThucNhan DECIMAL(18, 2) NOT NULL,
+    TrangThaiDoiSoat VARCHAR(50) NOT NULL CHECK (TrangThaiDoiSoat IN ('CHUA_THANH_TOAN', 'DA_THANH_TOAN')),
+    NgayTao DATETIME DEFAULT GETDATE(),
+    NgayXuLy DATETIME,
+    CONSTRAINT FK_DoiSoat_DonHang FOREIGN KEY (MaDonHang) REFERENCES DonHang(MaDonHang),
+    CONSTRAINT FK_DoiSoat_KhachHang FOREIGN KEY (MaKhachHang) REFERENCES NguoiDung(MaNguoiDung)
+);
+GO
+
+-- 7. Bảng KhoaAPI (Quản lý Đối tác B2B)
+CREATE TABLE KhoaAPI (
+    MaKhoa INT IDENTITY(1,1) PRIMARY KEY,
+    MaDoiTac INT NOT NULL,
+    ChuoiKhoaAPI VARCHAR(64) NOT NULL UNIQUE,
+    TrangThaiHoatDong BIT DEFAULT 1,
+    NgayTao DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_KhoaAPI_DoiTac FOREIGN KEY (MaDoiTac) REFERENCES NguoiDung(MaNguoiDung) ON DELETE CASCADE
 );
 GO
 
 -- CREATE INDEXES CHO TỐI ƯU HIỆU NĂNG
-CREATE INDEX IX_Orders_Sender ON Orders(Sender_UserID);
-CREATE INDEX IX_Orders_Status ON Orders(CurrentStatus);
-CREATE INDEX IX_TrackingHistory_Order ON TrackingHistory(OrderID);
-CREATE INDEX IX_Reconciliations_Status ON Reconciliations(ReconStatus);
+CREATE INDEX IX_DonHang_NguoiGui ON DonHang(MaNguoiGui);
+CREATE INDEX IX_DonHang_TrangThai ON DonHang(TrangThaiHienTai);
+CREATE INDEX IX_LichSu_DonHang ON LichSu_TrangThai(MaDonHang);
+CREATE INDEX IX_DoiSoat_TrangThai ON DoiSoat(TrangThaiDoiSoat);
 GO

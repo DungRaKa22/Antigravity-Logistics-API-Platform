@@ -13,7 +13,7 @@ def create_app(config_name="default"):
 
     # Initialize Extensions
     db.init_app(app)
-    cors.init_app(app)
+    cors.init_app(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
     # Health Check Endpoint
     @app.route('/api/health')

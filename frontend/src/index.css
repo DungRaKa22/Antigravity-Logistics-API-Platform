@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@layer base {
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+  }
+}
+
+@layer components {
+  /* Uber-inspired Pills & Cards */
+  .btn-primary {
+    @apply bg-primary text-on-primary rounded-pill font-medium flex items-center justify-center transition-opacity hover:opacity-80 active:scale-95;
+  }
+  .btn-secondary {
+    @apply bg-canvas-soft text-ink rounded-pill font-medium flex items-center justify-center transition-colors hover:bg-gray-200 active:scale-95;
+  }
+  .btn-subtle {
+    @apply bg-canvas-soft text-ink rounded-pill font-medium flex items-center justify-center transition-colors hover:bg-gray-200 active:scale-95;
+  }
+  .card {
+    @apply bg-canvas rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.08)];
+  }
+  .input-uber {
+    @apply bg-canvas-soft text-ink rounded-none px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary w-full border-b border-transparent focus:border-primary transition-all;
+  }
+  .pill-badge {
+    @apply inline-block px-3 py-1 bg-primary text-on-primary text-xs font-bold rounded-pill;
+  }
+}
+
+/* Grayscale Map for Uber Aesthetic */
+.leaflet-container {
+  filter: grayscale(100%) contrast(1.1) brightness(1.05);
+}

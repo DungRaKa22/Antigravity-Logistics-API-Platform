@@ -1,95 +1,125 @@
-# 🗄️ Cấu trúc Database (6 Bảng Cốt Lõi) - Logistics API Platform
+# 🗄️ Cấu trúc Database (7 Bảng Việt Hóa) - Logistics API Platform
 
-> Phiên bản tinh gọn và tối ưu hóa hệ thống vận chuyển với 6 bảng cốt lõi (Table Schema).
-
----
-
-## 1. Bảng `Users` (Quản lý Tài khoản Đa phân quyền)
-Lưu trữ toàn bộ người dùng kết hợp phân quyền qua cột Role.
-
-| Cột | Kiểu dữ liệu | Khóa | Ràng buộc | Mô tả |
-|-----|-------------|------|-----------|-------|
-| `UserID` | INT | PK | Tự tăng | Mã định danh duy nhất |
-| `Username` | VARCHAR(100) | | UNIQUE, NOT NULL | Tên đăng nhập (SĐT/Email) |
-| `PasswordHash` | VARCHAR(255) | | NOT NULL | Mật khẩu mã hóa |
-| `FullName` | NVARCHAR(255) | | NOT NULL | Họ tên / Tên doanh nghiệp đối tác |
-| `Role` | VARCHAR(20) | | IN ('SHOP', 'ADMIN', 'PARTNER')| Vai trò |
-| `CreatedAt` | DATETIME | | DEFAULT GETDATE() | Ngày tạo |
+> Chi tiết cấu trúc dữ liệu 7 bảng Việt hóa thực tế được ánh xạ qua SQLAlchemy ORM và chạy trên hệ quản trị cơ sở dữ liệu SQL Server 2022.
 
 ---
 
-## 2. Bảng `AddressBook` (Sổ địa chỉ thông minh)
-Gợi ý địa chỉ cho chủ shop khi lên đơn.
+## 1. Bảng `NguoiDung` (Quản lý Tài khoản & Phân quyền)
+Lưu trữ thông tin người dùng, mật khẩu đã mã hóa và cấu hình tài khoản ngân hàng phục vụ đối soát tài chính.
 
-| Cột | Kiểu dữ liệu | Khóa | Ràng buộc | Mô tả |
-|-----|-------------|------|-----------|-------|
-| `AddressID` | INT | PK | Tự tăng | Mã sổ địa chỉ |
-| `UserID` | INT | FK | REFERENCES Users(UserID) | Của shop nào |
-| `ContactName` | NVARCHAR(255) | | NOT NULL | Tên người nhận |
-| `ContactPhone` | VARCHAR(20) | | NOT NULL | SDT người nhận |
-| `FullAddress` | NVARCHAR(500) | | NOT NULL | Số nhà, Phường, Quận, Tỉnh... |
-| `Latitude` | DECIMAL(10,6) | | NULL | Vĩ độ |
-| `Longitude` | DECIMAL(10,6) | | NULL | Kinh độ |
-
----
-
-## 3. Bảng `Orders` (Quản lý Vận đơn)
-Bảng cốt lõi, lưu trữ kiện hàng.
-
-| Cột | Kiểu dữ liệu | Khóa | Ràng buộc | Mô tả |
-|-----|-------------|------|-----------|-------|
-| `OrderID` | VARCHAR(50) | PK | | Mã giao dịch tự parse (Vd: AG-883921) |
-| `Sender_UserID`| INT | FK | REFERENCES Users(UserID) | Người tạo đơn |
-| `ReceiverName` | NVARCHAR(255) | | NOT NULL | Tên người nhận |
-| `ReceiverPhone`| VARCHAR(20) | | NOT NULL | SĐT Nhận |
-| `ReceiverAddress`| NVARCHAR(500)| | NOT NULL | Địa chỉ người nhận đầy đủ |
-| `WeightGram` | INT | | NOT NULL | Khối lượng (gram) |
-| `DistanceKm` | DECIMAL(10,2) | | NULL | Số km (từ API Map) |
-| `ShippingFee` | DECIMAL(18,2) | | NOT NULL | Khối lượng * Khoảng cách |
-| `CodAmount` | DECIMAL(18,2) | | DEFAULT 0 | Tiền thu hộ |
-| `CurrentStatus`| VARCHAR(50) | | IN ('PENDING', 'PICKED_UP', 'DELIVERING', 'DELIVERED', 'RETURNED') | Trạng thái |
-| `CreatedAt` | DATETIME | | DEFAULT GETDATE() | Ngày tạo |
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả |
+|:---|:---|:---|:---|
+| `MaNguoiDung` | INT | PK, Identity(1,1) | Mã định danh duy nhất |
+| `TenDangNhap` | VARCHAR(100) | UNIQUE, NOT NULL | Tên đăng nhập (Username) |
+| `MatKhau` | VARCHAR(255) | NOT NULL | Mật khẩu mã hóa |
+| `HoTen` | NVARCHAR(255) | NOT NULL | Họ và tên / Tên doanh nghiệp |
+| `VaiTro` | VARCHAR(20) | CHECK (VaiTro IN ('KHACHHANG', 'QUANTRI', 'DOITAC')) | Phân quyền vai trò |
+| `SoTaiKhoan` | VARCHAR(50) | NULL | Số tài khoản ngân hàng |
+| `TenNganHang` | NVARCHAR(100) | NULL | Tên ngân hàng đối soát |
+| `ChuTaiKhoan` | NVARCHAR(100) | NULL | Chủ tài khoản ngân hàng |
+| `NgayTao` | DATETIME | DEFAULT GETDATE() | Ngày giờ khởi tạo tài khoản |
 
 ---
 
-## 4. Bảng `TrackingHistory` (Lịch sử Hành trình)
-Hệ thống tracking realtime.
+## 2. Bảng `SoDiaChi` (Sổ Địa Chỉ Người Nhận/Gửi)
+Danh bạ địa chỉ khách hàng của Shop để chọn nhanh khi tạo đơn hàng.
 
-| Cột | Kiểu dữ liệu | Khóa | Ràng buộc | Mô tả |
-|-----|-------------|------|-----------|-------|
-| `HistoryID` | INT | PK | Tự tăng | Mã tracking |
-| `OrderID` | VARCHAR(50) | FK | REFERENCES Orders(OrderID)| Cho vận đơn nào |
-| `StatusCode` | VARCHAR(50) | | IN ('PENDING', 'PICKED_UP', 'DELIVERING', 'DELIVERED', 'RETURNED') | Mã trạng thái |
-| `LocationInfo` | NVARCHAR(500) | | NULL | Ghi chú vị trí bưu cục... |
-| `UpdatedBy_AdminID`| INT | FK | REFERENCES Users(UserID)| Nhân viên Admin cập nhật |
-| `Timestamp` | DATETIME | | DEFAULT GETDATE() | Mốc thời gian |
-
----
-
-## 5. Bảng `Reconciliations` (Đối soát Tài chính COD)
-Bảng kế toán dòng tiền.
-
-| Cột | Kiểu dữ liệu | Khóa | Ràng buộc | Mô tả |
-|-----|-------------|------|-----------|-------|
-| `ReconID` | INT | PK | Tự tăng | Mã đối soát |
-| `OrderID` | VARCHAR(50) | FK | UNIQUE, REFERENCES Orders | Cho mã đơn nào |
-| `Shop_UserID` | INT | FK | REFERENCES Users(UserID) | Thuộc về shop nào |
-| `TotalCollected`| DECIMAL(18,2) | | NOT NULL | Tổng thu của khách mua |
-| `FeeDeducted` | DECIMAL(18,2) | | NOT NULL | Cước phí bị trừ đi |
-| `FinalPayout` | DECIMAL(18,2) | | NOT NULL | Thực nhận của Shop |
-| `ReconStatus` | VARCHAR(50) | | IN ('UNPAID', 'PAID') | Trạng thái trả tiền |
-| `CreatedAt` | DATETIME | | DEFAULT GETDATE() | Ngày tạo đối soát |
-| `ProcessedAt` | DATETIME | | NULL | Ngày thanh toán |
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả |
+|:---|:---|:---|:---|
+| `MaDiaChi` | INT | PK, Identity(1,1) | Mã địa chỉ duy nhất |
+| `MaNguoiDung` | INT | FK, REFERENCES NguoiDung | Liên kết đến tài khoản sở hữu |
+| `TenLienHe` | NVARCHAR(255) | NOT NULL | Tên người nhận/gửi hàng |
+| `SoDienThoai` | VARCHAR(20) | NOT NULL | Số điện thoại liên lạc |
+| `DiaChiChiTiet` | NVARCHAR(500) | NOT NULL | Địa chỉ chi tiết (số nhà, ngõ, phường...) |
+| `ViDo` | DECIMAL(10,6) | NULL | Tọa độ vĩ độ (Latitude) |
+| `KinhDo` | DECIMAL(10,6) | NULL | Tọa độ kinh độ (Longitude) |
+| `LaMacDinh` | BIT | DEFAULT 0 | Đánh dấu địa chỉ mặc định |
 
 ---
 
-## 6. Bảng `ApiKeys` (Quản lý Đối tác B2B)
-Bảo mật hệ thống mở API.
+## 3. Bảng `GoiDichVu` (Danh Mục Gói Cước)
+Lưu trữ cấu hình giá khởi điểm và cước phí trên mỗi km của gói dịch vụ.
 
-| Cột | Kiểu dữ liệu | Khóa | Ràng buộc | Mô tả |
-|-----|-------------|------|-----------|-------|
-| `KeyID` | INT | PK | Tự tăng | |
-| `Partner_UserID`| INT | FK | REFERENCES Users(UserID) | Đối tác sở hữu chi tiết |
-| `ApiKeyString` | VARCHAR(64) | | UNIQUE, NOT NULL | Chuỗi token bảo mật |
-| `IsActive` | BIT | | DEFAULT 1 | Bật/tắt truy cập |
-| `CreatedAt` | DATETIME | | DEFAULT GETDATE() | Ngày sinh token |
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả |
+|:---|:---|:---|:---|
+| `MaGoi` | INT | PK, Identity(1,1) | Mã gói dịch vụ |
+| `TenGoi` | VARCHAR(50) | NOT NULL | Tên gói cước (Ví dụ: STANDARD, EXPRESS) |
+| `GiaKhoiDiem` | DECIMAL(18,2) | NOT NULL | Cước khởi điểm (cho 3km đầu) |
+| `GiaMoiKm` | DECIMAL(18,2) | NOT NULL | Đơn giá cho mỗi km tiếp theo |
+
+---
+
+## 4. Bảng `DonHang` (Quản Lý Vận Đơn)
+Bảng trung tâm của toàn bộ hệ thống, chứa thông tin chi tiết về hàng hóa, chi phí, kích thước và trạng thái.
+
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả |
+|:---|:---|:---|:---|
+| `MaDonHang` | VARCHAR(50) | PK | Mã vận đơn (Vd: AG-123456) |
+| `MaNguoiGui` | INT | FK, REFERENCES NguoiDung | Chủ shop tạo đơn |
+| `MaGoi` | INT | FK, REFERENCES GoiDichVu | Gói cước vận chuyển |
+| `TenNguoiNhan` | NVARCHAR(255) | NOT NULL | Tên khách nhận hàng |
+| `SoDienThoaiNhan` | VARCHAR(20) | NOT NULL | Số điện thoại nhận |
+| `DiaChiNhan` | NVARCHAR(500) | NOT NULL | Địa chỉ giao hàng đầy đủ |
+| `TrongLuongGram` | INT | NOT NULL | Khối lượng thực tế (gram) |
+| `ChieuDaiCM` | INT | NULL | Chiều dài kiện hàng (cm) |
+| `ChieuRongCM` | INT | NULL | Chiều rộng kiện hàng (cm) |
+| `ChieuCaoCM` | INT | NULL | Chiều cao kiện hàng (cm) |
+| `TrongLuongQuyDoiGram` | INT | NULL | Khối lượng quy đổi từ kích thước |
+| `MoTaHangHoa` | NVARCHAR(500) | NOT NULL | Mô tả chi tiết loại hàng |
+| `GiaTriKhaiBao` | DECIMAL(18,2) | DEFAULT 0 | Giá trị hàng để mua bảo hiểm |
+| `PhiBaoHiem` | DECIMAL(18,2) | DEFAULT 0 | Phí bảo hiểm hàng hóa (0.5%) |
+| `KhoangCachKm` | DECIMAL(10,2) | NULL | Khoảng cách OSRM ước tính |
+| `PhiVanChuyen` | DECIMAL(18,2) | NOT NULL | Cước vận chuyển chính thức |
+| `TienThuHoCOD` | DECIMAL(18,2) | DEFAULT 0 | Tiền thu hộ COD |
+| `QuyenKiemTra` | VARCHAR(50) | CHECK (QuyenKiemTra IN ('KHONG_XEM', 'XEM_KHONG_THU', 'THU_HANG')) | Cờ kiểm tra hàng |
+| `GiaoMotPhan` | BIT | DEFAULT 0 | Cho phép giao một phần |
+| `HinhThucLayHang` | VARCHAR(50) | CHECK (HinhThucLayHang IN ('TU_MANG_RA_BUU_CUC', 'NHAN_VIEN_DEN_LAY')) | Cách thức gửi hàng |
+| `TrangThaiHienTai` | VARCHAR(50) | CHECK (TrangThaiHienTai IN ('CHO_LAY_HANG', 'DA_LAY_HANG', 'DANG_VAN_CHUYEN', 'GIAO_THANH_CONG', 'DA_HUY', 'HOAN_TRA')) | Trạng thái vận đơn |
+| `NgayTao` | DATETIME | DEFAULT GETDATE() | Ngày giờ lên đơn |
+
+---
+
+## 5. Bảng `LichSu_TrangThai` (Nhật Ký Hành Trình Vận Đơn)
+Ghi vết chi tiết mọi thay đổi về trạng thái của vận đơn kèm theo vị trí và bưu tá cập nhật.
+
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả |
+|:---|:---|:---|:---|
+| `MaLichSu` | INT | PK, Identity(1,1) | Mã bản ghi hành trình |
+| `MaDonHang` | VARCHAR(50) | FK, REFERENCES DonHang | Cho vận đơn nào |
+| `MaTrangThai` | VARCHAR(50) | NOT NULL | Trạng thái cập nhật |
+| `ThongTinViTri` | NVARCHAR(500) | NULL | Mô tả bưu cục, vị trí hiện tại |
+| `MaNhanVienCapNhat` | INT | FK, REFERENCES NguoiDung | Người thực hiện cập nhật |
+| `ThoiGian` | DATETIME | DEFAULT GETDATE() | Ngày giờ cập nhật |
+
+---
+
+## 6. Bảng `DoiSoat` (Đối Soát Tài Chính COD)
+Theo dõi dòng tiền thu hộ COD và khấu trừ cước phí cho khách hàng.
+
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả |
+|:---|:---|:---|:---|
+| `MaDoiSoat` | INT | PK, Identity(1,1) | Mã sao kê đối soát |
+| `MaDonHang` | VARCHAR(50) | FK, UNIQUE, REFERENCES DonHang | Sao kê cho đơn hàng cụ thể |
+| `MaKhachHang` | INT | FK, REFERENCES NguoiDung | Shop nhận thụ hưởng |
+| `TongTienThu` | DECIMAL(18,2) | NOT NULL | Tổng COD thực tế thu được |
+| `PhiVanChuyenTru` | DECIMAL(18,2) | NOT NULL | Cước vận chuyển bị trừ |
+| `PhiBaoHiemTru` | DECIMAL(18,2) | DEFAULT 0 | Phí bảo hiểm bị trừ |
+| `PhiHoanTraTru` | DECIMAL(18,2) | DEFAULT 0 | Phí hoàn trả phát sinh (nếu có) |
+| `PhiGiaoMotPhanTru` | DECIMAL(18,2) | DEFAULT 0 | Phí giao một phần (nếu có) |
+| `ThucNhan` | DECIMAL(18,2) | NOT NULL | Tiền thực tế chuyển khoản |
+| `TrangThaiDoiSoat` | VARCHAR(50) | CHECK (TrangThaiDoiSoat IN ('CHUA_THANH_TOAN', 'DA_THANH_TOAN')) | Trạng thái thanh toán |
+| `NgayTao` | DATETIME | DEFAULT GETDATE() | Ngày giờ khởi tạo sao kê |
+| `NgayXuLy` | DATETIME | NULL | Ngày giờ thực hiện chuyển khoản |
+
+---
+
+## 7. Bảng `KhoaAPI` (Quản Lý Token Đối Tác B2B)
+Lưu trữ các API Key của đối tác ngoại tích hợp qua REST API.
+
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả |
+|:---|:---|:---|:---|
+| `MaKhoa` | INT | PK, Identity(1,1) | Mã khóa API |
+| `MaDoiTac` | INT | FK, REFERENCES NguoiDung | Đối tác thụ hưởng |
+| `ChuoiKhoaAPI` | VARCHAR(64) | UNIQUE, NOT NULL | Chuỗi API Key 64 ký tự bảo mật |
+| `TrangThaiHoatDong` | BIT | DEFAULT 1 | Bật/tắt truy cập ngoại |
+| `NgayTao` | DATETIME | DEFAULT GETDATE() | Ngày cấp khóa |

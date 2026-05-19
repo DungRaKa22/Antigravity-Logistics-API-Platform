@@ -1,67 +1,54 @@
 # 📋 Kế hoạch triển khai chi tiết - Logistics API Platform
 
-> Tài liệu mô tả chi tiết từng bước triển khai theo Database 6 bảng cốt lõi và mục tiêu kinh doanh.
+> Trạng thái dự án: **🟢 HOÀN THÀNH TOÀN DIỆN (100%)**
 
 ---
 
-## PHASE 1: Nền tảng & Database (Tuần 1-2) [HOÀN THÀNH]
-- [x] Cài đặt Python 3.11+, SQL Server.
-- [x] Thiết kế 6 Bảng Cốt lõi: Users, AddressBook, Orders, TrackingHistory, Reconciliations, ApiKeys.
-- [x] Lưu trữ logic Database vào `init_database.sql`.
+## PHASE 1: Nền tảng & Database [HOÀN THÀNH] ✅
+- [x] Thiết kế 7 Bảng Cốt lõi (Việt hóa): `NguoiDung`, `SoDiaChi`, `GoiDichVu`, `DonHang`, `LichSu_TrangThai`, `DoiSoat`, `KhoaAPI`.
+- [x] Cài đặt SQL Server 2022 và khởi tạo tệp tin cơ sở dữ liệu `init_database.sql`.
+- [x] Nạp dữ liệu mẫu thực tế qua `seed_data.sql`.
+- [x] Đồng bộ hóa SQLAlchemy Models trong `backend/app/models.py`.
 
 ---
 
-## PHASE 2: Backend API Core (Tuần 3-5) [HOÀN THÀNH]
-
-### Ưu tiên 1: Auth & User Module
-- [x] `POST /api/auth/login` (Trả về JWT or Auth Session, lưu Role: SHOP/ADMIN/PARTNER).
-- [x] `GET /api/address-book` (Sổ địa chỉ thông minh, auto-complete phục vụ làm đơn lẻ).
-- [x] `POST /api/address-book` (Thêm địa chỉ).
-
-### Ưu tiên 2: Orders & OSRM (Trái tim hệ thống)
-- [x] Tích hợp OSRM/Map API: nhận `Address` -> Tọa Độ -> Tính DistanceKm -> ShippingFee.
-- [x] `POST /api/orders` (Tạo đơn lẻ, sinh OrderID AG-XXXXXX).
-- [x] `POST /api/orders/bulk-excel` (API parse Upload Excel tạo lô đơn hàng loạt, validate Excel file).
-- [x] `GET /api/orders` (Bảng điều phối trung tâm. Có Query params: status, date, text).
-
-### Ưu tiên 3: Tracking & State Management
-- [x] `GET /api/tracking/{order_id}` (Truy vấn TrackingHistory ra chain timeline phục vụ khách không cần login).
-- [x] `PUT /api/orders/{id}/status` (Chuyển trạng thái PENDING -> PICKED_UP -> vv):
-  - ⚡ **Logic ngầm**: Insert vào bảng `TrackingHistory` dòng log (Ai [AdminID] bấm, lúc nào, Location Info).
-  - ⚡ **Webhook trigger**: Gửi Async background job post payload vào webhook_url của Partner nếu User tạo là PARTNER.
-
-### Ưu tiên 4: Reconciliations & Partners
-- [x] `GET /api/reconciliations/shop` (Xem bảng dòng tiền đối soát).
-- [x] `POST /api/reconciliations/pay` (Kế toán Admin bấm nút duyệt trả tiền thu hộ COD. Chuyển ReconStatus -> PAID).
-- [x] `POST /api/partners/apikey` (Gen Token vào bảng ApiKeys).
+## PHASE 2: Backend API Core [HOÀN THÀNH] ✅
+- [x] **Refactor API theo Schema Việt hóa**:
+  - Auth API (`TenDangNhap`, `MatKhau`, cấp token JWT).
+  - Order API (Tự động quy đổi khối lượng và tính cước vận chuyển, phí bảo hiểm 0.5%).
+  - Address Book API (Hỗ trợ tìm kiếm, phân trang và cờ `LaMacDinh`).
+  - Finance API (Tính toán đối soát bù trừ cước phí và COD, duyệt thanh toán).
+- [x] **Tích hợp Bản đồ số OSRM & Geocode Nominatim**:
+  - Tìm tọa độ từ địa chỉ văn bản, gọi API OSRM tính cước thực tế dựa trên số km đi đường.
+  - Thiết lập cơ chế Fallback (10.5 km) khi API bản đồ công cộng bị quá tải/ngắt kết nối.
+- [x] **Cơ chế Bảo mật Phân quyền**:
+  - Viết middleware kiểm tra quyền hạn `@require_auth` và `@require_role`.
+  - Cấp phát và xác thực chuỗi B2B API Key qua header `X-API-Key`.
 
 ---
 
-## PHASE 3: Web App Toàn Diện (Tuần 6-8)
-
-Sử dụng HTML/CSS/JS thuần + Alpine.js. Một UI duy nhất nhưng rẽ nhánh Role Guard.
-
-### 1. Vùng Public (Guest)
-- Hero Tracking Dashboard tại Trang Chủ.
-- Component Ước tính Cước phí thông minh.
-
-### 2. Merchant Portal (Role: SHOP)
-- Layout có Sidebar Quản lý.
-- Trang Sổ địa chỉ (Smart Address Book).
-- Trang Lên Cũ / Mới Đơn Hàng (Sử dụng AutoComplete sổ địa chỉ).
-- Nút "Upload Excel" kèm Template mẫu .xlsx download.
-- Dashboard Quản lý Đơn hàng (Filter trạng thái).
-- Bảng điều khiển Đối soát (Dòng tiền shop thực nhận).
-
-### 3. Admin Web Dashboard (Role: ADMIN)
-- Bảng điều phối trung tâm (Nhìn thấy ALL Nguồn: API và Web).
-- Component lưới Quản lý Vòng đời (Action: Chuyển Trạng Thái).
-- Tool Quản lý Kế toán: List các đơn cần chuyển khoản (ReconStatus=UNPAID), Nút Duyệt tiền (Approve PAID).
-- Trang quản trị cấu hình (Duyệt Partner, cấp API Key).
+## PHASE 3: Web App Toàn Diện (React + Tailwind CSS) [HOÀN THÀNH] ✅
+- [x] **Thiết lập & Tối ưu hóa Design System**:
+  - Sử dụng Google Stitch AI thiết kế giao diện tối giản Uber-style.
+  - Cập nhật font chữ hiện đại, màu sắc tương phản cao (Đen/Trắng), các nút dạng viên thuốc và ô nhập liệu sắc cạnh không bo góc.
+- [x] **Xây dựng Màn hình Đăng nhập & Đăng ký**:
+  - Bố cục Split Screen sang trọng (bên trái ảnh logistics đen trắng, bên phải form nhập).
+  - Tích hợp bộ chọn vai trò Segmented Control động.
+- [x] **Xây dựng Merchant Portal (Phân hệ Khách hàng)**:
+  - **Trang Dashboard đơn hàng (`/merchant`)**: Danh sách vận đơn, tìm kiếm, lọc trạng thái, phân trang. Khi click vào đơn hàng tự chuyển sang trang hành trình.
+  - **Trang Tạo đơn hàng (`/merchant/order/new`)**: Tích hợp công cụ tính cước động thời gian thực (Real-time Calculator) tự động cập nhật cước phí sau khi nhập thông tin. Tích hợp Combo Box chọn địa chỉ gửi nhanh từ Sổ địa chỉ (ưu tiên địa chỉ mặc định).
+  - **Trang Sổ địa chỉ (`/merchant/addresses`)**: Danh sách địa chỉ nhận, nút đặt mặc định, và form thêm địa chỉ có checkbox đặt làm mặc định.
 
 ---
 
-## PHASE 4 & 5: Tích hợp, Test và Báo Cáo (Tuần 9-11)
-- Verify nghiệp vụ OSRM xử lý km đúng chuẩn. Nhận dạng các Address xa xôi tự fallback.
-- Auto-testing các workflow chính.
-- Báo cáo đồ án, PPT slide và docs public.
+## PHASE 4: Tích hợp & Kiểm thử [HOÀN THÀNH] ✅
+- [x] **Kiểm thử liên thông toàn trình**:
+  - Đăng ký tài khoản ➡️ Lên đơn hàng ➡️ Tính cước OSRM ➡️ Cập nhật trạng thái bưu cục ➡️ Tự sinh bảng đối soát ➡️ Duyệt chi trả COD cho chủ shop.
+- [x] **Khắc phục lỗi logic**:
+  - Sửa NameError và ánh xạ sai tên cột trong API tra cứu hành trình (`tracking_routes.py`).
+
+---
+
+## PHASE 5: Đóng gói & Báo cáo [HOÀN THÀNH] ✅
+- [x] Đồng bộ hóa các tài liệu lưu trữ dự án trong thư mục `memory/`.
+- [x] Hoàn thiện tài liệu hướng dẫn vận hành kĩ thuật và cơ chế API.

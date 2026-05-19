@@ -1,104 +1,48 @@
-# 📝 Ghi chú & Vấn đề phát sinh - Logistics API Platform
+# 📝 Ghi Chú Kỹ Thuật & Vận Hành - Logistics API Platform
 
-> File ghi chú nhanh trong quá trình phát triển. Ghi lại các vấn đề, giải pháp, ý tưởng mới.
-
----
-
-## Ghi chú chung
-
-- **2026-04-07**: Khởi tạo dự án, đọc và phân tích tài liệu đề cương đồ án
-- Framework Python: Cân nhắc giữa Flask (đơn giản) và FastAPI (hiện đại, tự gen docs)
-- **2026-04-09**: Quyết định bổ sung **Alpine.js** cho frontend web
-  - Giữ đúng tinh thần HTML/CSS/JS thuần của đề cương
-  - Alpine.js chỉ là thư viện nhẹ (~15KB), dùng qua CDN, không cần build
-  - Bổ sung Google Fonts (Inter) + Font Awesome cho UI đẹp hơn
+> Tài liệu tổng hợp các ghi chú kĩ thuật quan trọng, cơ chế fallback, và kinh nghiệm xử lý lỗi trong toàn bộ vòng đời phát triển dự án.
 
 ---
 
-## Vấn đề phát sinh & Giải pháp
+## 🗺️ Tích Hợp Bản Đồ & Geocoding (Nominatim & OSRM)
 
-| # | Ngày | Vấn đề | Giải pháp | Trạng thái |
-|---|------|--------|-----------|-----------|
-| 1 | 2026-04-09 | Filtered indexes (WHERE clause) gây lỗi `QUOTED_IDENTIFIER` khi INSERT | Tạo lại indexes không dùng WHERE filter | ✅ Đã sửa |
-| 2 | 2026-04-09 | Python print emoji gây lỗi `UnicodeEncodeError` trên Windows console | Set `PYTHONIOENCODING=utf-8` trước khi chạy | ✅ Đã sửa |
-| 3 | 2026-04-09 | Java JDBC `integratedSecurity` cần file `mssql-jdbc_auth` DLL | Thêm `-Djava.library.path=...\auth\x64` khi chạy | ✅ Đã sửa |
-| 4 | 2026-04-09 | Git push lần đầu bị timeout HTTP 408 | Push lại lần 2 thành công | ✅ Đã sửa |
-
----
-
-## Ý tưởng bổ sung (Backlog)
-
-- [ ] Thêm notification (email/SMS) khi đơn hàng thay đổi trạng thái
-- [ ] Export đơn hàng ra Excel
-- [ ] Thống kê biểu đồ doanh thu trên Desktop
-- [ ] Rate limiting cho API để chống abuse
-- [ ] API versioning (v1, v2)
+1. **Giới hạn tốc độ của Nominatim API**:
+   - Dịch vụ geocoding công cộng của OpenStreetMap (Nominatim) quy định nghiêm ngặt tốc độ tối đa **1 request/giây** trên mỗi IP và bắt buộc có trường `User-Agent` hợp lệ trong header của HTTP request.
+   - Để tuân thủ, backend sử dụng hàm `time.sleep(1)` trước mỗi lần gọi Geocode ở file `osrm_service.py`.
+2. **Cơ chế Fallback Quãng đường An toàn**:
+   - Khi Nominatim hoặc OSRM rớt kết nối, bị chặn IP, hoặc quá tải băng thông công cộng, hệ thống sẽ tự động sử dụng khoảng cách **Fallback là 10.5 km** làm tham số tính toán.
+   - Điều này đảm bảo quy trình tạo đơn hàng của shop không bao giờ bị nghẽn (Zero-blockage) và cước phí ước tính vẫn được đưa ra.
 
 ---
 
-## Tài liệu tham khảo
+## 📘 Logic Hoán Đổi Địa Chỉ Mặc Định (`LaMacDinh`)
 
-- [Flask Documentation](https://flask.palletsprojects.com/)
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [RESTful API Design Best Practices](https://restfulapi.net/)
-- [SQL Server Documentation](https://learn.microsoft.com/en-us/sql/sql-server/)
-- [Java Swing Tutorial](https://docs.oracle.com/javase/tutorial/uiswing/)
-- [Alpine.js Documentation](https://alpinejs.dev/)
-
----
-
-## Thông tin Repository
-
-| Mục | Giá trị |
-|-----|---------|
-| GitHub URL | https://github.com/DungRaKa22/Antigravity-Logistics-API-Platform |
-| Branch chính | `main` |
-| Visibility | Private |
-| Commits | 3+ (init, remove .docx, Việt hóa SQL) |
+Quy trình đồng bộ cờ địa chỉ mặc định trong CSDL được tối ưu hóa như sau:
+1. **Khi thêm mới**:
+   - Nếu khách hàng tích chọn checkbox "Đặt làm mặc định" ➡️ Hệ thống chạy lệnh `SoDiaChi.query.filter_by(MaNguoiDung=user_id).update({"LaMacDinh": False})` để gỡ mặc định cũ trước khi insert bản ghi mới.
+   - Nếu đây là địa chỉ đầu tiên của khách hàng trong hệ thống ➡️ Tự động buộc đặt làm mặc định (`LaMacDinh = True`).
+2. **Khi đặt mặc định**:
+   - Endpoint `PUT /api/address-book/<id>/set-default` sẽ gỡ bỏ cờ mặc định của tất cả địa chỉ cũ của shop đó, sau đó bật cờ mặc định cho địa chỉ mục tiêu trong cùng một database session.
+3. **Khi xóa địa chỉ**:
+   - Nếu shop xóa địa chỉ mặc định hiện tại ➡️ Backend tự động tìm kiếm địa chỉ tiếp theo (nếu có) để đặt làm mặc định mới, tránh việc shop không còn địa chỉ mặc định nào.
 
 ---
 
-## Quyết định kỹ thuật (Technical Decisions)
+## 🛠️ Khắc Phục Lỗi Lịch Sử Hành Trình (`tracking_routes.py`)
 
-| # | Quyết định | Lý do | Ngày |
-|---|-----------|-------|------|
-| 1 | Dùng SQL Server | Yêu cầu đề cương, phù hợp môi trường học thuật | 2026-04-07 |
-| 2 | API-First Architecture | Cho phép đa nền tảng client kết nối | 2026-04-07 |
-| 3 | HTML/CSS/JS thuần (không framework nặng) | Yêu cầu đề cương, tập trung vào kiến thức nền | 2026-04-07 |
-| 4 | ~~Java Swing cho Desktop~~ → **Loại bỏ** | Gộp quản lý vào Web, giảm phức tạp, 1 app duy nhất | 2026-04-14 |
-| 5 | Bổ sung **Alpine.js** cho frontend | Nhẹ (~15KB CDN), reactivity tốt, không cần build, giữ tinh thần JS thuần | 2026-04-09 |
-| 6 | Google Fonts (Inter) + Font Awesome | Typography & icon hiện đại, chuyên nghiệp, dùng qua CDN | 2026-04-09 |
-| 7 | SPA-like hash routing (tự viết) | Điều hướng trang không reload, UX mượt, không cần thư viện router | 2026-04-09 |
-| 8 | CSS Design System (Variables) | Quản lý theme/color/spacing tập trung, dễ maintain, responsive | 2026-04-09 |
-| 9 | Windows Authentication cho SQL Server | Máy dev dùng Windows Auth (không cần sa password) | 2026-04-09 |
-| 10 | GitHub private repo | Quản lý source code, backup, collaboration | 2026-04-09 |
-| 11 | **Việt hóa SQL hoàn toàn** | Tên bảng/cột/trạng thái/vai trò bằng tiếng Việt không dấu, dễ hiểu cho đề tài VN | 2026-04-10 |
-| 12 | **OSRM + Nominatim** cho tính cước | Tính phí theo khoảng cách thực tế (km), miễn phí, open source, hybrid fallback zone | 2026-04-13 |
-| 13 | **Web Admin thay Desktop** | Gộp quản lý (dashboard, đơn hàng, giá cước, users) vào web với phân quyền NHANVIEN/QUANTRI | 2026-04-14 |
+*   **Vấn đề phát sinh**: Trong quá trình review code toàn diện dự án, phát hiện API tra cứu hành trình `/api/tracking/<id>` bị lỗi sập dịch vụ (NameError) do gọi sai tên Model lớp `Order` và `TrackingHistory` không khớp với tên khai báo thực tế bằng tiếng Việt trong tệp tin `models.py` (`DonHang`, `LichSu_TrangThai`).
+*   **Giải pháp xử lý**: Thực hiện cập nhật hoàn tất file `tracking_routes.py`. Bản đồ hóa đúng các thuộc tính CSDL thực tế:
+    - Ánh xạ `order.MaDonHang` thay thế `order.OrderID`.
+    - Ánh xạ `order.TrangThaiHienTai` thay thế `order.CurrentStatus`.
+    - Ánh xạ `order.NgayTao` thay thế `order.CreatedAt`.
+    - Ánh xạ `h.MaTrangThai` thay thế `h.StatusCode`.
+    - Ánh xạ `h.ThongTinViTri` thay thế `h.LocationInfo`.
+    - Ánh xạ `h.ThoiGian` thay thế `h.Timestamp`.
+*   **Kết quả**: API tra cứu công khai đã hoạt động 100% trơn tru, trả về đầy đủ lịch trình thời gian thực dạng JSON.
 
-### Bảng ánh xạ tên (Cũ → Mới)
+---
 
-| Tên cũ (English) | Tên mới (Việt hóa) |
-|---|---|
-| `Users` | `NguoiDung` |
-| `Partners` | `DoiTac` |
-| `Areas` | `KhuVuc` |
-| `ShippingRates` | `BangGia` |
-| `Orders` | `DonHang` |
-| `OrderStatusHistory` | `LichSu_TrangThai` |
+## 🔑 Quản Lý API Key B2B Cho Đối Tác (`DOITAC`)
 
-| Trạng thái cũ | Trạng thái mới |
-|---|---|
-| `PENDING` | `CHO_LAY_HANG` |
-| `PICKED_UP` | `DA_LAY_HANG` |
-| `IN_TRANSIT` | `DANG_VAN_CHUYEN` |
-| `DELIVERED` | `GIAO_THANH_CONG` |
-| `CANCELLED` | `DA_HUY` |
-| `RETURNED` | `HOAN_TRA` |
-
-| Vai trò cũ | Vai trò mới |
-|---|---|
-| `CUSTOMER` | `KHACHHANG` |
-| `STAFF` | `NHANVIEN` |
-| `ADMIN` | `QUANTRI` |
-
+- Chuỗi API Key được backend sinh ra ngẫu nhiên có độ dài 64 ký tự bắt đầu bằng tiền tố `AG_PARTNER_...` sử dụng hàm bảo mật `secrets.token_hex`.
+- Đối tác tích hợp đẩy đơn hàng qua API sử dụng header `X-API-Key` giúp hệ thống phân biệt được đối tác cụ thể mà không cần duy trì JWT Token hết hạn.

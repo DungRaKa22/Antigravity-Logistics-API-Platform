@@ -29,3 +29,9 @@ def calculate_final_payout(cod_amount: Decimal, shipping_fee: Decimal) -> Decima
     cod = Decimal(str(cod_amount))
     fee = Decimal(str(shipping_fee))
     return cod - fee
+
+def calculate_insurance_fee(declared_value: float) -> float:
+    return float(declared_value) * 0.005
+
+def calculate_volumetric_weight(length: int, width: int, height: int) -> int:
+    return int((length * width * height) / 5000)

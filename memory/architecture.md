@@ -10,24 +10,25 @@
 │                                                                 │
 │  ┌─────────────────────────────┐  ┌────────────────────────────┐│
 │  │  🌐 Web App (SPA)          │  │  🔗 Partner Systems        ││
-│  │  HTML/CSS/JS + Alpine.js   │  │  (Sàn TMĐT, 3rd Party)     ││
+│  │  React + Vite + Tailwind    │  │  (Sàn TMĐT, 3rd Party)     ││
 │  │                             │  │                            ││
-│  │  👤 Guest: Tracking & Giá   │  │  Gọi RESTful API           ││
-│  │  🏪 Shop: Portal (Address  │  │  M2M tự động. Nhận WebHook ││
-│  │       Book, Bulk Excel)     │  │                            ││
-│  │  👨‍💼 Admin: Dispatch Board, │  │                            ││
-│  │       Reconciliation (Đối   │  │                            ││
-│  │       soát).                │  │                            ││
+│  │  👤 Guest: Tracking         │  │  Gọi RESTful API           ││
+│  │  Store: AuthContext         │  │  M2M tự động.              ││
+│  │  🏪 Merchant: Portal        │  │  Nhận Webhook              ││
+│  │       (Sổ địa chỉ mặc định, │  │                            ││
+│  │       Tạo đơn OSRM)         │  │                            ││
+│  │  👨‍💼 Admin: Dispatch &      │  │                            ││
+│  │       Reconciliation        │  │                            ││
 │  └──────────┬──────────────────┘  └────────────┬───────────────┘│
 │             │                                  │                │
 └─────────────┼──────────────────────────────────┼────────────────┘
-              │  HTTP/JSON (Fetch API)            │  HTTP/JSON
+              │  HTTP/JSON (Axios)               │  HTTP/JSON
               │                                  │
 ┌─────────────┼──────────────────────────────────┼────────────────┐
 │             ▼                                  ▼                │
 │  ┌─────────────────────────────────────────────────────────┐     │
 │  │              🐍 SERVICE TIER - Python API               │     │
-│  │                  (Flask / FastAPI)                       │     │
+│  │                      (Flask Web)                        │     │
 │  │                                                         │     │
 │  │  ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐  │     │
 │  │  │  Auth   │ │ Address  │ │ Orders & │ │   Recon   │  │     │
@@ -36,35 +37,36 @@
 │  │                    │                                    │     │
 │  │              ┌─────▼──────────────────────────────┐    │     │
 │  │              │   🗺️ Dịch vụ Bản Đồ Số           │    │     │
-│  │              │   • OSRM / Google Maps             │    │     │
-│  │              │   • Trả về Quãng đường (Distance)  │    │     │
+│  │              │   • OSRM Router API                │    │     │
+│  │              │   • Geocoding Nominatim (OSM)      │    │     │
 │  │              └────────────────────────────────────┘    │     │
 │  │                                                         │     │
 │  │  ┌──────────────────────────────────────────────────┐  │     │
-│  │  │           Middleware & Worker Layer              │  │     │
-│  │  │  • API Key Validation                            │  │     │
-│  │  │  • Excel Parser (Bulk Upload)                    │  │     │
+│  │  │           Middleware & Service Layer             │  │     │
+│  │  │  • API Key Validation (B2B Header check)         │  │     │
+│  │  │  • openpyxl Excel Parser (Bulk Upload)           │  │     │
 │  │  │  • Webhook Trigger (Khi đổi Status)              │  │     │
 │  │  └──────────────────────────────────────────────────┘  │     │
 │  └────────────────────────┬────────────────────────────────┘     │
 │                           │                                      │
 │              SERVICE TIER │                                      │
 └───────────────────────────┼──────────────────────────────────────┘
-                            │  SQL Queries (pyodbc/SQLAlchemy)
+                            │  SQL Queries (SQLAlchemy ORM / PyODBC)
                             │
                   ┌─────────▼─────────┐
                   │                   │  
                   │   📦 DATA TIER    │
-                  │   SQL Server      │
+                  │   SQL Server 2022 │
                   │                   │
                   │  ┌──────────────┐  │
-                  │  │ 6 Core Tables│  │
-                  │  │ - Users      │  │
-                  │  │ - AddressBook│  │
-                  │  │ - Orders     │  │
-                  │  │ - Tracking   │  │
-                  │  │ - Recon      │  │
-                  │  │ - ApiKeys    │  │
+                  │  │7 Core Tables │  │
+                  │  │- NguoiDung   │  │
+                  │  │- SoDiaChi    │  │
+                  │  │- GoiDichVu   │  │
+                  │  │- DonHang     │  │
+                  │  │- LichSu      │  │
+                  │  │- DoiSoat     │  │
+                  │  │- KhoaAPI     │  │
                   │  └──────────────┘  │
                   │                   │
                   └───────────────────┘
@@ -77,43 +79,36 @@
 ### 1. Luồng Chủ Shop lập đơn hàng (Order Creation)
 ```
 [Web App Portal]
-  Nhập Tên khách -> Alpine.js Autocomplete search (API GET /address-book)
-  Tự động điền SĐT, Tỉnh, Thành phố.
-  Upload Excel -> API POST /orders/bulk-excel -> Insert N rows TO Orders.
+  Người dùng chọn địa chỉ gửi nhanh từ Sổ địa chỉ (hoặc để mặc định).
+  Nhập địa chỉ nhận ➡️ Hệ thống gọi API OSRM tính km và ước tính cước phí thời gian thực.
+  Nhập trọng lượng và kích thước D-R-C ➡️ Quy đổi trọng lượng quy đổi và tính toán phụ phí.
+  Bấm Tạo đơn ➡️ Gửi POST lên /api/orders/ ➡️ Lưu vào CSDL với mã vận đơn tự sinh (AG-XXXXXX).
 ```
 
-### 2. Luồng Tính cước phí Thông minh
+### 2. Luồng Tính cước phí thông minh
 ```
-Dựa trên Master Data Địa Chỉ:
-  -> Ném qua API OSRM / GG Maps.
-  -> Trả về: 25.5 Km (DistanceKm).
-  -> FeeDeducted = 25.5 * 3000 VNĐ.
-  -> CodAmount (Khách tự nhập)
-```
-
-### 3. Luồng Dispatch (Điều phối) & State Timeline
-```
-Admin Dashboard (Dispatch Board)
-  Lọc Grid 1000 đơn hàng. Chọn đơn AG-883921.
-  Mở Modal: Bấm "Đã lấy hàng" (PICKED_UP).
-  -> API Update Order [CurrentStatus].
-  -> API Insert [TrackingHistory] ghi vết AdminID nào bấm, thời gian.
-  -> API Trigger HTTP POST async sang webhook_url_cua_partner.
+Tính toán cước phí và phụ phí:
+  TrongLuongQuyDoiGram = (D x R x C) / 5000
+  TrongLuongTinhCuoc = max(TrongLuongGram, TrongLuongQuyDoiGram)
+  GoiDichVu ➡️ Lấy GiaKhoiDiem và GiaMoiKm của dịch vụ được chọn (Standard/Express).
+  KhoangCachKm ➡️ Lấy khoảng cách thực tế từ OSRM API (Fallback về 10.5 km nếu lỗi kết nối Nominatim).
+  PhiVanChuyen = GiaKhoiDiem + (GiaMoiKm * (KhoangCachKm - 3.0)) + Phụ phí khối lượng (2,000đ cho mỗi 1kg vượt mức).
+  PhiBaoHiem = GiaTriKhaiBao * 0.005 (nếu có khai báo giá trị).
 ```
 
-### 4. Luồng Kế Toán Đối Soát (Reconciliation)
+### 3. Luồng Đối soát tài chính COD (Reconciliation)
 ```
-Đơn hàng giao thành công [DELIVERED]. COD thu xong.
-Kế toán bật màn hình Finance Recon.
-Hệ thống tính: FinalPayout = CodAmount - ShippingFee.
-Bấm nút "Tạo sao kê" -> Cập nhật bảng `Reconciliations` Status UNPAID -> PAID.
-Chủ shop nhìn thấy bảng đối soát trên màn hình Merchant Portal.
+Đơn hàng giao thành công [GIAO_THANH_CONG].
+  ➡️ Hệ thống tự động kích hoạt tạo dòng đối soát DoiSoat ở trạng thái CHUA_THANH_TOAN.
+  ➡️ ThucNhan = TienThuHoCOD - PhiVanChuyen - PhiBaoHiem.
+  ➡️ Quản trị viên (Kế toán) bấm nút "Thanh toán đối soát" trên Admin Dashboard.
+  ➡️ Bảng DoiSoat chuyển trạng thái sang DA_THANH_TOAN, ghi nhận ngày giờ xử lý thực tế.
 ```
+
+---
 
 ## Giải pháp kỹ thuật
 
-- **Trình bày (Web)**: Đừng quá thiết kế phức tạp. Alpine.js handle form và autocomplete.
-- **Bảo mật & Auth**: Sử dụng `werkzeug.security` thay thế bcrypt. `PyJWT` quản lý phiên truy cập, và Token 64 kí tự cho B2B API Key.
-- **Tiêu thụ Bản đồ**: OSRM cho tiết kiệm, kết hợp Nominatim geocoding. 
-- **Upload Excel**: Client parse gửi JSON lên API, hoặc Upload trực tiếp MIME part Backend dùng `pandas`/`openpyxl` bóc tách dữ liệu vào Database.
-- **Webhook**: Dùng `threading` cơ bản trên Python Flask để ném background request hoặc dùng `celery`/`Redis` nếu scale lớn.
+- **Ứng dụng Web Single Page App (SPA)**: Xây dựng bằng React + Vite, giao diện Uber-style tối giản đen-trắng, tối ưu hóa các linh kiện và state giúp giao diện tải siêu tốc.
+- **Xác thực an toàn**: Sử dụng token JWT (JSON Web Tokens) cho phiên làm việc của người dùng trên Web, và API Key dài 64 ký tự an toàn cho các tác vụ kết nối B2B M2M của Đối tác.
+- **Tích hợp bản đồ**: Kết hợp dịch vụ địa lý Nominatim Geocoding của OpenStreetMap và dịch vụ OSRM Router để lấy khoảng cách chính xác theo km đường đi thực tế. Có cơ chế fallback tự động để hệ thống không bao giờ bị nghẽn khi API công cộng bị giới hạn băng thông.
