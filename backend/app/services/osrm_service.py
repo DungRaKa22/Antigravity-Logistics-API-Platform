@@ -64,3 +64,55 @@ def get_smart_distance(addr_gui: str, addr_nhan: str, lat_gui=None, lon_gui=None
             
     # Fallback giả định nếu API OSM/OSRM rớt
     return 10.5
+
+def optimize_multistop_path(sender_address: str, receiver_addresses: list):
+    """
+    Tối ưu hóa lộ trình đa điểm (Nearest Neighbor).
+    Trả về danh sách địa chỉ nhận đã được sắp xếp tối ưu kèm khoảng cách từng chặng.
+    """
+    # 1. Geocode sender
+    lat_gui, lon_gui = geocode_address(sender_address)
+    if not lat_gui or not lon_gui:
+        # Fallback if geocoding fails
+        return list(range(len(receiver_addresses))), [10.5] + [5.0] * (len(receiver_addresses) - 1)
+
+    # 2. Geocode all receivers
+    coords = []
+    for idx, addr in enumerate(receiver_addresses):
+        lat, lon = geocode_address(addr)
+        coords.append((idx, lat, lon))
+
+    # Nearest Neighbor routing
+    unvisited = list(coords)
+    curr_lat, curr_lon = lat_gui, lon_gui
+    optimized_indices = []
+    distances = []
+
+    while unvisited:
+        # Tìm điểm nhận chưa đi qua gần nhất (khoảng cách Euclid sơ bộ)
+        best_idx = 0
+        best_dist = float('inf')
+        
+        for i, (idx, lat, lon) in enumerate(unvisited):
+            if lat is not None and lon is not None and curr_lat is not None and curr_lon is not None:
+                dist = ((lat - curr_lat) ** 2 + (lon - curr_lon) ** 2) ** 0.5
+            else:
+                dist = 9999.0
+            
+            if dist < best_dist:
+                best_dist = dist
+                best_idx = i
+        
+        # Chọn điểm đó
+        chosen_idx, chosen_lat, chosen_lon = unvisited.pop(best_idx)
+        
+        # Tính khoảng cách OSRM thực tế từ điểm hiện tại tới điểm nhận được chọn
+        leg_dist = get_smart_distance("", "", lat_gui=curr_lat, lon_gui=curr_lon, lat_nhan=chosen_lat, lon_nhan=chosen_lon)
+        distances.append(leg_dist)
+        
+        # Cập nhật vị trí hiện tại
+        if chosen_lat is not None and chosen_lon is not None:
+            curr_lat, curr_lon = chosen_lat, chosen_lon
+        optimized_indices.append(chosen_idx)
+
+    return optimized_indices, distances

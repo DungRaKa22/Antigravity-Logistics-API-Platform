@@ -15,6 +15,37 @@ def create_app(config_name="default"):
     db.init_app(app)
     cors.init_app(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
+    # Safe SQL Server migrations on startup
+    with app.app_context():
+        from sqlalchemy import text
+        try:
+            db.session.execute(text("""
+                IF NOT EXISTS (
+                    SELECT * FROM sys.columns 
+                    WHERE object_id = OBJECT_ID(N'NguoiDung') 
+                    AND name = N'GioiHanDonNgay'
+                )
+                BEGIN
+                    ALTER TABLE NguoiDung ADD GioiHanDonNgay INT NOT NULL DEFAULT 100;
+                END
+            """))
+            db.session.execute(text("""
+                IF NOT EXISTS (
+                    SELECT * FROM sys.columns 
+                    WHERE object_id = OBJECT_ID(N'NguoiDung') 
+                    AND name = N'GhiChuNhanSu'
+                )
+                BEGIN
+                    ALTER TABLE NguoiDung ADD GhiChuNhanSu NVARCHAR(1000) NULL;
+                END
+            """))
+            db.session.commit()
+            app.logger.info("Safe database schema migration completed.")
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error checking/migrating schema: {e}")
+
+
     # Health Check Endpoint
     @app.route('/api/health')
     def health_check():

@@ -1,6 +1,7 @@
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import PublicOnlyRoute from './components/PublicOnlyRoute';
 
 import Home from './pages/Home';
 import Tracking from './pages/Tracking';
@@ -10,50 +11,328 @@ import Register from './pages/Register';
 import MerchantDashboard from './pages/MerchantDashboard';
 import MerchantOrders from './pages/MerchantOrders';
 import MerchantAddresses from './pages/MerchantAddresses';
+import MerchantInvoices from './pages/MerchantInvoices';
+
+// Admin Portals
+import AdminDashboard from './pages/AdminDashboard';
+import AdminUsers from './pages/AdminUsers';
+import AdminInvoices from './pages/AdminInvoices';
+
+// Staff Portals
+import StaffDashboard from './pages/StaffDashboard';
 
 
 function Navbar() {
   const { user, logout, isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  const isActive = (path) => location.pathname === path;
+
+  const getDashboardPath = () => {
+    if (!isAuthenticated()) return '/';
+    if (user?.role === 'QUANTRI') return '/admin';
+    if (user?.role === 'NHANVIEN') return '/staff';
+    return '/merchant';
+  };
 
   return (
-    <nav className="h-16 border-b border-gray-200 flex items-center justify-between px-6 bg-canvas">
-      <div className="flex items-center gap-6">
-        <Link to="/" className="font-bold text-xl tracking-tight">ANTIGRAVITY EXPRESS</Link>
-        <div className="flex gap-4">
-          <Link to="/" className="font-medium text-sm text-secondary hover:text-ink">Trang chủ</Link>
-          <Link to="/tracking" className="font-medium text-sm text-secondary hover:text-ink">Tra cứu</Link>
-          {isAuthenticated() && user.role === 'KHACHHANG' && (
+    <header className="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-white border-b border-black/5 shadow-[0_2px_15px_rgba(0,0,0,0.01)]">
+      <div className="flex items-center gap-8">
+        <Link to={getDashboardPath()} className="flex flex-col items-start group transition-all duration-300">
+          <div className="flex items-center gap-2">
+            <svg viewBox="0 0 32 32" className="w-7 h-7 transform group-hover:scale-110 transition-transform duration-300" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 3L4 25C4 25 9 22 16 22C23 22 28 25 28 25L16 3Z" fill="url(#navLogoGrad)" />
+              <path d="M16 10L10 20H22L16 10Z" fill="white" />
+              <circle cx="16" cy="15" r="2.5" fill="#30195C" />
+              <defs>
+                 <linearGradient id="navLogoGrad" x1="4" y1="3" x2="28" y2="25" gradientUnits="userSpaceOnUse">
+                   <stop offset="0%" stop-color="#5E0ED7" />
+                   <stop offset="100%" stop-color="#30195C" />
+                 </linearGradient>
+              </defs>
+            </svg>
+            <div className="flex items-center font-display">
+              <span className="font-medium text-sm md:text-base tracking-[0.5px] text-[#30195C] transition-colors duration-300 uppercase">ANTIGRAVITY</span>
+              <span className="bg-[#30195C] text-white font-extrabold text-[11px] md:text-[13px] px-1.5 py-0.5 ml-1 rounded-[1px] tracking-[0.5px] uppercase shadow-[0_2px_8px_rgba(48,25,92,0.2)]">EXPRESS</span>
+            </div>
+          </div>
+          <span className="text-[6px] md:text-[7.5px] font-bold text-[#30195C]/80 tracking-[2px] mt-0.5 ml-9 uppercase font-sans">NHANH VÀ ĐÁNG TIN CẬY</span>
+        </Link>
+        <nav className="hidden md:flex gap-6 items-center h-full pt-1">
+          {/* Hide public pages (Trang chủ & Tra cứu) when authenticated */}
+          {!isAuthenticated() && (
             <>
-              <Link to="/merchant" className="font-medium text-sm text-secondary hover:text-ink">Dashboard</Link>
-              <Link to="/merchant/order/new" className="font-medium text-sm text-secondary hover:text-ink">Tạo Đơn</Link>
-              <Link to="/merchant/orders" className="font-medium text-sm text-secondary hover:text-ink">Đơn hàng</Link>
-              <Link to="/merchant/addresses" className="font-medium text-sm text-secondary hover:text-ink">Sổ địa chỉ</Link>
+              <Link 
+                to="/" 
+                className={`font-semibold text-xs tracking-wider uppercase transition-all pb-1 relative group ${
+                  isActive('/') ? 'text-black font-extrabold' : 'text-black/60 hover:text-black'
+                }`}
+              >
+                Trang chủ
+                <span className={`absolute bottom-0 left-0 w-full h-[2px] bg-accent-purple shadow-[0_0_8px_#5E0ED7] transition-transform duration-300 origin-center ${
+                  isActive('/') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`} />
+              </Link>
+              <Link 
+                to="/tracking" 
+                className={`font-semibold text-xs tracking-wider uppercase transition-all pb-1 relative group ${
+                  isActive('/tracking') ? 'text-black font-extrabold' : 'text-black/60 hover:text-black'
+                }`}
+              >
+                Tra cứu
+                <span className={`absolute bottom-0 left-0 w-full h-[2px] bg-accent-purple shadow-[0_0_8px_#5E0ED7] transition-transform duration-300 origin-center ${
+                  isActive('/tracking') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`} />
+              </Link>
             </>
           )}
-        </div>
+
+          {/* Merchant Navigation */}
+          {isAuthenticated() && user.role === 'KHACHHANG' && (
+            <>
+              <Link 
+                to="/merchant" 
+                className={`font-semibold text-xs tracking-wider uppercase transition-all pb-1 relative group ${
+                  isActive('/merchant') ? 'text-black font-extrabold' : 'text-black/60 hover:text-black'
+                }`}
+              >
+                Dashboard
+                <span className={`absolute bottom-0 left-0 w-full h-[2px] bg-accent-purple shadow-[0_0_8px_#5E0ED7] transition-transform duration-300 origin-center ${
+                  isActive('/merchant') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`} />
+              </Link>
+              <Link 
+                to="/merchant/order/new" 
+                className={`font-semibold text-xs tracking-wider uppercase transition-all pb-1 relative group ${
+                  isActive('/merchant/order/new') ? 'text-black font-extrabold' : 'text-black/60 hover:text-black'
+                }`}
+              >
+                Tạo Đơn
+                <span className={`absolute bottom-0 left-0 w-full h-[2px] bg-accent-purple shadow-[0_0_8px_#5E0ED7] transition-transform duration-300 origin-center ${
+                  isActive('/merchant/order/new') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`} />
+              </Link>
+              <Link 
+                to="/merchant/orders" 
+                className={`font-semibold text-xs tracking-wider uppercase transition-all pb-1 relative group ${
+                  isActive('/merchant/orders') ? 'text-black font-extrabold' : 'text-black/60 hover:text-black'
+                }`}
+              >
+                Đơn hàng
+                <span className={`absolute bottom-0 left-0 w-full h-[2px] bg-accent-purple shadow-[0_0_8px_#5E0ED7] transition-transform duration-300 origin-center ${
+                  isActive('/merchant/orders') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`} />
+              </Link>
+              <Link 
+                to="/merchant/invoices" 
+                className={`font-semibold text-xs tracking-wider uppercase transition-all pb-1 relative group ${
+                  isActive('/merchant/invoices') ? 'text-black font-extrabold' : 'text-black/60 hover:text-black'
+                }`}
+              >
+                Đối soát
+                <span className={`absolute bottom-0 left-0 w-full h-[2px] bg-accent-purple shadow-[0_0_8px_#5E0ED7] transition-transform duration-300 origin-center ${
+                  isActive('/merchant/invoices') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`} />
+              </Link>
+              <Link 
+                to="/merchant/addresses" 
+                className={`font-semibold text-xs tracking-wider uppercase transition-all pb-1 relative group ${
+                  isActive('/merchant/addresses') ? 'text-black font-extrabold' : 'text-black/60 hover:text-black'
+                }`}
+              >
+                Sổ địa chỉ
+                <span className={`absolute bottom-0 left-0 w-full h-[2px] bg-accent-purple shadow-[0_0_8px_#5E0ED7] transition-transform duration-300 origin-center ${
+                  isActive('/merchant/addresses') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`} />
+              </Link>
+            </>
+          )}
+
+          {/* Admin Navigation */}
+          {isAuthenticated() && user.role === 'QUANTRI' && (
+            <>
+              <Link 
+                to="/admin" 
+                className={`font-semibold text-xs tracking-wider uppercase transition-all pb-1 relative group ${
+                  isActive('/admin') ? 'text-black font-extrabold' : 'text-black/60 hover:text-black'
+                }`}
+              >
+                Operations Dashboard
+                <span className={`absolute bottom-0 left-0 w-full h-[2px] bg-accent-purple shadow-[0_0_8px_#5E0ED7] transition-transform duration-300 origin-center ${
+                  isActive('/admin') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`} />
+              </Link>
+              <Link 
+                to="/admin/users" 
+                className={`font-semibold text-xs tracking-wider uppercase transition-all pb-1 relative group ${
+                  isActive('/admin/users') ? 'text-black font-extrabold' : 'text-black/60 hover:text-black'
+                }`}
+              >
+                Nhân sự
+                <span className={`absolute bottom-0 left-0 w-full h-[2px] bg-accent-purple shadow-[0_0_8px_#5E0ED7] transition-transform duration-300 origin-center ${
+                  isActive('/admin/users') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`} />
+              </Link>
+              <Link 
+                to="/admin/invoices" 
+                className={`font-semibold text-xs tracking-wider uppercase transition-all pb-1 relative group ${
+                  isActive('/admin/invoices') ? 'text-black font-extrabold' : 'text-black/60 hover:text-black'
+                }`}
+              >
+                Hóa đơn Đối soát
+                <span className={`absolute bottom-0 left-0 w-full h-[2px] bg-accent-purple shadow-[0_0_8px_#5E0ED7] transition-transform duration-300 origin-center ${
+                  isActive('/admin/invoices') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`} />
+              </Link>
+            </>
+          )}
+
+          {/* Shipper Navigation */}
+          {isAuthenticated() && user.role === 'NHANVIEN' && (
+            <>
+              <Link 
+                to="/staff" 
+                className={`font-semibold text-xs tracking-wider uppercase transition-all pb-1 relative group ${
+                  isActive('/staff') ? 'text-black font-extrabold' : 'text-black/60 hover:text-black'
+                }`}
+              >
+                Shipper Portal
+                <span className={`absolute bottom-0 left-0 w-full h-[2px] bg-accent-purple shadow-[0_0_8px_#5E0ED7] transition-transform duration-300 origin-center ${
+                  isActive('/staff') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`} />
+              </Link>
+            </>
+          )}
+        </nav>
       </div>
 
       <div className="flex items-center gap-4">
         {isAuthenticated() ? (
           <div className="flex items-center gap-4">
-            <span className="text-sm font-semibold text-ink">
-              {user.fullname} <span className="text-xs font-normal text-secondary bg-canvas-soft px-2 py-1 rounded-full">{user.role}</span>
-            </span>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-accent-purple text-white flex items-center justify-center font-bold text-xs border border-accent-purple/30 shadow-[0_0_10px_rgba(94,14,215,0.4)]" title={user.fullname}>
+                {user.fullname?.charAt(0).toUpperCase() || 'A'}
+              </div>
+              <span className="text-xs font-extrabold text-black uppercase tracking-wider hidden sm:inline flex items-center gap-1.5">
+                {user.fullname} 
+                <span className="text-[9px] font-bold text-accent-purple bg-accent-purple/10 px-2 py-0.5 rounded-full border border-accent-purple/35 shadow-[0_0_8px_rgba(94,14,215,0.15)]">
+                  {user.role}
+                </span>
+              </span>
+            </div>
             <button
               onClick={logout}
-              className="btn-subtle px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+              className="px-4 py-1.5 text-xs text-black border border-black/10 rounded-full hover:border-accent-purple hover:bg-accent-purple/5 hover:shadow-[0_2px_10px_rgba(94,14,215,0.1)] transition-all font-extrabold cursor-pointer"
             >
               Đăng xuất
             </button>
           </div>
         ) : (
           <div className="flex gap-2">
-            <Link to="/login" className="btn-subtle px-4 py-2 text-sm">Đăng nhập</Link>
-            <Link to="/register" className="btn-primary px-4 py-2 text-sm">Đăng ký</Link>
+            <Link to="/login" className="btn-secondary px-4 py-2 text-xs font-extrabold border border-black/10 hover:border-accent-purple/35 transition-all text-black bg-transparent">Đăng nhập</Link>
+            <Link to="/register" className="btn-primary px-4 py-2 text-xs font-extrabold">Đăng ký</Link>
           </div>
         )}
       </div>
-    </nav>
+    </header>
+  );
+}
+
+function AppContent() {
+  const location = useLocation();
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+
+  return (
+    <div className="min-h-screen flex flex-col bg-canvas">
+      {!isAuthPage && <Navbar />}
+      <main className={`flex-1 bg-canvas ${isAuthPage ? '' : 'pt-16'}`}>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<PublicOnlyRoute><Home /></PublicOnlyRoute>} />
+          <Route path="/tracking" element={<PublicOnlyRoute><Tracking /></PublicOnlyRoute>} />
+          <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+          <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+
+          {/* Protected Merchant Routes */}
+          <Route
+            path="/merchant"
+            element={
+              <ProtectedRoute allowedRoles={['KHACHHANG']}>
+                <MerchantDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/merchant/order/new"
+            element={
+              <ProtectedRoute allowedRoles={['KHACHHANG']}>
+                <MerchantOrder />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/merchant/orders"
+            element={
+              <ProtectedRoute allowedRoles={['KHACHHANG']}>
+                <MerchantOrders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/merchant/addresses"
+            element={
+              <ProtectedRoute allowedRoles={['KHACHHANG']}>
+                <MerchantAddresses />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/merchant/invoices"
+            element={
+              <ProtectedRoute allowedRoles={['KHACHHANG']}>
+                <MerchantInvoices />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected Admin Routes */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['QUANTRI']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute allowedRoles={['QUANTRI']}>
+                <AdminUsers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/invoices"
+            element={
+              <ProtectedRoute allowedRoles={['QUANTRI']}>
+                <AdminInvoices />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected Staff/Shipper Routes */}
+          <Route
+            path="/staff"
+            element={
+              <ProtectedRoute allowedRoles={['NHANVIEN']}>
+                <StaffDashboard />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </main>
+    </div>
   );
 }
 
@@ -61,52 +340,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="min-h-screen flex flex-col">
-          <Navbar />
-          <main className="flex-1">
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/tracking" element={<Tracking />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-
-              {/* Protected Merchant Routes */}
-              <Route
-                path="/merchant"
-                element={
-                  <ProtectedRoute allowedRoles={['KHACHHANG']}>
-                    <MerchantDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/merchant/order/new"
-                element={
-                  <ProtectedRoute allowedRoles={['KHACHHANG']}>
-                    <MerchantOrder />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/merchant/orders"
-                element={
-                  <ProtectedRoute allowedRoles={['KHACHHANG']}>
-                    <MerchantOrders />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/merchant/addresses"
-                element={
-                  <ProtectedRoute allowedRoles={['KHACHHANG']}>
-                    <MerchantAddresses />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </main>
-        </div>
+        <AppContent />
       </Router>
     </AuthProvider>
   );

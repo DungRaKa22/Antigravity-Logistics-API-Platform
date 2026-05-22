@@ -116,89 +116,101 @@ export default function MerchantAddresses() {
   };
 
   return (
-    <div className="bg-canvas min-h-screen py-8 px-6 lg:px-16 animate-fadeIn">
+    <div className="bg-canvas min-h-screen py-10 px-6 lg:px-16 relative overflow-hidden">
+      {/* Advanced Neon Aurora Background Blobs */}
+      <div className="neon-aurora-blob bg-accent-purple/10 w-[600px] h-[600px] -top-20 -left-20 animate-pulse"></div>
+      <div className="neon-aurora-blob bg-cyan-500/5 w-[500px] h-[500px] bottom-10 right-10 animate-pulse" style={{ animationDuration: '6s' }}></div>
+
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10 pb-6 border-b border-gray-200">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10 pb-6 border-b border-black/10 relative z-10">
         <div>
-          <h1 className="text-[32px] font-bold text-ink tracking-tight mb-1">Sổ địa chỉ</h1>
-          <p className="text-secondary text-sm">Lưu giữ thông tin liên hệ và địa chỉ lấy hàng thường dùng</p>
+          <span className="text-[10px] font-black text-accent-purple uppercase tracking-widest block mb-1">Address Book</span>
+          <h1 className="text-3xl font-black text-black tracking-widest uppercase font-display text-glow-purple">Sổ địa chỉ</h1>
+          <p className="text-mute text-xs font-semibold uppercase tracking-wider mt-1">Lưu giữ thông tin liên hệ và địa chỉ lấy hàng thường dùng</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="bg-primary text-on-primary font-semibold text-sm px-6 py-3 rounded-full hover:opacity-90 active:scale-95 transition-all flex items-center gap-2"
+          className="btn-primary px-6 py-3 text-xs uppercase tracking-widest font-extrabold flex items-center gap-2 h-12"
         >
-          <Plus className="w-4 h-4" /> Thêm địa chỉ mới
+          <Plus className="w-4 h-4 text-white" /> Thêm địa chỉ mới
         </button>
       </div>
 
       {error && (
-        <div className="bg-amber-50 text-amber-800 text-sm p-4 rounded-xl mb-8 border border-amber-100">
+        <div className="bg-rose-50 text-rose-700 text-xs p-4 rounded-xl mb-8 border border-rose-200 font-bold uppercase tracking-wider relative z-10">
           {error}
         </div>
       )}
 
       {/* Search Bar */}
-      <section className="mb-8">
+      <section className="mb-8 relative z-10">
         <div className="relative w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-mute" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-accent-purple" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Tìm kiếm tên liên hệ hoặc số điện thoại..."
-            className="w-full h-14 pl-12 pr-4 bg-canvas-soft border-none focus:ring-1 focus:ring-primary text-sm rounded-none text-ink placeholder-mute"
+            className="w-full input-neon h-14 pl-12 pr-4 focus:shadow-[0_0_20px_rgba(94,14,215,0.08)] text-xs font-bold uppercase tracking-wider text-black placeholder-mute transition-all duration-300"
           />
         </div>
       </section>
 
       {/* Address Grid */}
       {loading ? (
-        <div className="text-center py-12 text-secondary text-sm">
+        <div className="text-center py-12 text-mute font-bold uppercase tracking-widest animate-pulse relative z-10">
           Đang tải danh sách địa chỉ...
         </div>
       ) : filteredAddresses.length === 0 ? (
-        <div className="text-center py-12 text-secondary text-sm border border-dashed border-gray-200 rounded-2xl">
+        <div className="text-center py-12 text-mute font-bold uppercase tracking-wider border border-dashed border-black/10 rounded-2xl relative z-10 bg-white/40">
           Không tìm thấy địa chỉ nào trong sổ địa chỉ.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
           {filteredAddresses.map((item) => (
             <div
               key={item.id}
-              className={`bg-canvas border rounded-2xl p-6 flex flex-col justify-between transition-all duration-300 min-h-[240px] ${
-                item.isDefault ? 'border-primary shadow-sm bg-gray-50/20' : 'border-gray-200 hover:border-primary'
+              className={`glow-card p-6 flex flex-col justify-between transition-all duration-300 min-h-[240px] relative overflow-hidden group ${
+                item.isDefault 
+                  ? 'border-accent-purple/40 bg-accent-purple/[0.03] shadow-[0_4px_20px_rgba(94,14,215,0.08)]' 
+                  : 'border-black/10 bg-white/50 hover:border-accent-purple/30'
               }`}
             >
+              {item.isDefault && (
+                <div className="absolute top-0 right-0 w-[80px] h-[80px] bg-accent-purple/5 rounded-bl-[80px] pointer-events-none"></div>
+              )}
+              
               <div>
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <h3 className="font-bold text-lg text-ink tracking-tight uppercase break-all">
+                <div className="flex items-start justify-between gap-4 mb-2">
+                  <h3 className="font-black text-base text-black tracking-widest uppercase break-all font-display text-glow-purple">
                     {item.name}
                   </h3>
                   {item.isDefault && (
-                    <span className="bg-primary text-on-primary text-[10px] font-bold px-2.5 py-1 rounded-full uppercase shrink-0">
+                    <span className="bg-accent-purple text-white text-[9px] font-black tracking-widest px-2.5 py-1 rounded-full uppercase shrink-0 shadow-[0_2px_8px_rgba(94,14,215,0.18)]">
                       Mặc định
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-secondary font-medium mb-4">{item.phone}</p>
-                <div className="pt-4 border-t border-gray-100">
-                  <p className="text-sm text-body leading-relaxed">{item.address}</p>
+                <p className="text-xs text-mute font-bold tracking-wider mb-4 uppercase">{item.phone}</p>
+                <div className="pt-4 border-t border-black/5">
+                  <p className="text-xs text-black leading-relaxed font-semibold">{item.address}</p>
                 </div>
               </div>
-              <div className="flex justify-between items-center pt-4 border-t border-gray-50 mt-4">
+              
+              <div className="flex justify-between items-center pt-4 border-t border-black/5 mt-4">
                 <div>
                   {!item.isDefault && (
                     <button
                       onClick={() => handleSetDefault(item.id)}
-                      className="text-xs font-semibold text-secondary hover:text-primary transition-colors flex items-center gap-1"
+                      className="text-[10px] font-black text-mute hover:text-accent-purple uppercase tracking-widest transition-all duration-300 flex items-center gap-1 cursor-pointer"
                     >
-                      <Star className="w-3.5 h-3.5" /> Đặt mặc định
+                      <Star className="w-3.5 h-3.5 text-accent-purple animate-pulse" /> Đặt mặc định
                     </button>
                   )}
                 </div>
                 <button
                   onClick={() => handleDelete(item.id)}
-                  className="p-2 text-mute hover:text-red-600 transition-colors"
+                  className="p-2 text-mute hover:text-rose-600 hover:scale-115 transition-all cursor-pointer rounded-lg bg-transparent hover:bg-rose-50 border border-transparent hover:border-rose-200"
                   title="Xóa địa chỉ"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -211,88 +223,91 @@ export default function MerchantAddresses() {
 
       {/* Modal Overlay Thêm Địa Chỉ */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-all duration-300"
             onClick={() => setShowModal(false)}
           ></div>
 
           {/* Modal Container */}
-          <div className="bg-canvas w-full max-w-lg rounded-2xl overflow-hidden flex flex-col relative z-10 animate-scaleUp border border-gray-200">
+          <div className="bg-white/95 backdrop-blur-2xl w-full max-w-lg rounded-3xl overflow-hidden flex flex-col relative z-10 animate-slide-up-card border border-black/10 shadow-[0_15px_50px_rgba(0,0,0,0.1)]">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <h2 className="font-bold text-lg text-ink uppercase tracking-tight">Thêm địa chỉ mới</h2>
-              <button onClick={() => setShowModal(false)} className="text-ink hover:opacity-50 transition-opacity">
+            <div className="px-6 py-4 border-b border-black/5 flex justify-between items-center bg-black/[0.02]">
+              <h2 className="font-black text-sm text-black uppercase tracking-widest font-display text-glow-purple">Thêm địa chỉ mới</h2>
+              <button 
+                onClick={() => setShowModal(false)} 
+                className="text-black hover:text-accent-purple hover:scale-115 transition-all p-2 cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Body / Form */}
             <form onSubmit={handleSubmit}>
-              <div className="p-6 space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-ink uppercase block">Tên liên hệ</label>
+              <div className="p-6 space-y-5">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-extrabold text-mute uppercase tracking-widest block">Tên liên hệ</label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="VD: Nguyễn Văn A"
-                    className="w-full bg-canvas-soft border-none h-12 px-4 rounded-none focus:ring-1 focus:ring-primary text-sm text-ink placeholder-mute"
+                    className="w-full input-neon px-4 py-3.5 text-sm text-black placeholder-mute focus:outline-none focus:border-accent-purple transition-all font-semibold"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-ink uppercase block">Số điện thoại</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-extrabold text-mute uppercase tracking-widest block">Số điện thoại</label>
                   <input
                     type="tel"
                     required
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="09xx xxx xxx"
-                    className="w-full bg-canvas-soft border-none h-12 px-4 rounded-none focus:ring-1 focus:ring-primary text-sm text-ink placeholder-mute"
+                    className="w-full input-neon px-4 py-3.5 text-sm text-black placeholder-mute focus:outline-none focus:border-accent-purple transition-all font-semibold"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-ink uppercase block">Địa chỉ chi tiết</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-extrabold text-mute uppercase tracking-widest block">Địa chỉ chi tiết</label>
                   <textarea
                     required
                     rows="3"
                     value={addressDetail}
                     onChange={(e) => setAddressDetail(e.target.value)}
                     placeholder="Số nhà, tên đường, phường/xã, quận/huyện..."
-                    className="w-full bg-canvas-soft border-none p-4 rounded-none focus:ring-1 focus:ring-primary text-sm text-ink placeholder-mute resize-none"
+                    className="w-full input-neon p-4 text-sm text-black placeholder-mute resize-none font-semibold"
                   ></textarea>
                 </div>
                 
                 {/* Default Address Checkbox */}
-                <div className="flex items-center gap-2 pt-2">
+                <div className="flex items-center gap-2.5 pt-2">
                   <input
                     type="checkbox"
                     id="isDefault"
                     checked={isDefaultForm}
                     onChange={(e) => setIsDefaultForm(e.target.checked)}
-                    className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4"
+                    className="rounded border-black/20 bg-white text-accent-purple focus:ring-accent-purple w-4 h-4 cursor-pointer"
                   />
-                  <label htmlFor="isDefault" className="text-sm font-medium text-ink select-none cursor-pointer">
+                  <label htmlFor="isDefault" className="text-xs font-bold text-black uppercase tracking-wider select-none cursor-pointer">
                     Đặt địa chỉ này làm mặc định lấy hàng
                   </label>
                 </div>
               </div>
 
               {/* Modal Footer */}
-              <div className="px-6 py-4 border-t border-gray-100 flex justify-end items-center gap-4 bg-gray-50/50">
+              <div className="px-6 py-4 border-t border-black/5 flex justify-end items-center gap-4 bg-black/[0.02]">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="text-sm font-semibold text-secondary hover:text-ink transition-colors"
+                  className="text-xs font-black text-mute hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="bg-primary text-on-primary font-semibold text-sm px-6 py-3 rounded-full hover:opacity-90 disabled:opacity-50 transition-all min-w-[120px]"
+                  className="btn-primary px-6 py-3 text-xs uppercase tracking-widest font-extrabold min-w-[120px]"
                 >
                   {submitting ? 'Đang lưu...' : 'Lưu địa chỉ'}
                 </button>

@@ -26,7 +26,28 @@ export const AuthService = {
   register: async (username, password, fullname) => {
     const response = await api.post('/auth/register', { username, password, fullname });
     return response.data;
+  },
+  getUsers: async (role = '', month = '', year = '') => {
+    const response = await api.get(`/auth/users?role=${role}&month=${month}&year=${year}`);
+    return response.data;
+  },
+  createStaff: async (staffData) => {
+    const response = await api.post('/auth/staff', staffData);
+    return response.data;
+  },
+  getProfile: async () => {
+    const response = await api.get('/auth/profile');
+    return response.data;
+  },
+  updateProfile: async (profileData) => {
+    const response = await api.put('/auth/profile', profileData);
+    return response.data;
+  },
+  updateShipperConfig: async (shipperId, configData) => {
+    const response = await api.put(`/auth/users/${shipperId}/shipper-config`, configData);
+    return response.data;
   }
+
 };
 
 export const OrderService = {
@@ -86,6 +107,36 @@ export const OrderService = {
       console.error("Get Orders Error:", error);
       throw error;
     }
+  },
+
+  // Tính cước đa điểm
+  calculateMultistopFee: async (multistopData) => {
+    const response = await api.post('/orders/calculate-multistop', multistopData);
+    return response.data;
+  },
+
+  // Tạo đơn hàng đa điểm
+  createMultistopOrder: async (multistopData) => {
+    const response = await api.post('/orders/multistop', multistopData);
+    return response.data;
+  },
+
+  // Gán shipper cho đơn hàng
+  assignShipper: async (orderId, shipperId) => {
+    const response = await api.put(`/orders/${orderId}/assign`, { shipper_id: shipperId });
+    return response.data;
+  },
+
+  // Lấy danh sách đơn được gán cho Shipper
+  getAssignedOrders: async () => {
+    const response = await api.get('/orders/assigned');
+    return response.data;
+  },
+
+  // Shipper cập nhật đơn hàng
+  staffUpdateOrder: async (orderId, updateData) => {
+    const response = await api.put(`/orders/${orderId}/staff-update`, updateData);
+    return response.data;
   }
 };
 
@@ -104,14 +155,39 @@ export const TrackingService = {
 
 export const FinanceService = {
   // Lấy danh sách đối soát tài chính
-  getReconciliations: async () => {
+  getReconciliations: async (invoiceId = '') => {
     try {
-      const response = await api.get('/reconciliations/');
+      const url = invoiceId ? `/reconciliations/?invoice_id=${invoiceId}` : '/reconciliations/';
+      const response = await api.get(url);
       return response.data;
     } catch (error) {
       console.error("Get Reconciliations Error:", error);
       throw error;
     }
+  },
+  
+  // Thanh toán một bản ghi đối soát lẻ (Admin dùng)
+  payReconciliation: async (id) => {
+    const response = await api.put(`/reconciliations/${id}/pay`);
+    return response.data;
+  },
+
+  // Tạo hóa đơn đối soát
+  createInvoice: async (invoiceData = {}) => {
+    const response = await api.post('/reconciliations/invoice', invoiceData);
+    return response.data;
+  },
+
+  // Lấy danh sách hóa đơn đối soát
+  getInvoices: async () => {
+    const response = await api.get('/reconciliations/invoices');
+    return response.data;
+  },
+
+  // Duyệt thanh toán hóa đơn
+  payInvoice: async (invoiceId) => {
+    const response = await api.put(`/reconciliations/invoices/${invoiceId}/pay`);
+    return response.data;
   }
 };
 

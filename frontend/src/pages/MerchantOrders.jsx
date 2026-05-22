@@ -1,7 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { OrderService } from '../services/api';
-import { Search, Plus, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { OrderService, TrackingService } from '../services/api';
+import { printWaybill } from '../utils/waybill';
+import { Search, Plus, ChevronLeft, ChevronRight, Filter, X, MapPin, Package, Phone, Truck, ShieldCheck, DollarSign, Loader2, Navigation, CheckCircle2, Printer } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import { fetchRouteGeometry } from '../utils/routing';
+import L from 'leaflet';
+
+// Fix Leaflet's default icon path issues in Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Custom Neon Purple Pulsing DivIcons
+const purplePulsingIcon = L.divIcon({
+  className: 'custom-leaflet-pulsing-icon',
+  html: `<div class="relative flex items-center justify-center">
+    <div class="absolute w-6 h-6 bg-[#5E0ED7] rounded-full animate-ping opacity-30"></div>
+    <div class="relative w-4 h-4 bg-[#5E0ED7] border-2 border-white rounded-full shadow-[0_0_10px_rgba(94,14,215,0.4)]"></div>
+  </div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+  popupAnchor: [0, -12],
+});
+
+const destinationNeonIcon = L.divIcon({
+  className: 'custom-leaflet-dest-icon',
+  html: `<div class="relative flex items-center justify-center">
+    <div class="absolute w-8 h-8 bg-purple-500 rounded-full animate-pulse opacity-20"></div>
+    <div class="relative w-5 h-5 bg-white border-3 border-[#5E0ED7] rounded-full shadow-[0_0_12px_rgba(94,14,215,0.3)] flex items-center justify-center">
+      <div class="w-1.5 h-1.5 bg-[#5E0ED7] rounded-full"></div>
+    </div>
+  </div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+  popupAnchor: [0, -16],
+});
 
 export default function MerchantOrders() {
   const navigate = useNavigate();
@@ -15,6 +53,80 @@ export default function MerchantOrders() {
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 5;
+
+  // Modal Chi tiết Đơn hàng
+  const [selectedOrderCode, setSelectedOrderCode] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalError, setModalError] = useState('');
+  const [orderDetail, setOrderDetail] = useState(null);
+  const [modalSenderCoords, setModalSenderCoords] = useState(null);
+  const [modalReceiverCoords, setModalReceiverCoords] = useState(null);
+  const [modalRouteGeometry, setModalRouteGeometry] = useState(null); // OSRM real road geometry for modal
+
+  const geocodeAddress = async (address) => {
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
+      const res = await fetch(url, { headers: { 'User-Agent': 'Antigravity-Logistics/1.0' } });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+        }
+      }
+    } catch (e) {
+      console.error("Geocoding failed for address: " + address, e);
+    }
+    return null;
+  };
+
+  const handleRowClick = async (orderCode) => {
+    setSelectedOrderCode(orderCode);
+    setIsModalOpen(true);
+    setModalLoading(true);
+    setModalError('');
+    setOrderDetail(null);
+    setModalSenderCoords(null);
+    setModalReceiverCoords(null);
+    setModalRouteGeometry(null);
+
+    try {
+      const res = await TrackingService.trackOrder(orderCode);
+      if (res.success && res.data) {
+        setOrderDetail(res.data);
+        
+        // Geocode dynamic points for modal map
+        const sender = res.data.sender_address;
+        const receiver = res.data.receiver_address;
+        
+        geocodeAddress(sender).then(coords => {
+          if (coords) setModalSenderCoords(coords);
+        });
+        geocodeAddress(receiver).then(coords => {
+          if (coords) setModalReceiverCoords(coords);
+        });
+      } else {
+        setModalError(res.message || 'Không thể lấy thông tin chi tiết đơn hàng.');
+      }
+    } catch (err) {
+      console.error(err);
+      setModalError('Lỗi kết nối đến máy chủ.');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Fetch OSRM real road geometry for the modal map
+  useEffect(() => {
+    if (modalSenderCoords && modalReceiverCoords) {
+      setModalRouteGeometry(null);
+      fetchRouteGeometry([modalSenderCoords, modalReceiverCoords]).then((geometry) => {
+        if (geometry && geometry.length > 0) {
+          setModalRouteGeometry(geometry);
+        }
+      });
+    }
+  }, [modalSenderCoords, modalReceiverCoords]);
 
   useEffect(() => {
     async function fetchOrders() {
@@ -72,16 +184,16 @@ export default function MerchantOrders() {
   const getStatusStyle = (status) => {
     switch (status) {
       case 'GIAO_THANH_CONG':
-        return 'bg-green-50 text-green-700 border border-green-100';
+        return 'bg-emerald-50 text-emerald-700 text-glow-green border border-emerald-500/20 neon-border-green px-3 py-1 font-black';
       case 'DANG_VAN_CHUYEN':
       case 'DA_LAY_HANG':
-        return 'bg-blue-50 text-blue-700 border border-blue-100';
+        return 'bg-purple-50 text-accent-purple text-glow-purple border border-accent-purple/20 neon-border-purple px-3 py-1 font-black';
       case 'CHO_LAY_HANG':
-        return 'bg-yellow-50 text-yellow-700 border border-yellow-100';
+        return 'bg-amber-50 text-amber-700 text-glow-amber border border-amber-500/20 neon-border-amber px-3 py-1 font-black';
       case 'DA_HUY':
-        return 'bg-red-50 text-red-700 border border-red-100';
+        return 'bg-rose-50 text-rose-700 text-glow-rose border border-rose-500/20 neon-border-rose px-3 py-1 font-black';
       default:
-        return 'bg-gray-50 text-gray-700 border border-gray-100';
+        return 'bg-black/5 text-mute border border-black/10 px-3 py-1';
     }
   };
 
@@ -97,32 +209,37 @@ export default function MerchantOrders() {
   };
 
   return (
-    <div className="bg-canvas min-h-screen py-8 px-6 lg:px-16 animate-fadeIn">
+    <div className="bg-canvas min-h-screen py-10 px-6 lg:px-16 relative overflow-hidden">
+      {/* Background neon glows */}
+      <div className="neon-aurora-blob bg-accent-purple/5 w-[600px] h-[600px] -top-20 -left-20 animate-pulse"></div>
+      <div className="neon-aurora-blob bg-cyan-500/5 w-[500px] h-[500px] bottom-10 right-10 animate-pulse" style={{ animationDuration: '6s' }}></div>
+
       {/* Header Section */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-6 border-b border-gray-200">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-6 border-b border-black/10 relative z-10">
         <div>
-          <h1 className="text-[32px] font-bold text-ink tracking-tight mb-1">Danh sách vận đơn</h1>
-          <p className="text-secondary text-sm">Tổng cộng {orders.length} đơn hàng</p>
+          <span className="text-[10px] font-black text-accent-purple uppercase tracking-widest block mb-1">Database Ledger</span>
+          <h1 className="text-3xl font-black text-black tracking-widest uppercase font-display text-glow">Danh sách vận đơn</h1>
+          <p className="text-mute text-xs font-semibold uppercase tracking-wider mt-1">Tổng cộng {orders.length} đơn hàng</p>
         </div>
         <button
           onClick={() => navigate('/merchant/order/new')}
-          className="bg-primary text-on-primary px-6 py-3 rounded-full font-semibold hover:opacity-90 transition-all active:scale-95 text-sm flex items-center gap-2 self-start md:self-auto"
+          className="btn-primary px-6 py-3 text-xs uppercase tracking-widest font-extrabold flex items-center gap-2 self-start md:self-auto h-12"
         >
-          <Plus className="w-4 h-4" /> Tạo vận đơn mới
+          <Plus className="w-4 h-4 text-white" /> Tạo vận đơn mới
         </button>
       </header>
 
       {error && (
-        <div className="bg-amber-50 text-amber-800 text-sm p-4 rounded-xl mb-8 border border-amber-100">
+        <div className="bg-red-500/10 text-red-700 text-xs p-4 rounded-xl mb-8 border border-red-500/20 font-bold uppercase tracking-wider relative z-10">
           {error}
         </div>
       )}
 
       {/* Search & Filter Bar */}
-      <section className="mb-8 flex flex-col gap-4">
+      <section className="mb-8 flex flex-col gap-4 relative z-10">
         {/* Tìm kiếm */}
         <div className="relative w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-accent-purple" />
           <input
             type="text"
             value={searchTerm}
@@ -131,12 +248,12 @@ export default function MerchantOrders() {
               setCurrentPage(1); // Reset về trang 1
             }}
             placeholder="Tìm kiếm mã vận đơn, người nhận, số điện thoại..."
-            className="w-full h-14 bg-canvas-soft border-none focus:ring-1 focus:ring-primary pl-12 pr-4 text-sm rounded-none text-ink placeholder-mute"
+            className="w-full h-14 input-neon pl-12 pr-4 text-xs font-bold uppercase tracking-wider rounded-none"
           />
         </div>
 
         {/* Bộ lọc trạng thái */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           {[
             { id: 'ALL', label: 'Tất cả' },
             { id: 'CHO_LAY_HANG', label: 'Chờ lấy hàng' },
@@ -150,10 +267,10 @@ export default function MerchantOrders() {
                 setActiveFilter(filter.id);
                 setCurrentPage(1); // Reset về trang 1
               }}
-              className={`px-6 py-2 rounded-full text-xs font-bold transition-all ${
+              className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer ${
                 activeFilter === filter.id
-                  ? 'bg-primary text-on-primary'
-                  : 'bg-canvas-soft text-ink hover:bg-gray-200'
+                  ? 'bg-accent-purple text-white shadow-[0_4px_12px_rgba(94,14,215,0.22)] border border-black/10'
+                  : 'bg-black/5 text-mute border border-black/10 hover:bg-black/10 hover:text-black'
               }`}
             >
               {filter.label}
@@ -163,30 +280,30 @@ export default function MerchantOrders() {
       </section>
 
       {/* Data Table */}
-      <section className="w-full overflow-x-auto bg-canvas border border-gray-200 rounded-xl">
+      <section className="w-full overflow-x-auto bg-white border border-black/10 rounded-xl relative z-10 shadow-[0_4px_30px_rgba(0,0,0,0.03)] glow-card">
         <table className="w-full text-left border-collapse min-w-[1000px]">
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50/50">
-              <th className="py-4 px-6 text-xs font-semibold text-secondary uppercase">Mã vận đơn</th>
-              <th className="py-4 px-6 text-xs font-semibold text-secondary uppercase">Ngày tạo</th>
-              <th className="py-4 px-6 text-xs font-semibold text-secondary uppercase">Người nhận</th>
-              <th className="py-4 px-6 text-xs font-semibold text-secondary uppercase">Số điện thoại</th>
-              <th className="py-4 px-6 text-xs font-semibold text-secondary uppercase">Địa chỉ giao</th>
-              <th className="py-4 px-6 text-xs font-semibold text-secondary uppercase">Cước phí</th>
-              <th className="py-4 px-6 text-xs font-semibold text-secondary uppercase">Thu hộ (COD)</th>
-              <th className="py-4 px-6 text-xs font-semibold text-secondary uppercase">Trạng thái</th>
+            <tr className="border-b border-black/10 bg-black/5">
+              <th className="py-4 px-6 text-[10px] font-black text-mute uppercase tracking-widest">Mã vận đơn</th>
+              <th className="py-4 px-6 text-[10px] font-black text-mute uppercase tracking-widest">Ngày tạo</th>
+              <th className="py-4 px-6 text-[10px] font-black text-mute uppercase tracking-widest">Người nhận</th>
+              <th className="py-4 px-6 text-[10px] font-black text-mute uppercase tracking-widest">Số điện thoại</th>
+              <th className="py-4 px-6 text-[10px] font-black text-mute uppercase tracking-widest">Địa chỉ giao</th>
+              <th className="py-4 px-6 text-[10px] font-black text-mute uppercase tracking-widest">Cước phí</th>
+              <th className="py-4 px-6 text-[10px] font-black text-mute uppercase tracking-widest">Thu hộ (COD)</th>
+              <th className="py-4 px-6 text-[10px] font-black text-mute uppercase tracking-widest">Trạng thái</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-black/5 text-xs text-black">
             {loading ? (
               <tr>
-                <td colSpan="8" className="py-8 text-center text-secondary text-sm">
+                <td colSpan="8" className="py-8 text-center text-mute font-bold uppercase tracking-widest animate-pulse">
                   Đang tải dữ liệu vận đơn...
                 </td>
               </tr>
             ) : currentOrders.length === 0 ? (
               <tr>
-                <td colSpan="8" className="py-8 text-center text-secondary text-sm">
+                <td colSpan="8" className="py-8 text-center text-mute font-bold uppercase tracking-wider">
                   Không tìm thấy vận đơn nào khớp với bộ lọc.
                 </td>
               </tr>
@@ -194,22 +311,22 @@ export default function MerchantOrders() {
               currentOrders.map((order) => (
                 <tr
                   key={order.MaDonHang}
-                  onClick={() => navigate(`/tracking?code=${order.MaDonHang}`)}
-                  className="hover:bg-canvas-soft/50 transition-colors cursor-pointer group"
+                  onClick={() => handleRowClick(order.MaDonHang)}
+                  className="hover:bg-black/5 transition-colors cursor-pointer group text-xs"
                 >
-                  <td className="py-5 px-6 font-semibold text-ink">{order.MaDonHang}</td>
-                  <td className="py-5 px-6 text-secondary text-sm">
+                  <td className="py-5 px-6 font-black uppercase tracking-wider text-glow">{order.MaDonHang}</td>
+                  <td className="py-5 px-6 text-mute font-semibold">
                     {order.NgayTao ? new Date(order.NgayTao).toLocaleDateString('vi-VN') : 'N/A'}
                   </td>
-                  <td className="py-5 px-6 font-semibold text-ink">{order.TenNguoiNhan}</td>
-                  <td className="py-5 px-6 text-secondary text-sm">{order.SoDienThoaiNhan}</td>
-                  <td className="py-5 px-6 text-secondary text-sm max-w-[200px] truncate" title={order.DiaChiNhan}>
+                  <td className="py-5 px-6 font-bold">{order.TenNguoiNhan}</td>
+                  <td className="py-5 px-6 text-mute font-semibold">{order.SoDienThoaiNhan}</td>
+                  <td className="py-5 px-6 text-mute font-semibold max-w-[200px] truncate" title={order.DiaChiNhan}>
                     {order.DiaChiNhan}
                   </td>
-                  <td className="py-5 px-6 text-ink">{(order.PhiVanChuyen || 0).toLocaleString()} đ</td>
-                  <td className="py-5 px-6 font-semibold text-ink">{(order.TienThuHoCOD || 0).toLocaleString()} đ</td>
+                  <td className="py-5 px-6 font-bold">{(order.PhiVanChuyen || 0).toLocaleString()} đ</td>
+                  <td className="py-5 px-6 font-black text-accent-purple text-glow">{(order.TienThuHoCOD || 0).toLocaleString()} đ</td>
                   <td className="py-5 px-6">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${getStatusStyle(order.TrangThaiHienTai)}`}>
+                    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${getStatusStyle(order.TrangThaiHienTai)}`}>
                       {getStatusText(order.TrangThaiHienTai)}
                     </span>
                   </td>
@@ -221,28 +338,28 @@ export default function MerchantOrders() {
       </section>
 
       {/* Pagination Controls */}
-      <footer className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <span className="text-secondary text-xs">
+      <footer className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
+        <span className="text-mute text-[10px] font-black uppercase tracking-widest">
           Hiển thị {currentOrders.length} trên {filteredOrders.length} vận đơn
         </span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="px-6 py-2 border border-gray-200 rounded-full text-xs font-semibold hover:bg-canvas-soft disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="px-5 py-2 bg-black/5 border border-black/10 hover:bg-black/10 hover:text-black text-[10px] font-black uppercase tracking-widest rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer text-black"
           >
             Trước
           </button>
           
-          <div className="flex items-center gap-1 px-4">
+          <div className="flex items-center gap-1 px-2">
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
               <button
                 key={pageNum}
                 onClick={() => handlePageChange(pageNum)}
-                className={`w-8 h-8 flex items-center justify-center rounded-full text-xs font-bold transition-all ${
+                className={`w-8 h-8 flex items-center justify-center rounded-full text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
                   currentPage === pageNum
-                    ? 'bg-primary text-on-primary'
-                    : 'text-ink hover:bg-canvas-soft'
+                    ? 'bg-accent-purple text-white shadow-[0_4px_12px_rgba(94,14,215,0.25)] border border-black/10'
+                    : 'text-mute hover:bg-black/5 hover:text-black'
                 }`}
               >
                 {pageNum}
@@ -253,12 +370,276 @@ export default function MerchantOrders() {
           <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="px-6 py-2 border border-gray-200 rounded-full text-xs font-semibold hover:bg-canvas-soft disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="px-5 py-2 bg-black/5 border border-black/10 hover:bg-black/10 hover:text-black text-[10px] font-black uppercase tracking-widest rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer text-black"
           >
             Sau
           </button>
         </div>
       </footer>
+
+      {/* Premium Light Studio Order Details Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/45 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-white/95 backdrop-blur-2xl border border-black/10 rounded-[28px] shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden relative animate-scaleUp">
+            
+            {/* Modal Header */}
+            <header className="flex justify-between items-center px-8 py-5 border-b border-black/5 bg-black/[0.01]">
+              <div>
+                <span className="text-[10px] font-black text-accent-purple uppercase tracking-widest block mb-0.5">Order Detail Ledger</span>
+                <h2 className="text-xl font-black text-black tracking-widest uppercase font-display flex items-center gap-2 text-glow">
+                  Chi tiết vận đơn <span className="text-accent-purple font-black">{selectedOrderCode}</span>
+                </h2>
+              </div>
+              <button 
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setOrderDetail(null);
+                }}
+                className="p-2 hover:bg-black/5 rounded-full text-mute hover:text-black transition-all cursor-pointer border border-black/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </header>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+              {modalLoading ? (
+                <div className="py-20 flex flex-col items-center justify-center gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-accent-purple" />
+                  <span className="text-xs font-black uppercase tracking-widest text-mute animate-pulse">Đang tải chi tiết vận đơn...</span>
+                </div>
+              ) : modalError ? (
+                <div className="py-20 text-center text-red-600 font-bold uppercase tracking-wider">
+                  {modalError}
+                </div>
+              ) : orderDetail ? (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                  {/* Left Column: Details Grid */}
+                  <div className="lg:col-span-7 flex flex-col gap-6">
+                    {/* Status Ribbon */}
+                    <div className="bg-black/5 border border-black/10 p-4 rounded-2xl flex justify-between items-center text-xs">
+                      <div>
+                        <span className="text-[9px] text-mute uppercase font-black tracking-widest">Trạng thái hiện tại:</span>
+                        <p className="text-sm font-black text-accent-purple uppercase tracking-wider text-glow mt-0.5">
+                          {getStatusText(orderDetail.current_status)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[9px] text-mute uppercase font-black tracking-widest">Dịch vụ:</span>
+                        <p className="font-bold text-black uppercase mt-0.5">{orderDetail.service_package || 'STANDARD'}</p>
+                      </div>
+                    </div>
+
+                    {/* Sender & Receiver Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Sender */}
+                      <div className="bg-black/[0.02] border border-black/5 p-5 rounded-2xl">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-accent-purple mb-3 flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5" /> Người gửi
+                        </h4>
+                        <div className="space-y-1 text-xs">
+                          <p className="font-bold text-black">{orderDetail.sender_name}</p>
+                          <p className="text-mute font-semibold">{orderDetail.sender_phone}</p>
+                          <p className="text-mute font-semibold leading-relaxed mt-1">{orderDetail.sender_address}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Receiver */}
+                      <div className="bg-black/[0.02] border border-black/5 p-5 rounded-2xl">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-accent-purple mb-3 flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5" /> Người nhận
+                        </h4>
+                        <div className="space-y-1 text-xs">
+                          <p className="font-bold text-black">{orderDetail.receiver_name}</p>
+                          <p className="text-mute font-semibold">{orderDetail.receiver_phone}</p>
+                          <p className="text-mute font-semibold leading-relaxed mt-1">{orderDetail.receiver_address}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Package Specs */}
+                    <div className="border border-black/10 rounded-2xl p-6 space-y-4 shadow-sm">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-black flex items-center gap-1.5 border-b border-black/5 pb-2.5">
+                        <Package className="w-4 h-4 text-accent-purple" /> Thuộc tính hàng hóa
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                        <div className="col-span-2 md:col-span-3">
+                          <span className="text-[9px] text-mute uppercase font-black tracking-widest">Mô tả:</span>
+                          <p className="font-semibold text-black mt-0.5">{orderDetail.description || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-mute uppercase font-black tracking-widest">Khối lượng:</span>
+                          <p className="font-semibold text-black mt-0.5">{(orderDetail.weight_gram || 0).toLocaleString()} g</p>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-mute uppercase font-black tracking-widest">Khối lượng quy đổi:</span>
+                          <p className="font-semibold text-black mt-0.5">{(orderDetail.volumetric_weight_gram || 0).toLocaleString()} g</p>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-mute uppercase font-black tracking-widest">Kích thước (DxRxC):</span>
+                          <p className="font-semibold text-black mt-0.5">{orderDetail.length_cm} x {orderDetail.width_cm} x {orderDetail.height_cm} cm</p>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-mute uppercase font-black tracking-widest">Chính sách:</span>
+                          <p className="font-semibold text-black mt-0.5 uppercase tracking-wide text-[10px]">{orderDetail.inspection_policy === 'KHONG_XEM' ? 'Không xem hàng' : orderDetail.inspection_policy === 'XEM_KHONG_THU' ? 'Xem không thử' : 'Thử hàng'}</p>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-mute uppercase font-black tracking-widest">Hình thức lấy:</span>
+                          <p className="font-semibold text-black mt-0.5 uppercase tracking-wide text-[10px]">{orderDetail.pickup_type === 'TU_MANG_RA_BUU_CUC' ? 'Mang ra bưu cục' : 'Bưu tá lấy hàng'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Financial Summary */}
+                    <div className="border border-black/10 rounded-2xl p-6 bg-accent-purple/[0.01] space-y-4 shadow-sm border-dashed">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-black flex items-center gap-1.5 border-b border-black/5 pb-2.5">
+                        <DollarSign className="w-4 h-4 text-accent-purple" /> Bảng kê cước phí
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                        <div>
+                          <span className="text-[9px] text-mute uppercase font-black tracking-widest">Cước ship:</span>
+                          <p className="font-bold text-black mt-0.5">{(orderDetail.shipping_fee || 0).toLocaleString()} đ</p>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-mute uppercase font-black tracking-widest">Phí bảo hiểm:</span>
+                          <p className="font-bold text-black mt-0.5">{(orderDetail.insurance_fee || 0).toLocaleString()} đ</p>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-mute uppercase font-black tracking-widest">Tiền thu hộ COD:</span>
+                          <p className="font-black text-accent-purple text-glow-purple mt-0.5 font-display">{(orderDetail.cod_amount || 0).toLocaleString()} đ</p>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-mute uppercase font-black tracking-widest">Tổng chi phí:</span>
+                          <p className="font-black text-black text-glow mt-0.5">{( (orderDetail.shipping_fee || 0) + (orderDetail.insurance_fee || 0) ).toLocaleString()} đ</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Maps & Timeline */}
+                  <div className="lg:col-span-5 flex flex-col gap-6">
+                    {/* Live Routing Map */}
+                    <div className="w-full h-48 border border-black/10 rounded-2xl overflow-hidden relative shadow-inner">
+                      <MapContainer 
+                        center={modalSenderCoords || [21.0285, 105.8542]} 
+                        zoom={modalSenderCoords && modalReceiverCoords ? 10 : 6} 
+                        style={{ height: '100%', width: '100%' }}
+                        zoomControl={false}
+                      >
+                        <TileLayer
+                          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                          attribution='&copy; CARTO'
+                        />
+                        
+                        {modalSenderCoords && (
+                          <Marker position={modalSenderCoords} icon={purplePulsingIcon}>
+                            <Popup>
+                              <div className="text-xs font-bold">Kho gửi: {orderDetail.sender_address}</div>
+                            </Popup>
+                          </Marker>
+                        )}
+
+                        {modalReceiverCoords && (
+                          <Marker position={modalReceiverCoords} icon={destinationNeonIcon}>
+                            <Popup>
+                              <div className="text-xs font-bold">Khách nhận: {orderDetail.receiver_address}</div>
+                            </Popup>
+                          </Marker>
+                        )}
+                        
+                        {modalSenderCoords && modalReceiverCoords && (
+                          <>
+                            {/* Shadow glow layer */}
+                            <Polyline 
+                              positions={modalRouteGeometry || [modalSenderCoords, modalReceiverCoords]} 
+                              color="#5E0ED7" 
+                              weight={8} 
+                              opacity={0.12} 
+                              lineCap="round" 
+                              lineJoin="round"
+                            />
+                            {/* Main route line */}
+                            <Polyline 
+                              positions={modalRouteGeometry || [modalSenderCoords, modalReceiverCoords]} 
+                              color="#5E0ED7" 
+                              weight={4} 
+                              opacity={0.85} 
+                              lineCap="round" 
+                              lineJoin="round"
+                            />
+                          </>
+                        )}
+                      </MapContainer>
+                      <div className="absolute top-2.5 left-2.5 z-[1000] bg-white/95 border border-black/10 px-2.5 py-1 rounded-lg shadow-sm text-[9px] font-black uppercase tracking-widest text-black flex items-center gap-1">
+                        <Navigation className="w-3 h-3 text-accent-purple" /> Sơ đồ định vị
+                      </div>
+                    </div>
+
+                    {/* Timeline Stepper */}
+                    <div className="border border-black/10 rounded-2xl p-6 flex flex-col gap-4 flex-1 max-h-[300px] overflow-y-auto custom-scrollbar">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-black flex items-center gap-1.5 border-b border-black/5 pb-2.5">
+                        <Truck className="w-4 h-4 text-accent-purple" /> Hành trình bưu phẩm
+                      </h4>
+                      <div className="flex flex-col gap-0 relative pl-3">
+                        <div className="absolute left-[13.5px] top-2 bottom-2 w-[1.5px] bg-accent-purple/20 rounded-full z-0"></div>
+                        
+                        {orderDetail.timeline && orderDetail.timeline.length > 0 ? (
+                          orderDetail.timeline.map((item, idx) => (
+                            <div key={idx} className="flex gap-4 items-start relative z-10 mb-4 last:mb-0">
+                              <div className={`w-[9px] h-[9px] rounded-full shrink-0 mt-1.5 shadow-sm border ${idx === 0 ? 'bg-accent-purple border-accent-purple shadow-[0_0_8px_#5E0ED7]' : 'bg-white border-black/20'}`} />
+                              <div className="flex-1 text-[11px]">
+                                <h5 className={`font-black uppercase tracking-wider ${idx === 0 ? 'text-black text-glow-purple' : 'text-mute'}`}>
+                                  {getStatusText(item.status)}
+                                </h5>
+                                <p className="text-mute font-medium leading-normal mt-0.5">{item.info}</p>
+                                <span className="text-[9px] font-bold text-accent-purple/70 tracking-widest block mt-0.5">
+                                  {new Date(item.time).toLocaleString('vi-VN')}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-[10px] text-mute font-bold uppercase tracking-widest">Chờ cập nhật...</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            
+            {/* Modal Footer */}
+            <footer className="px-8 py-5 border-t border-black/5 bg-black/[0.01] flex justify-end gap-3 flex-wrap">
+              <button 
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setOrderDetail(null);
+                }}
+                className="px-5 py-2.5 bg-black/5 border border-black/10 hover:bg-black/10 text-black text-[10px] font-black uppercase tracking-widest rounded-full transition-all cursor-pointer"
+              >
+                Đóng
+              </button>
+              {orderDetail && (
+                <>
+                  <button 
+                    onClick={() => printWaybill(orderDetail)}
+                    className="px-6 py-2.5 bg-accent-purple/10 border border-[#5E0ED7]/35 text-[#5E0ED7] hover:bg-[#5E0ED7] hover:text-white text-[10px] font-black uppercase tracking-widest rounded-full transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8px_rgba(94,14,215,0.06)]"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>In Tem Vận Đơn (A6)</span>
+                  </button>
+                  <button 
+                    onClick={() => navigate(`/tracking?code=${orderDetail.order_id}`)}
+                    className="btn-primary px-6 py-2.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5"
+                  >
+                    <Navigation className="w-3.5 h-3.5 text-white" /> Link tra cứu công khai
+                  </button>
+                </>
+              )}
+            </footer>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

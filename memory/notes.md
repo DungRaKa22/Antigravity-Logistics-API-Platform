@@ -1,6 +1,6 @@
 # 📝 Ghi Chú Kỹ Thuật & Vận Hành - Logistics API Platform
 
-> Tài liệu tổng hợp các ghi chú kĩ thuật quan trọng, cơ chế fallback, và kinh nghiệm xử lý lỗi trong toàn bộ vòng đời phát triển dự án.
+> Tài liệu tổng hợp các ghi chú kĩ thuật quan trọng, cơ chế fallback, kinh nghiệm xử lý lỗi và logic nghiệp vụ cốt lõi trong toàn bộ vòng đời phát triển dự án.
 
 ---
 
@@ -28,7 +28,32 @@ Quy trình đồng bộ cờ địa chỉ mặc định trong CSDL được tố
 
 ---
 
-## 🛠️ Khắc Phục Lỗi Lịch Sử Hành Trình (`tracking_routes.py`)
+## 🛵 Logic Kiểm Tra Hạn Ngạch Ôm Đơn Của Shipper
+
+Để đảm bảo hiệu suất giao hàng và tránh quá tải cho nhân viên:
+1. **Kiểm tra thời gian thực**:
+   - Khi Admin hoặc hệ thống phân công một đơn hàng cho Shipper, backend sẽ đếm số lượng đơn hàng mà Shipper đó đang đảm nhận trong ngày hiện tại.
+   - Nếu `SoDonDaOm >= GioiHanDonNgay`, hệ thống sẽ trả về lỗi `400 Bad Request` cùng thông báo ngăn chặn.
+2. **Khởi tạo và cấu hình mặc định**:
+   - Trường `GioiHanDonNgay` trong bảng `NguoiDung` mặc định là **20 đơn / ngày** khi đăng ký nhân viên mới. Admin có thể tùy ý điều chỉnh tăng/giảm hạn ngạch này từ màn hình quản trị nhân sự.
+
+---
+
+## 💵 Cơ Chế Tính Lương & Xuất Báo Cáo Excel (.xlsx) Qua SheetJS
+
+1. **Công thức tính lương Shipper**:
+   - Chỉ các đơn hàng có trạng thái `GIAO_THANH_CONG` mới được ghi nhận tính lương.
+   - Lương của mỗi đơn hoàn thành là **3.000 VNĐ**.
+   - Công thức tổng hợp lương tháng: `TongLuong = TongDonThanhCong * 3000`.
+2. **Logic xuất Excel thời gian thực bằng SheetJS**:
+   - Sử dụng thư viện `xlsx` (SheetJS) trực tiếp tại Client-side để giảm tải cho máy chủ backend.
+   - Tự động phát hiện tháng trước đó: Khi mở báo cáo ở tháng hiện tại (Ví dụ: Tháng 5), hệ thống tự động thiết lập mặc định khoảng thời gian lọc dữ liệu là Tháng trước (Tháng 4). Điều này giúp kế toán viên click xuất báo cáo lương tháng trước ngay lập tức mà không cần lọc thủ công.
+   - **Xử lý độ rộng cột động (Column Auto-width)**: Thiết lập mảng `cols` chỉ định độ rộng cột rõ ràng trong SheetJS (ví dụ: `wch: 15` cho mã shipper, `wch: 25` cho tên shipper, `wch: 10` cho các cột ngày) để Excel không bao giờ hiển thị lỗi tràn chữ hoặc ký tự `###`.
+   - **Tương thích font chữ tiếng Việt**: Sử dụng phương thức ghi file nhị phân của SheetJS giúp bảo toàn định dạng UTF-8, đảm bảo hiển thị đúng 100% các ký tự tiếng Việt có dấu khi mở file bằng Excel trên Windows và macOS.
+
+---
+
+## 🛠️ Khắc Phục Lỗi Lịch Sử Hành Trình & Ánh Xạ CSDL
 
 *   **Vấn đề phát sinh**: Trong quá trình review code toàn diện dự án, phát hiện API tra cứu hành trình `/api/tracking/<id>` bị lỗi sập dịch vụ (NameError) do gọi sai tên Model lớp `Order` và `TrackingHistory` không khớp với tên khai báo thực tế bằng tiếng Việt trong tệp tin `models.py` (`DonHang`, `LichSu_TrangThai`).
 *   **Giải pháp xử lý**: Thực hiện cập nhật hoàn tất file `tracking_routes.py`. Bản đồ hóa đúng các thuộc tính CSDL thực tế:
@@ -39,10 +64,3 @@ Quy trình đồng bộ cờ địa chỉ mặc định trong CSDL được tố
     - Ánh xạ `h.ThongTinViTri` thay thế `h.LocationInfo`.
     - Ánh xạ `h.ThoiGian` thay thế `h.Timestamp`.
 *   **Kết quả**: API tra cứu công khai đã hoạt động 100% trơn tru, trả về đầy đủ lịch trình thời gian thực dạng JSON.
-
----
-
-## 🔑 Quản Lý API Key B2B Cho Đối Tác (`DOITAC`)
-
-- Chuỗi API Key được backend sinh ra ngẫu nhiên có độ dài 64 ký tự bắt đầu bằng tiền tố `AG_PARTNER_...` sử dụng hàm bảo mật `secrets.token_hex`.
-- Đối tác tích hợp đẩy đơn hàng qua API sử dụng header `X-API-Key` giúp hệ thống phân biệt được đối tác cụ thể mà không cần duy trì JWT Token hết hạn.

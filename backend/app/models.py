@@ -13,7 +13,10 @@ class NguoiDung(db.Model):
     SoTaiKhoan = db.Column(db.String(50), nullable=True)
     TenNganHang = db.Column(NVARCHAR(100), nullable=True)
     ChuTaiKhoan = db.Column(NVARCHAR(100), nullable=True)
+    GioiHanDonNgay = db.Column(db.Integer, nullable=False, default=100)
+    GhiChuNhanSu = db.Column(NVARCHAR(1000), nullable=True)
     NgayTao = db.Column(db.DateTime, default=datetime.utcnow)
+
 
     # Relationships
     dia_chi = db.relationship('SoDiaChi', backref='nguoi_dung', cascade="all, delete-orphan")
@@ -71,11 +74,13 @@ class DonHang(db.Model):
     HinhThucLayHang = db.Column(db.String(50), nullable=False, default='TU_MANG_RA_BUU_CUC')
     
     TrangThaiHienTai = db.Column(db.String(50), nullable=False)
+    MaNhanVienGiao = db.Column(db.Integer, db.ForeignKey('NguoiDung.MaNguoiDung'), nullable=True)
     NgayTao = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
     lich_su = db.relationship('LichSu_TrangThai', backref='don_hang', cascade="all, delete-orphan")
     doi_soat = db.relationship('DoiSoat', backref='don_hang', uselist=False)
+    nhan_vien_giao = db.relationship('NguoiDung', foreign_keys=[MaNhanVienGiao], backref='don_hang_giao')
 
 class LichSu_TrangThai(db.Model):
     __tablename__ = 'LichSu_TrangThai'
@@ -95,6 +100,7 @@ class DoiSoat(db.Model):
     MaDoiSoat = db.Column(db.Integer, primary_key=True, autoincrement=True)
     MaDonHang = db.Column(db.String(50), db.ForeignKey('DonHang.MaDonHang'), unique=True, nullable=False)
     MaKhachHang = db.Column(db.Integer, db.ForeignKey('NguoiDung.MaNguoiDung'), nullable=False)
+    MaHoaDon = db.Column(db.String(50), db.ForeignKey('HoaDonDoiSoat.MaHoaDon'), nullable=True)
     TongTienThu = db.Column(db.Numeric(18, 2), nullable=False)
     PhiVanChuyenTru = db.Column(db.Numeric(18, 2), nullable=False)
     PhiBaoHiemTru = db.Column(db.Numeric(18, 2), nullable=False, default=0)
@@ -106,6 +112,22 @@ class DoiSoat(db.Model):
     NgayXuLy = db.Column(db.DateTime, nullable=True)
 
     khach_hang = db.relationship('NguoiDung', foreign_keys=[MaKhachHang])
+
+class HoaDonDoiSoat(db.Model):
+    __tablename__ = 'HoaDonDoiSoat'
+
+    MaHoaDon = db.Column(db.String(50), primary_key=True)
+    MaKhachHang = db.Column(db.Integer, db.ForeignKey('NguoiDung.MaNguoiDung'), nullable=False)
+    TongCOD = db.Column(db.Numeric(18, 2), nullable=False)
+    TongPhiVanChuyen = db.Column(db.Numeric(18, 2), nullable=False)
+    TongThucNhan = db.Column(db.Numeric(18, 2), nullable=False)
+    TrangThaiThanhToan = db.Column(db.String(50), nullable=False, default='CHUA_THANH_TOAN')
+    NgayTao = db.Column(db.DateTime, default=datetime.utcnow)
+    NgayThanhToan = db.Column(db.DateTime, nullable=True)
+
+    # Relationships
+    khach_hang = db.relationship('NguoiDung', foreign_keys=[MaKhachHang], backref='hoa_don_doi_soat')
+    doi_soat_records = db.relationship('DoiSoat', foreign_keys='DoiSoat.MaHoaDon', backref='hoa_don')
 
 class KhoaAPI(db.Model):
     __tablename__ = 'KhoaAPI'

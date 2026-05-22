@@ -1,37 +1,243 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @import "tailwindcss";
-@config "../tailwind.config.js";
+
+@theme {
+  --color-canvas: #ffffff;
+  --color-canvas-soft: #f8f9fa;
+  --color-canvas-softer: #f1f3f5;
+  --color-ink: #000000;
+  --color-primary: #5E0ED7;
+  --color-accent-purple: #5E0ED7;
+  --color-on-primary: #ffffff;
+  --color-hairline-mid: rgba(0, 0, 0, 0.08);
+  --color-surface-pressed: rgba(0, 0, 0, 0.05);
+  --color-body: rgba(0, 0, 0, 0.82);
+  --color-mute: rgba(0, 0, 0, 0.5);
+
+  --radius-pill: 9999px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  
+  --font-display: 'Inter', sans-serif;
+  --font-sans: 'Inter', sans-serif;
+}
 
 @layer base {
   body {
-    @apply bg-canvas text-ink font-sans antialiased;
+    @apply bg-canvas text-ink font-sans antialiased min-h-screen relative;
+    background-image: radial-gradient(circle, rgba(94, 14, 215, 0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
   }
 }
 
 @layer components {
-  /* Uber-inspired Pills & Cards */
+  /* Futuristic Zero Gravity Component Classes - Premium Light */
   .btn-primary {
-    @apply bg-primary text-on-primary rounded-pill font-medium flex items-center justify-center transition-opacity hover:opacity-80 active:scale-95;
+    @apply bg-accent-purple text-white rounded-pill font-medium flex items-center justify-center transition-all duration-300 hover:bg-[#6e19f1] active:scale-95 shadow-[0_4px_12px_rgba(94,14,215,0.22)] hover:shadow-[0_6px_20px_rgba(94,14,215,0.38)] cursor-pointer;
   }
   .btn-secondary {
-    @apply bg-canvas-soft text-ink rounded-pill font-medium flex items-center justify-center transition-colors hover:bg-gray-200 active:scale-95;
+    @apply bg-black/5 text-black border border-black/10 rounded-pill font-medium flex items-center justify-center transition-all duration-300 hover:bg-black/10 hover:border-black/20 active:scale-95 cursor-pointer;
   }
   .btn-subtle {
-    @apply bg-canvas-soft text-ink rounded-pill font-medium flex items-center justify-center transition-colors hover:bg-gray-200 active:scale-95;
+    @apply bg-black/5 text-black border border-black/10 rounded-pill font-medium flex items-center justify-center transition-all duration-300 hover:bg-black/10 hover:border-black/20 active:scale-95 cursor-pointer;
   }
   .card {
-    @apply bg-canvas rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.08)];
+    @apply bg-white/60 backdrop-blur-md rounded-2xl border border-black/10 shadow-[0_4px_30px_rgba(0,0,0,0.03)];
   }
   .input-uber {
-    @apply bg-canvas-soft text-ink rounded-none px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary w-full border-b border-transparent focus:border-primary transition-all;
+    @apply bg-white/40 text-black rounded-none px-4 py-3 focus:outline-none focus:ring-1 focus:ring-accent-purple w-full border-b border-black/10 focus:border-accent-purple transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)];
   }
   .pill-badge {
-    @apply inline-block px-3 py-1 bg-primary text-on-primary text-xs font-bold rounded-pill;
+    @apply inline-block px-3 py-1 bg-accent-purple text-white text-xs font-bold rounded-pill shadow-[0_2px_8px_rgba(94,14,215,0.18)];
+  }
+  
+  /* Cyberpunk Glass and Neon Glow utilities - Light Studio Edition */
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-xl border border-black/10 rounded-[24px] shadow-[0_15px_35px_rgba(0,0,0,0.04)];
+  }
+  .glow-card {
+    @apply bg-white/70 backdrop-blur-xl border border-black/10 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.03)] transition-all duration-300 hover:border-accent-purple/40 hover:shadow-[0_10px_25px_rgba(94,14,215,0.08)];
+  }
+  .neon-border {
+    @apply border border-accent-purple/30 shadow-[0_2px_12px_rgba(94,14,215,0.08)] hover:border-accent-purple/60 hover:shadow-[0_4px_20px_rgba(94,14,215,0.18)] transition-all duration-300;
+  }
+  
+  /* Neon Text Glow Variations - High Contrast for light backgrounds */
+  .text-glow {
+    text-shadow: 0 0 8px rgba(94, 14, 215, 0.2);
+    @apply text-accent-purple font-semibold;
+  }
+  .text-glow-purple {
+    text-shadow: 0 0 8px rgba(94, 14, 215, 0.2);
+    @apply text-accent-purple font-semibold;
+  }
+  .text-glow-green {
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+    color: #065f46; /* High readability */
+    @apply font-semibold;
+  }
+  .text-glow-amber {
+    text-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
+    color: #92400e;
+    @apply font-semibold;
+  }
+  .text-glow-rose {
+    text-shadow: 0 0 8px rgba(244, 63, 94, 0.2);
+    color: #9f1239;
+    @apply font-semibold;
+  }
+  .text-glow-cyan {
+    text-shadow: 0 0 8px rgba(6, 182, 212, 0.2);
+    color: #155e75;
+    @apply font-semibold;
+  }
+
+  /* Multi-color Neon Borders - Soft light theme glow */
+  .neon-border-purple {
+    @apply border border-accent-purple/20 shadow-[0_2px_10px_rgba(94,14,215,0.05)] hover:border-accent-purple/50 hover:shadow-[0_4px_18px_rgba(94,14,215,0.15)] transition-all duration-300;
+  }
+  .neon-border-green {
+    @apply border border-emerald-500/20 shadow-[0_2px_10px_rgba(16,185,129,0.05)] hover:border-emerald-500/50 hover:shadow-[0_4px_18px_rgba(16,185,129,0.15)] transition-all duration-300;
+  }
+  .neon-border-amber {
+    @apply border border-amber-500/20 shadow-[0_2px_10px_rgba(245,158,11,0.05)] hover:border-amber-500/50 hover:shadow-[0_4px_18px_rgba(245,158,11,0.15)] transition-all duration-300;
+  }
+  .neon-border-rose {
+    @apply border border-rose-500/20 shadow-[0_2px_10px_rgba(244,63,94,0.05)] hover:border-rose-500/50 hover:shadow-[0_4px_18px_rgba(244,63,94,0.15)] transition-all duration-300;
+  }
+  .neon-border-cyan {
+    @apply border border-cyan-500/20 shadow-[0_2px_10px_rgba(6,182,212,0.05)] hover:border-cyan-500/50 hover:shadow-[0_4px_18px_rgba(6,182,212,0.15)] transition-all duration-300;
+  }
+
+  /* Tactile Neon Input */
+  .input-neon {
+    @apply bg-white/70 text-black rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-accent-purple/40 w-full border border-black/10 focus:border-accent-purple transition-all duration-300 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)];
+  }
+  .input-neon:focus {
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02), 0 0 12px rgba(94, 14, 215, 0.15);
+  }
+
+  /* Neon Breathing/Pulse Animations - Soft light theme glow */
+  .neon-pulse-purple {
+    animation: neon-pulse-purple-anim 2.5s infinite ease-in-out;
+  }
+  .neon-pulse-green {
+    animation: neon-pulse-green-anim 2.5s infinite ease-in-out;
+  }
+  .neon-pulse-amber {
+    animation: neon-pulse-amber-anim 2.5s infinite ease-in-out;
+  }
+
+  /* Aurora Neon Background Blobs - Multipled and soft in Light theme */
+  .neon-aurora-blob {
+    @apply absolute rounded-full blur-[100px] opacity-[0.06] pointer-events-none z-0;
+    mix-blend-mode: multiply;
   }
 }
 
-/* Grayscale Map for Uber Aesthetic */
-.leaflet-container {
-  filter: grayscale(100%) contrast(1.1) brightness(1.05);
+@keyframes neon-pulse-purple-anim {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(94, 14, 215, 0.05);
+    border-color: rgba(94, 14, 215, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(94, 14, 215, 0.18);
+    border-color: rgba(94, 14, 215, 0.5);
+  }
 }
+
+@keyframes neon-pulse-green-anim {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.05);
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.18);
+    border-color: rgba(16, 185, 129, 0.5);
+  }
+}
+
+@keyframes neon-pulse-amber-anim {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.05);
+    border-color: rgba(245, 158, 11, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.18);
+    border-color: rgba(245, 158, 11, 0.5);
+  }
+}
+
+/* Zero Gravity Animations */
+@keyframes clip-reveal {
+  from {
+    clip-path: inset(100% 0 0 0);
+    transform: translateY(60px);
+  }
+  to {
+    clip-path: inset(0% 0 0 0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-clip-1 {
+  animation: clip-reveal 1s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
+  clip-path: inset(100% 0 0 0);
+}
+.animate-clip-2 {
+  animation: clip-reveal 1s cubic-bezier(0.22, 1, 0.36, 1) 0.25s forwards;
+  clip-path: inset(100% 0 0 0);
+}
+.animate-clip-3 {
+  animation: clip-reveal 1s cubic-bezier(0.22, 1, 0.36, 1) 0.4s forwards;
+  clip-path: inset(100% 0 0 0);
+}
+
+.animate-slide-up-stats {
+  animation: fade-slide-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.6s both;
+}
+
+.animate-slide-up-card {
+  animation: fade-slide-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+}
+
+/* Gray and Clean Map for Light Studio Aesthetic */
+.leaflet-container {
+  filter: grayscale(20%) contrast(100%) brightness(100%);
+}
+
+/* Material Symbols Styling and Custom Scrollbar */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined' !important;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(94, 14, 215, 0.2);
+}
+

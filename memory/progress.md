@@ -1,8 +1,8 @@
 # 📊 Tiến độ thực hiện - Logistics API Platform
 
 > **Bắt đầu**: 2026-04-07  
-> **Cập nhật lần cuối**: 2026-05-19  
-> **Trạng thái tổng**: 🟢 **DỰ ÁN HOÀN THÀNH 100% (PHASE 5 ĐÃ BÀN GIAO)**
+> **Cập nhật lần cuối**: 2026-05-20  
+> **Trạng thái tổng**: 🟢 **DỰ ÁN HOÀN THÀNH 100% (PHASE 5 NÂNG CẤP ĐÃ BÀN GIAO)**
 
 ---
 
@@ -87,14 +87,23 @@ TỔNG THỂ                        [██████████] 100%
 
 ---
 
-## Phase 5: Hoàn thiện & Báo cáo (Tuần 11)
+## Phase 5: Hoàn thiện & Nâng cấp (Tuần 11)
 
 | # | Task | Trạng thái | Ngày hoàn thành | Ghi chú |
 |---|------|-----------|-----------------|---------|
 | 5.1 | Dọn dẹp Code (Refactoring, comments) | ✅ Xong | 2026-05-19 | Giải quyết NameError của route tracking |
-| 5.2 | Đồng bộ hóa toàn bộ tài liệu memory/ | ✅ Xong | 2026-05-19 | Đã cập nhật 9 tệp tin lưu trữ dự án |
+| 5.2 | Đồng bộ hóa toàn bộ tài liệu memory/ | ✅ Xong | 2026-05-20 | Đã cập nhật đầy đủ cấu trúc 9 tệp tin |
+| 5.3 | Tái cấu trúc phân hệ Admin và Nhân viên | ✅ Xong | 2026-05-20 | Triển khai Dashboard Admin, Roster Personnel, COD Invoice và Mobile Shipper Portal |
+| 5.4 | Khắc phục sụp đổ CSS & Căn chỉnh SVG | ✅ Xong | 2026-05-20 | Sửa Tailwind v4 theme, bo tròn SVG aspect-ratio |
+| 5.5 | Fix đè chữ Đăng nhập & Nút Quay lại | ✅ Xong | 2026-05-20 | Conditional Navbar, card bo góc, thêm nút Quay lại |
+| 5.6 | Ví Thụ Hưởng & Ngân Hàng Merchant | ✅ Xong | 2026-05-22 | Profile API và giao diện Bank Config ở ví đối soát |
+| 5.7 | Tem Vận đơn A6 SPX & Quét Mã | ✅ Xong | 2026-05-22 | Waybill.js in nhiệt A6 SPX và quét mã neon pulsing shipper |
+| 5.8 | Chi tiết Hóa đơn Đơn 0đ vs Đơn COD | ✅ Xong | 2026-05-22 | Nâng cấp API gom đối soát và Accordion đối chiếu dòng tiền |
+| 5.9 | Shipper Lịch sử & Tài khoản | ✅ Xong | 2026-05-22 | Chuyển đổi tab BottomNavBar, xem timeline tracking động và Bank profile shipper |
+| 5.10| Admin Shipper & Quota Giám Sát | ✅ Xong | 2026-05-22 | Hạn mức động, Ghi chú, Quỹ lương, Modal Kính mờ và modal Đơn đang ôm |
+| 5.11| Xuất Excel XLSX tiếng Việt có dấu | ✅ Xong | 2026-05-23 | SheetJS (.xlsx) căn chỉnh tự động, lọc khoảng bưu tá |
 
-**Trạng thái Phase 5**: ✅ Hoàn thành (2/2)
+**Trạng thái Phase 5**: ✅ Hoàn thành (11/11)
 
 ---
 
@@ -109,3 +118,9 @@ TỔNG THỂ                        [██████████] 100%
 | 2026-05-19 | **Đồng bộ hóa Sổ địa chỉ mặc định**: Tích hợp cột `LaMacDinh` và combo box tạo đơn hàng lẻ | AI Assistant |
 | 2026-05-19 | **Nâng cấp Login & Register**: Áp dụng thiết kế Split Screen nghệ thuật đen trắng từ Google Stitch | AI Assistant |
 | 2026-05-19 | **Review code toàn dự án**: Sửa NameError trong `tracking_routes.py`. Cập nhật 100% bộ nhớ `memory/` | AI Assistant |
+| 2026-05-20 | **Nâng cấp Admin & Staff Portal**: Thiết kế giao diện quản trị Admin và Shipper Mobile có Timeline và BottomNavBar | Antigravity |
+| 2026-05-20 | **Khắc phục Responsive & Tỉ lệ SVG**: Sửa sụp đổ chiều rộng do spacing Tailwind v4 và chống bẹp SVG charts | Antigravity |
+| 2026-05-20 | **Sửa lỗi đè chữ & Thêm nút Quay lại**: Tách biệt luồng Navbar trên auth pages, dựng card nổi, thêm nút Quay lại | Antigravity |
+| 2026-05-22 | **Tích hợp Nghiệp Vụ Chuyên Sâu**: Ví Merchant, In tem vận đơn A6 SPX/GHN độc lập, Quét mã hành trình định vị tím pulsing, Accordion hóa đơn đối soát cước âm của Đơn 0đ vs Đơn COD | Antigravity |
+| 2026-05-22 | **Shipper Portal & Quản trị Quota**: Hoàn thiện Tab Lịch sử (timeline inline) và Tab Tài khoản của Shipper. Thêm hạn mức ngày và Ghi chú nhân sự vào CSDL. Xây dựng Trung tâm Shipper & Quỹ lương 3.000đ/đơn ở Admin. | Antigravity |
+| 2026-05-23 | **Xuất báo cáo Excel XLSX**: Chuyển đổi tệp xuất CSV sang tệp `.xlsx` nguyên bản qua SheetJS, tự động giãn độ rộng cột, viết tiếng Việt chuẩn xác và hỗ trợ phân đoạn khoảng bưu tá. | Antigravity |

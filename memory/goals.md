@@ -27,8 +27,25 @@
   - Khi đơn hàng cập nhật thành `GIAO_THANH_CONG`, hệ thống tự động kích hoạt tạo sao kê đối soát tài chính (`DoiSoat`).
   - Tự động khấu trừ: `ThucNhan = TienThuHoCOD - PhiVanChuyen - PhiBaoHiem`.
   - Quản trị viên truy cập màn hình đối soát để duyệt và xác nhận thanh toán (`CHUA_THANH_TOAN` ➡️ `DA_THANH_TOAN`), tự động cập nhật ngày giờ thanh toán.
+  - Phân tách rõ ràng **Đơn COD** và **Đơn 0đ** (Prepaid) trên bảng đối soát đối chiếu dạng Accordion trơn tru.
+- [x] **Trung tâm Quản lý & Giám sát Shipper (Phase 5)**:
+  - KPI Indicator Cards: Tổng hợp động chỉ số shipper hoạt động, số đơn đang ôm trên xe thời gian thực, tổng số đơn thành công/thất bại, và Tổng Quỹ Lương Shipper trong kỳ.
+  - Cấu hình hạn mức ngày (`GioiHanDonNgay`) và ghi chú nhân sự (`GhiChuNhanSu`) thông qua stepper kính mờ điều chỉnh động.
+  - Trực tiếp kiểm tra giới hạn động khi gán đơn hàng, tự động chặn nếu shipper vượt giới hạn gán trong ngày.
+  - Xuất báo cáo lương bưu tá dạng bảng tính **Excel `.xlsx` nguyên bản (SheetJS)**, căn chỉnh độ rộng cột tự động, đúng cấu trúc cột yêu cầu kèm lọc khoảng bưu tá.
 
-### 3. Phân Hệ Đối Tác B2B (DOITAC) ✅
+### 3. Phân Hệ Shipper/Nhân Viên (NHANVIEN) ✅
+- [x] **Trang Mobile Dashboard & BottomNavBar**:
+  - Tích hợp 3 phân tab chuyển đổi nhanh (`activeTab` state machine): Đơn hàng, Lịch sử, Tài khoản với thiết kế Kính mờ bo cong hiện đại.
+- [x] **Quản lý Đơn Giao & Quét Mã Nhanh**:
+  - Quét mã vận đơn (Code128/QR) tự động định vị thẻ đơn hàng, nháy sáng tím pulsing neon 3 giây và mở hộp thoại cập nhật trạng thái cực nhanh.
+- [x] **Lịch sử Giao Nhận & Inline Timeline**:
+  - Xem thống kê tiền COD thu hộ thời gian thực để chốt quỹ nộp về bưu cục.
+  - Click xem chi tiết lịch trình tự động dựng cây timeline hành trình động (`/api/tracking/<order_id>`) ngay dưới thẻ đơn hàng.
+- [x] **Tài Khoản & Ví Thụ Hưởng Nhận Lương**:
+  - Thiết lập hồ sơ cá nhân và tài khoản ngân hàng thụ hưởng nhận lương, lưu trữ đồng bộ vào DB backend thông qua API `/api/auth/profile`.
+
+### 4. Phân Hệ Đối Tác B2B (DOITAC) ✅
 - [x] **Cấp phát API Key & Xác thực M2M**:
   - Quản trị viên cấp API Key dài 64 ký tự bảo mật (`AG_PARTNER_...`) cho đối tác.
   - Đối tác tích hợp đẩy đơn hàng qua API bằng header `X-API-Key` mà không cần duy trì token JWT.
@@ -37,6 +54,7 @@
 
 ## ⚡ Tiêu chí Kỹ thuật Đạt được
 
-1. **Hiệu năng**: Hệ thống React chạy cực mượt, thời gian build production dưới 1 giây. Backend xử lý song song và có cơ chế fallback khoảng cách an toàn nếu dịch vụ bản đồ OSRM/Nominatim quá tải.
-2. **Trải nghiệm người dùng (UX)**: Đạt tiêu chuẩn tối giản sang trọng phong cách Uber (Tone đen/trắng, form input sắc cạnh, nút bấm dạng viên thuốc mềm mại).
+1. **Hiệu năng & Khả năng Đóng gói**: Hệ thống React được tối ưu hoá và biên dịch thành công 100% bằng Vite (`npm run build`) dưới 1 giây. Backend xử lý song song và có cơ chế fallback bản đồ OSRM/Nominatim an toàn.
+2. **Trải nghiệm người dùng (UX/UI)**: Đạt tiêu chuẩn tối giản sang trọng phong cách Uber kết hợp các hiệu ứng Neon Glow, Glassmorphism, Stepper hiện đại và mượt mà.
 3. **Bảo mật**: Cơ chế phân quyền nghiêm ngặt cả ở Client (Route guards `ProtectedRoute`) và Server (Decorators `@require_auth` và `@require_role`).
+4. **Tương thích Microsoft Excel**: Xuất báo cáo dạng `.xlsx` nguyên bản qua SheetJS, căn chỉnh độ rộng tự động và tương thích 100% tiếng Việt có dấu.
