@@ -17,10 +17,10 @@ GO
 -- 2. Dữ liệu bảng NguoiDung (KHACHHANG, QUANTRI, DOITAC)
 -- ==========================================================
 INSERT INTO NguoiDung (TenDangNhap, MatKhau, HoTen, VaiTro, SoTaiKhoan, TenNganHang, ChuTaiKhoan) VALUES 
-('admin_tong', 'hashed_123456', N'Quản trị viên Hệ thống', 'QUANTRI', NULL, NULL, NULL),
-('shop_sneaker', 'hashed_123456', N'Cửa hàng Giày Sneaker X', 'KHACHHANG', '123456789', N'Vietcombank', N'NGUYEN VAN A'),
-('shop_quanao', 'hashed_123456', N'Tiệm Quần Áo Thu Đông', 'KHACHHANG', '987654321', N'Techcombank', N'LE THI B'),
-('shopee_partner', 'hashed_123456', N'Đối tác Sàn TMĐT Shopee', 'DOITAC', NULL, NULL, NULL);
+('admin_tong', 'scrypt:32768:8:1$6z6UGBzYD6quU3uo$155f018269deb9e727b5b7dccb3c8cfd44e3425a06e83daf77604a2ff5924e1bba0d7a579aa57f5b68df17bbdeb252a0db3d54bf2cbec1b6d72b1d1c19d263bd', N'Quản trị viên Hệ thống', 'QUANTRI', NULL, NULL, NULL),
+('shop_sneaker', 'scrypt:32768:8:1$6z6UGBzYD6quU3uo$155f018269deb9e727b5b7dccb3c8cfd44e3425a06e83daf77604a2ff5924e1bba0d7a579aa57f5b68df17bbdeb252a0db3d54bf2cbec1b6d72b1d1c19d263bd', N'Cửa hàng Giày Sneaker X', 'KHACHHANG', '123456789', N'Vietcombank', N'NGUYEN VAN A'),
+('shop_quanao', 'scrypt:32768:8:1$6z6UGBzYD6quU3uo$155f018269deb9e727b5b7dccb3c8cfd44e3425a06e83daf77604a2ff5924e1bba0d7a579aa57f5b68df17bbdeb252a0db3d54bf2cbec1b6d72b1d1c19d263bd', N'Tiệm Quần Áo Thu Đông', 'KHACHHANG', '987654321', N'Techcombank', N'LE THI B'),
+('shopee_partner', 'scrypt:32768:8:1$6z6UGBzYD6quU3uo$155f018269deb9e727b5b7dccb3c8cfd44e3425a06e83daf77604a2ff5924e1bba0d7a579aa57f5b68df17bbdeb252a0db3d54bf2cbec1b6d72b1d1c19d263bd', N'Đối tác Sàn TMĐT Shopee', 'DOITAC', NULL, NULL, NULL);
 GO
 
 -- ==========================================================
