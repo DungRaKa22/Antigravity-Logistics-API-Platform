@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { OrderService, FinanceService } from '../services/api';
+import { OrderService, FinanceService, BACKEND_URL } from '../services/api';
 import { Plus, ChevronRight, Bell, Package } from 'lucide-react';
 
 export default function MerchantDashboard() {
@@ -48,7 +48,7 @@ export default function MerchantDashboard() {
 
   // Real-time EventSource (SSE) Connection (Silent Auto-refresh)
   useEffect(() => {
-    const eventSource = new EventSource('http://localhost:5000/api/orders/events');
+    const eventSource = new EventSource(`${BACKEND_URL}/api/orders/events`);
     
     eventSource.addEventListener('order_update', (e) => {
       fetchData(); // Silently sync dashboard metrics when order status changes in backend!

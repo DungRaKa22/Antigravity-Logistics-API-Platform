@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
-import { TrackingService, ChatService } from '../services/api';
+import { TrackingService, ChatService, BACKEND_URL } from '../services/api';
 
 const DECISION_TREE = {
   welcome: {
@@ -112,7 +112,7 @@ export default function QuantumGuide() {
   // Socket.io integration for human CSKH handover
   useEffect(() => {
     if (isLiveChat && liveChatRoom) {
-      const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000' : `${window.location.protocol}//${window.location.hostname}`;
+      const socketUrl = BACKEND_URL;
       const socket = io(socketUrl, { autoConnect: true });
       socketRef.current = socket;
 

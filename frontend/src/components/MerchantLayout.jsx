@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+import { BACKEND_URL } from '../services/api';
+
 export default function MerchantLayout({ children }) {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -20,7 +22,7 @@ export default function MerchantLayout({ children }) {
 
   // Global SSE Listener for order updates across all merchant pages!
   useEffect(() => {
-    const eventSource = new EventSource('http://localhost:5000/api/orders/events');
+    const eventSource = new EventSource(`${BACKEND_URL}/api/orders/events`);
     
     eventSource.addEventListener('connect', (e) => {
       console.log("Global Merchant SSE connected:", e.data);

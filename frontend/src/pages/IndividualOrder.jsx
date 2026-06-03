@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import 'leaflet/dist/leaflet.css';
 import { Package, Zap, DollarSign, ArrowRight, MapPin, Truck, CheckCircle2, Copy, Check, Navigation, CreditCard, ChevronRight } from 'lucide-react';
 import L from 'leaflet';
-import { OrderService, TrackingService } from '../services/api';
+import { OrderService, TrackingService, BACKEND_URL } from '../services/api';
 import { fetchRouteGeometry } from '../utils/routing';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -340,7 +340,7 @@ export default function IndividualOrder() {
         setSuccessDetails({
           orderId: response.data.order_id,
           totalFee: estimatedFee.total_fee,
-          paymentUrl: `http://localhost:5000${response.data.payment_url}`
+          paymentUrl: `${BACKEND_URL}${response.data.payment_url}`
         });
         setShowSuccessModal(true);
       } else {

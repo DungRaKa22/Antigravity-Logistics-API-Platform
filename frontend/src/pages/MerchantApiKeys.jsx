@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PartnerService } from '../services/api';
+import { PartnerService, BACKEND_URL } from '../services/api';
 import { Key, Copy, Check, Terminal, RefreshCw, AlertCircle, FileCode } from 'lucide-react';
 
 export default function MerchantApiKeys() {
@@ -63,7 +63,7 @@ export default function MerchantApiKeys() {
     switch (activeTab) {
       case 'curl':
         return `# 1. Tính toán cước phí & khoảng cách chặng
-curl -X POST http://localhost:5000/api/partner/calculate-fee \\
+curl -X POST ${BACKEND_URL}/api/partner/calculate-fee \\
   -H "X-API-Key: ${keyStr}" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -76,7 +76,7 @@ curl -X POST http://localhost:5000/api/partner/calculate-fee \\
   }'
 
 # 2. Tạo đơn vận chuyển tự động
-curl -X POST http://localhost:5000/api/partner/create-order \\
+curl -X POST ${BACKEND_URL}/api/partner/create-order \\
   -H "X-API-Key: ${keyStr}" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -96,7 +96,7 @@ curl -X POST http://localhost:5000/api/partner/create-order \\
         return `const axios = require('axios');
 
 const API_KEY = '${keyStr}';
-const BASE_URL = 'http://localhost:5000/api/partner';
+const BASE_URL = '${BACKEND_URL}/api/partner';
 
 // Tạo đơn vận chuyển sang Antigravity Logistics
 async function createShippingOrder() {
@@ -130,7 +130,7 @@ async function createShippingOrder() {
         return `import requests
 
 API_KEY = "${keyStr}"
-BASE_URL = "http://localhost:5000/api/partner"
+BASE_URL = "${BACKEND_URL}/api/partner"
 
 headers = {
     "X-API-Key": API_KEY,
@@ -263,7 +263,7 @@ create_shipping_order()`;
               <ul className="space-y-2 text-xs text-mute font-semibold">
                 <li className="flex justify-between border-b border-black/5 pb-1">
                   <span>Base API URL:</span>
-                  <span className="font-mono text-black font-extrabold">http://localhost:5000/api/partner</span>
+                  <span className="font-mono text-black font-extrabold">{BACKEND_URL}/api/partner</span>
                 </li>
                 <li className="flex justify-between border-b border-black/5 pb-1">
                   <span>Header Authorization:</span>
