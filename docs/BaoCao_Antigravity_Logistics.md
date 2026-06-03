@@ -71,7 +71,7 @@ Dù đã nỗ lực hết mình để hoàn thiện đồ án một cách chỉn
 - **CHƯƠNG 3: XÂY DỰNG ỨNG DỤNG VÀ KẾT QUẢ THỰC NGHIỆM**
   - 3.1. Kiến trúc mã nguồn và công nghệ triển khai
   - 3.2. Cài đặt các thuật toán và hàm xử lý cốt lõi
-  - 3.3. Kết quả thực nghiệm hệ thống (Screenshots & Scenarios)
+  - 3.3. Kết quả thực nghiệm hệ thống theo từng vai trò sử dụng
 - **KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN**
 - **TÀI LIỆU THAM KHẢO**
 
@@ -135,13 +135,13 @@ Dù đã nỗ lực hết mình để hoàn thiện đồ án một cách chỉn
 *   Hình 2.23: Sơ đồ trình tự (Sequence Diagram) live chat CSKH và chatbot
 *   Hình 2.24: Sơ đồ mối quan hệ thực thể (ERD) cơ sở dữ liệu PostgreSQL
 *   Hình 3.1: Giao diện tra cứu bưu gửi public và radar quét 3D pha lê
-*   Hình 3.2: Giao diện Đăng nhập hệ thống (Obsidian Glassmorphism Cyberpunk)
-*   Hình 3.3: Giao diện Tạo đơn hàng lẻ B2C có hộp 3D trực quan co giãn
-*   Hình 3.4: Giao diện cổng VietQR dynamic MB Bank thanh toán cước phí
-*   Hình 3.5: Giao diện Cổng tích hợp API B2B Keys & Tài liệu SDK
-*   Hình 3.6: Giao diện đối soát COD chi tiết của Kế toán
-*   Hình 3.7: Bản xem trước và in ấn A4 biên bản đối soát COD (đọc chữ số)
-*   Hình 3.8: Dashboard bưu tá (Shipper Portal) và khung vẽ chữ ký điện tử
+*   Hình 3.2: Giao diện Tạo đơn hàng lẻ B2C có hộp 3D trực quan co giãn
+*   Hình 3.3: Giao diện cổng VietQR dynamic MB Bank thanh toán cước phí
+*   Hình 3.4: Giao diện Cổng tích hợp API B2B Keys & Tài liệu SDK
+*   Hình 3.5: Giao diện đối soát COD chi tiết của Kế toán
+*   Hình 3.6: Bản xem trước và in ấn A4 biên bản đối soát COD (đọc chữ số)
+*   Hình 3.7: Dashboard bưu tá (Shipper Portal) và khung vẽ chữ ký điện tử
+*   Hình 3.8: Giao diện Đăng nhập hệ thống (Obsidian Glassmorphism Cyberpunk)
 
 ---
 
@@ -1693,65 +1693,83 @@ const exportInvoiceToExcel = (invoice) => {
 
 ---
 
-### 3.3. Kết quả thực nghiệm hệ thống
+### 3.3. Kết quả thực nghiệm hệ thống theo từng vai trò sử dụng
 
-Phần này trình bày hình ảnh chụp màn hình thực tế các chức năng giao diện hệ thống hoạt động thực tế trên nền tảng trình duyệt Web.
+Phần này trình bày kết quả thực nghiệm hệ thống, được phân loại chi tiết theo từng vai trò của người sử dụng nhằm thể hiện luồng công việc nghiệp vụ thực tế trên nền tảng web.
 
-#### 3.3.1. Giao diện người dùng công cộng và bản đồ tra cứu hành trình bưu gửi
-Trang chủ hệ thống cung cấp giao diện tra cứu hành trình công khai. Khi người dùng nhập mã vận đơn, bản đồ định vị sẽ vẽ lộ trình di chuyển thời gian thực đồng thời biểu diễn gói hàng dưới dạng mô hình 3D Crystal xoay tròn động:
+#### 3.3.1. Phân hệ dành cho Khách hàng cá nhân (B2C User)
+
+Đây là nhóm chức năng công cộng hoặc dành cho khách lẻ vãng lai để tạo đơn và theo dõi hành trình đơn hàng tại nhà:
+
+##### 1. Giao diện tra cứu bưu gửi công cộng và bản đồ radar hành trình
+Trang chủ hệ thống cung cấp giao diện tra cứu hành trình công khai. Khi khách hàng nhập mã vận đơn, bản đồ định vị sẽ vẽ lộ trình di chuyển thời gian thực của bưu gửi qua các kho bãi trung chuyển, đồng thời biểu diễn gói hàng trực quan dưới dạng mô hình 3D Crystal xoay tròn động:
 
 ![Hình 3.1: Giao diện tra cứu bưu gửi public và radar quét 3D pha lê](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780460989892.png)
 
-##### Hình 3.1: Giao diện tra cứu bưu gửi public và radar quét 3D pha lê
+###### Hình 3.1: Giao diện tra cứu bưu gửi public và radar quét 3D pha lê
 
-#### 3.3.2. Giao diện Đăng nhập hệ thống (Obsidian Glassmorphism Cyberpunk)
-Giao diện đăng nhập bảo mật của hệ thống được nâng cấp theo chuẩn thiết kế tối giản Obsidian Cyberpunk với các viền phát sáng neon, mang lại trải nghiệm chuyên nghiệp cho nhân viên vận hành:
+##### 2. Giao diện Tạo vận đơn lẻ B2C tích hợp hộp mô phỏng 3D
+Khách hàng vãng lai tạo đơn lẻ chặng ngắn hoặc liên tỉnh tại trang `/create-order`. Giao diện tích hợp bản đồ số Leaflet để chọn vị trí Marker tương tác (tự động lấy kinh vĩ độ trực tiếp để tối ưu tốc độ API), đồng thời hiển thị mô hình hộp hàng 3D co giãn kích thước động tương ứng theo số đo Dài - Rộng - Cao do khách nhập vào:
 
-![Hình 3.2: Giao diện Đăng nhập hệ thống (Obsidian Glassmorphism Cyberpunk)](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780328768560.png)
+![Hình 3.2: Giao diện Tạo đơn hàng lẻ B2C có hộp 3D trực quan co giãn](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780331383619.png)
 
-##### Hình 3.2: Giao diện Đăng nhập hệ thống (Obsidian Glassmorphism Cyberpunk)
+###### Hình 3.2: Giao diện Tạo đơn hàng lẻ B2C có hộp 3D trực quan co giãn
 
-#### 3.3.3. Giao diện Tạo đơn hàng lẻ B2C dành cho khách hàng cá nhân
-Khách hàng vãng lai có thể tạo đơn trực tiếp tại nhà. Giao diện tích hợp bản đồ Leaflet định vị tọa độ tự động và mô phỏng hộp hàng 3D co giãn kích thước động tương ứng với số đo dài/rộng/cao thực tế:
+##### 3. Cổng VietQR thanh toán cước phí trực tuyến động
+Sau khi hoàn tất đăng ký đơn hàng cá nhân, khách lẻ có thể thực hiện thanh toán trực tuyến ngay. Hệ thống liên kết với VietQR API để tự động sinh mã VietQR MB Bank động chứa chính xác thông tin tài khoản thụ hưởng, số tiền cước ship và nội dung chuyển khoản tự động khớp với mã đơn hàng:
 
-![Hình 3.3: Giao diện Tạo đơn hàng lẻ B2C có hộp 3D trực quan co giãn](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780331383619.png)
+![Hình 3.3: Giao diện cổng VietQR dynamic MB Bank thanh toán cước phí](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780441523058.png)
 
-##### Hình 3.3: Giao diện Tạo đơn hàng lẻ B2C có hộp 3D trực quan co giãn
+###### Hình 3.3: Giao diện cổng VietQR dynamic MB Bank thanh toán cước phí
 
-#### 3.3.4. Cổng VietQR động MB Bank phục vụ thanh toán cước phí trực tuyến
-Sau khi hoàn tất đăng ký đơn hàng, khách lẻ có thể thực hiện quét mã VietQR MB Bank. Hệ thống tự động liên kết với VietQR API để hiển thị đúng thông tin tài khoản thụ hưởng, số tiền cước và nội dung chuyển khoản động:
+#### 3.3.2. Phân hệ dành cho Cửa hàng / Đối tác liên kết (B2B User - Merchant)
 
-![Hình 3.4: Giao diện cổng VietQR dynamic MB Bank thanh toán cước phí](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780441523058.png)
+Dành cho các chủ shop kinh doanh chuyên nghiệp hoặc các đối tác thương mại điện tử cần tích hợp dịch vụ vận chuyển của Antigravity Express:
 
-##### Hình 3.4: Giao diện cổng VietQR dynamic MB Bank thanh toán cước phí
+##### 1. Cổng tích hợp API B2B và Tài liệu Developer Portal
+Trang quản lý API dành cho đối tác liên kết. Cung cấp chức năng cho phép Merchant tự tạo, kích hoạt hoặc thu hồi API Key 64 ký tự bảo mật. Giao diện tích hợp đầy đủ tài liệu đặc tả tham số API và các đoạn mã nguồn lập trình mẫu cURL, Node.js, Python có nhúng API Key thật của cửa hàng để đối tác tích hợp Machine-to-Machine chặng ngầm:
 
-#### 3.3.5. Cổng phát triển tích hợp B2B API Key (Developer Portal)
-Trang quản lý dành cho các đối tác liên kết. Cung cấp chức năng tạo/thu hồi API Key bảo mật, tài liệu mô tả chi tiết các tham số API và các đoạn mã mẫu lập trình cURL, Node.js, Python có nhúng API Key thật của cửa hàng theo thời gian thực:
+![Hình 3.4: Giao diện Cổng tích hợp API B2B Keys & Tài liệu SDK](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780377348660.png)
 
-![Hình 3.5: Giao diện Cổng tích hợp API B2B Keys & Tài liệu SDK](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780377348660.png)
+###### Hình 3.4: Giao diện Cổng tích hợp API B2B Keys & Tài liệu SDK
 
-##### Hình 3.5: Giao diện Cổng tích hợp API B2B Keys & Tài liệu SDK
+#### 3.3.3. Phân hệ dành cho Nhân viên Kế toán chi nhánh (Branch Accountant)
 
-#### 3.3.6. Giao diện Kế toán chi nhánh đối soát COD cửa hàng
-Giao diện quản lý các đợt đối soát tiền COD và cước trích trừ dành cho kế toán chi nhánh. Hệ thống tự hiển thị mã VietQR chuyển khoản payout tự động cho shop khi thực nhận Net dương:
+Hỗ trợ quản lý và đối soát dòng tiền thu hộ (COD) 2 chiều nhanh gọn giữa bưu cục vệ tinh và các cửa hàng:
 
-![Hình 3.6: Giao diện đối soát COD chi tiết của Kế toán](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780309238579.png)
+##### 1. Giao diện đối soát chi tiết COD tự động
+Giao diện quản lý các đợt đối soát tiền COD và cước phí trích trừ dành cho kế toán bưu cục. Hệ thống tự động gom các đơn giao thành công, tính toán số dư thực nhận và hiển thị mã VietQR chuyển khoản payout tự động cho shop khi thực nhận Net mang giá trị dương:
 
-##### Hình 3.6: Giao diện đối soát COD chi tiết của Kế toán
+![Hình 3.5: Giao diện đối soát COD chi tiết của Kế toán](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780309238579.png)
 
-#### 3.3.7. Bản xem trước hóa đơn đối soát A4 chuẩn hóa tài chính
-Khi kế toán nhấn lệnh in hóa đơn đối soát để ký tên đóng dấu, hệ thống kích hoạt giao diện xem trước khổ giấy A4, dịch chuyển số tiền cước Net thành chữ viết tiếng Việt, đồng thời ẩn toàn bộ navbar và các thành phần thừa trên trang:
+###### Hình 3.5: Giao diện đối soát COD chi tiết của Kế toán
 
-![Hình 3.7: Bản xem trước và in ấn A4 biên bản đối soát COD (đọc chữ số)](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780309501617.png)
+##### 2. Bản xem trước hóa đơn đối soát khổ A4 tiêu chuẩn kế toán
+Khi kế toán nhấn lệnh in hóa đơn đối soát, hệ thống tự động ẩn các thanh công cụ điều hướng và định dạng xem trước hóa đơn khổ A4 tiêu chuẩn, tự động dịch chuyển số tiền cước Net thành chữ viết tiếng Việt chuẩn xác phục vụ việc ký tên, đóng dấu và lưu trữ hồ sơ tài chính:
 
-##### Hình 3.7: Bản xem trước và in ấn A4 biên bản đối soát COD (đọc chữ số)
+![Hình 3.6: Bản xem trước và in ấn A4 biên bản đối soát COD (đọc chữ số)](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780309501617.png)
 
-#### 3.3.8. Dashboard bưu tá (Shipper Portal) và khung vẽ chữ ký điện tử xác nhận giao hàng
-Giao diện nghiệp vụ dành cho bưu tá di động, hiển thị danh sách đơn phân công, bản đồ dẫn đường và tích hợp khung vẽ chữ ký điện tử HTML5 Canvas để khách nhận hàng ký xác nhận trực tiếp bằng ngón tay trên điện thoại:
+###### Hình 3.6: Bản xem trước và in ấn A4 biên bản đối soát COD (đọc chữ số)
 
-![Hình 3.8: Dashboard bưu tá (Shipper Portal) và khung vẽ chữ ký điện tử](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780330028949.png)
+#### 3.3.4. Phân hệ dành cho Bưu tá giao nhận (Shipper Portal)
 
-##### Hình 3.8: Dashboard bưu tá (Shipper Portal) và khung vẽ chữ ký điện tử
+Hỗ trợ nhân viên giao nhận bưu phẩm chặng cuối quản lý luồng công việc hàng ngày:
+
+##### 1. Dashboard Shipper và Khung ký nhận điện tử Canvas
+Giao diện portal mobile dành cho bưu tá, hiển thị danh sách các đơn hàng được phân công gom/phát chặng cuối, bản đồ số chỉ đường. Đặc biệt, tích hợp khung vẽ chữ ký điện tử HTML5 Canvas cho phép người nhận ký nhận trực tiếp bằng ngón tay để làm bằng chứng giao hàng số:
+
+![Hình 3.7: Dashboard bưu tá (Shipper Portal) và khung vẽ chữ ký điện tử](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780330028949.png)
+
+###### Hình 3.7: Dashboard bưu tá (Shipper Portal) và khung vẽ chữ ký điện tử
+
+#### 3.3.5. Giao diện Đăng nhập dùng chung cho các nhân viên vận hành nội bộ
+
+##### 1. Giao diện Đăng nhập hệ thống Obsidian Cyberpunk
+Màn hình đăng nhập bảo mật dành cho các tài khoản nội bộ (Kế toán, Bưu tá, Quản trị viên, Thủ kho). Sử dụng ngôn ngữ thiết kế kính mờ Glassmorphism kết hợp hiệu ứng viền phát sáng Cyberpunk nâng cao độ chuyên nghiệp cho sản phẩm:
+
+![Hình 3.8: Giao diện Đăng nhập hệ thống (Obsidian Glassmorphism Cyberpunk)](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780328768560.png)
+
+###### Hình 3.8: Giao diện Đăng nhập hệ thống (Obsidian Glassmorphism Cyberpunk)
 
 ---
 
