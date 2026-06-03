@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { OrderService, TrackingService } from '../services/api';
+import { OrderService, TrackingService, BACKEND_URL } from '../services/api';
 import { printWaybill } from '../utils/waybill';
 import { Search, Plus, ChevronLeft, ChevronRight, Filter, X, MapPin, Package, Phone, Truck, ShieldCheck, DollarSign, Loader2, Navigation, CheckCircle2, Printer } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
@@ -89,6 +89,83 @@ export default function MerchantOrders() {
   const [modalSenderCoords, setModalSenderCoords] = useState(null);
   const [modalReceiverCoords, setModalReceiverCoords] = useState(null);
   const [modalRouteGeometry, setModalRouteGeometry] = useState(null); // OSRM real road geometry for modal
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFormData, setEditFormData] = useState({});
+
+  const startEdit = () => {
+    setEditFormData({
+      receiver_name: orderDetail.receiver_name || '',
+      receiver_phone: orderDetail.receiver_phone || '',
+      receiver_address: orderDetail.receiver_address || '',
+      sender_address: orderDetail.sender_address || '',
+      description: orderDetail.description || '',
+      weight_gram: orderDetail.weight_gram || 1000,
+      length_cm: orderDetail.length_cm || 10,
+      width_cm: orderDetail.width_cm || 10,
+      height_cm: orderDetail.height_cm || 10,
+      cod_amount: orderDetail.cod_amount || 0,
+      declared_value: orderDetail.declared_value || 0,
+      inspection_policy: orderDetail.inspection_policy || 'KHONG_XEM',
+      pickup_type: orderDetail.pickup_type || 'TU_MANG_RA_BUU_CUC',
+    });
+    setIsEditing(true);
+  };
+
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+    setModalLoading(true);
+    try {
+      const res = await OrderService.updateOrder(orderDetail.order_id, editFormData);
+      if (res.success) {
+        alert('Cập nhật vận đơn thành công!');
+        setIsEditing(false);
+        // Load lại chi tiết vận đơn
+        handleRowClick(orderDetail.order_id);
+        // Cập nhật lại danh sách vận đơn chính
+        const updatedOrders = await OrderService.getOrders();
+        if (updatedOrders.success) {
+          setOrders(updatedOrders.data || []);
+        }
+      } else {
+        alert(res.message || 'Lỗi khi cập nhật vận đơn.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Đã xảy ra lỗi kết nối đến máy chủ.');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
+    setModalLoading(true);
+    try {
+      const res = await OrderService.cancelOrder(orderDetail.order_id);
+      if (res.success) {
+        alert('Hủy đơn hàng thành công!');
+        setIsModalOpen(false);
+        setOrderDetail(null);
+        // Cập nhật lại danh sách vận đơn chính
+        const updatedOrders = await OrderService.getOrders();
+        if (updatedOrders.success) {
+          setOrders(updatedOrders.data || []);
+        }
+      } else {
+        alert(res.message || 'Lỗi khi hủy đơn hàng.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Đã xảy ra lỗi kết nối đến máy chủ.');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handlePaymentRedirect = () => {
+    const paymentUrl = `${BACKEND_URL}/api/payment/simulate-checkout/${orderDetail.order_id}`;
+    window.open(paymentUrl, '_blank');
+  };
 
   // Trạm trung chuyển tọa độ và cấu hình vùng miền
   const HUBS = {
@@ -156,6 +233,7 @@ export default function MerchantOrders() {
     setModalSenderCoords(null);
     setModalReceiverCoords(null);
     setModalRouteGeometry(null);
+    setIsEditing(false);
 
     try {
       const res = await TrackingService.trackOrder(orderCode);
@@ -249,6 +327,7 @@ export default function MerchantOrders() {
 
     // 2. Bộ lọc trạng thái
     if (activeFilter === 'ALL') return matchesSearch;
+    if (activeFilter === 'CHO_THANH_TOAN') return matchesSearch && order.TrangThaiHienTai === 'CHO_THANH_TOAN';
     if (activeFilter === 'CHO_LAY_HANG') return matchesSearch && order.TrangThaiHienTai === 'CHO_LAY_HANG';
     if (activeFilter === 'DANG_VAN_CHUYEN') return matchesSearch && (order.TrangThaiHienTai === 'DANG_VAN_CHUYEN' || order.TrangThaiHienTai === 'DA_LAY_HANG');
     if (activeFilter === 'GIAO_THANH_CONG') return matchesSearch && order.TrangThaiHienTai === 'GIAO_THANH_CONG';
@@ -280,6 +359,8 @@ export default function MerchantOrders() {
         return 'bg-purple-50 text-accent-purple text-glow-purple border border-accent-purple/20 neon-border-purple px-3 py-1 font-black';
       case 'CHO_LAY_HANG':
         return 'bg-amber-50 text-amber-700 text-glow-amber border border-amber-500/20 neon-border-amber px-3 py-1 font-black';
+      case 'CHO_THANH_TOAN':
+        return 'bg-blue-50 text-blue-700 text-glow-blue border border-blue-500/20 neon-border-blue px-3 py-1 font-black';
       case 'DA_HUY':
         return 'bg-rose-50 text-rose-700 text-glow-rose border border-rose-500/20 neon-border-rose px-3 py-1 font-black';
       default:
@@ -293,6 +374,7 @@ export default function MerchantOrders() {
       case 'DANG_VAN_CHUYEN': return 'Đang vận chuyển';
       case 'DA_LAY_HANG': return 'Đã lấy hàng';
       case 'CHO_LAY_HANG': return 'Chờ lấy hàng';
+      case 'CHO_THANH_TOAN': return 'Chờ thanh toán';
       case 'DA_HUY': return 'Đã hủy';
       default: return status || 'Chờ xử lý';
     }
@@ -330,6 +412,7 @@ export default function MerchantOrders() {
         <div className="flex flex-wrap items-center gap-2.5">
           {[
             { id: 'ALL', label: 'Tất cả' },
+            { id: 'CHO_THANH_TOAN', label: 'Chờ thanh toán' },
             { id: 'CHO_LAY_HANG', label: 'Chờ lấy hàng' },
             { id: 'DANG_VAN_CHUYEN', label: 'Đang vận chuyển' },
             { id: 'GIAO_THANH_CONG', label: 'Giao thành công' },
@@ -486,6 +569,188 @@ export default function MerchantOrders() {
                 <div className="py-20 text-center text-red-600 font-bold uppercase tracking-wider">
                   {modalError}
                 </div>
+              ) : isEditing ? (
+                <form onSubmit={handleUpdateSubmit} className="flex flex-col gap-6 text-xs text-black">
+                  <div className="bg-black/5 border border-black/10 p-4 rounded-2xl flex justify-between items-center">
+                    <div>
+                      <span className="text-[9px] text-mute uppercase font-black tracking-widest">Đang chỉnh sửa vận đơn:</span>
+                      <p className="text-sm font-black text-accent-purple uppercase tracking-wider text-glow mt-0.5">
+                        {orderDetail.order_id}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(false)}
+                      className="px-4 py-1.5 bg-black/5 border border-black/10 hover:bg-black/10 text-black text-[9px] font-black uppercase tracking-widest rounded-full transition-all cursor-pointer"
+                    >
+                      Hủy Sửa
+                    </button>
+                  </div>
+
+                  {/* Form fields grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Left side: Receiver & Description */}
+                    <div className="space-y-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-accent-purple border-b border-black/5 pb-2">
+                        Thông tin người nhận
+                      </h4>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-mute uppercase tracking-widest">Tên người nhận</label>
+                        <input
+                          type="text"
+                          value={editFormData.receiver_name}
+                          onChange={(e) => setEditFormData({...editFormData, receiver_name: e.target.value})}
+                          className="w-full h-10 border border-black/10 px-3 focus:outline-none focus:border-accent-purple text-xs text-black font-semibold tracking-wider rounded-lg"
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-mute uppercase tracking-widest">Số điện thoại nhận</label>
+                        <input
+                          type="text"
+                          value={editFormData.receiver_phone}
+                          onChange={(e) => setEditFormData({...editFormData, receiver_phone: e.target.value})}
+                          className="w-full h-10 border border-black/10 px-3 focus:outline-none focus:border-accent-purple text-xs text-black font-semibold tracking-wider rounded-lg"
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-mute uppercase tracking-widest">Địa chỉ nhận hàng</label>
+                        <input
+                          type="text"
+                          value={editFormData.receiver_address}
+                          onChange={(e) => setEditFormData({...editFormData, receiver_address: e.target.value})}
+                          className="w-full h-10 border border-black/10 px-3 focus:outline-none focus:border-accent-purple text-xs text-black font-semibold tracking-wider rounded-lg"
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-mute uppercase tracking-widest">Mô tả hàng hóa</label>
+                        <input
+                          type="text"
+                          value={editFormData.description}
+                          onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
+                          className="w-full h-10 border border-black/10 px-3 focus:outline-none focus:border-accent-purple text-xs text-black font-semibold tracking-wider rounded-lg"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Right side: Package Spec & Financials */}
+                    <div className="space-y-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-accent-purple border-b border-black/5 pb-2">
+                        Thông số hàng hóa & Tài chính
+                      </h4>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[8px] font-bold text-mute uppercase tracking-widest">Dài (cm)</label>
+                          <input
+                            type="number"
+                            value={editFormData.length_cm}
+                            onChange={(e) => setEditFormData({...editFormData, length_cm: parseInt(e.target.value) || 0})}
+                            className="w-full h-10 border border-black/10 px-3 focus:outline-none focus:border-accent-purple text-xs text-black font-semibold tracking-wider rounded-lg text-center"
+                            required
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[8px] font-bold text-mute uppercase tracking-widest">Rộng (cm)</label>
+                          <input
+                            type="number"
+                            value={editFormData.width_cm}
+                            onChange={(e) => setEditFormData({...editFormData, width_cm: parseInt(e.target.value) || 0})}
+                            className="w-full h-10 border border-black/10 px-3 focus:outline-none focus:border-accent-purple text-xs text-black font-semibold tracking-wider rounded-lg text-center"
+                            required
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[8px] font-bold text-mute uppercase tracking-widest">Cao (cm)</label>
+                          <input
+                            type="number"
+                            value={editFormData.height_cm}
+                            onChange={(e) => setEditFormData({...editFormData, height_cm: parseInt(e.target.value) || 0})}
+                            className="w-full h-10 border border-black/10 px-3 focus:outline-none focus:border-accent-purple text-xs text-black font-semibold tracking-wider rounded-lg text-center"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-bold text-mute uppercase tracking-widest">Khối lượng (g)</label>
+                          <input
+                            type="number"
+                            value={editFormData.weight_gram}
+                            onChange={(e) => setEditFormData({...editFormData, weight_gram: parseInt(e.target.value) || 0})}
+                            className="w-full h-10 border border-black/10 px-3 focus:outline-none focus:border-accent-purple text-xs text-black font-semibold tracking-wider rounded-lg"
+                            required
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-bold text-mute uppercase tracking-widest">Hình thức lấy</label>
+                          <select
+                            value={editFormData.pickup_type}
+                            onChange={(e) => setEditFormData({...editFormData, pickup_type: e.target.value})}
+                            className="w-full h-10 border border-black/10 px-3 focus:outline-none focus:border-accent-purple text-xs text-black font-bold tracking-wider rounded-lg"
+                          >
+                            <option value="TU_MANG_RA_BUU_CUC">Mang ra bưu cục</option>
+                            <option value="BUU_TA_LAY_HANG">Bưu tá lấy hàng</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-bold text-mute uppercase tracking-widest">COD (đ)</label>
+                          <input
+                            type="number"
+                            value={editFormData.cod_amount}
+                            onChange={(e) => setEditFormData({...editFormData, cod_amount: parseFloat(e.target.value) || 0})}
+                            className="w-full h-10 border border-black/10 px-3 focus:outline-none focus:border-accent-purple text-xs text-black font-semibold tracking-wider rounded-lg"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-bold text-mute uppercase tracking-widest">Khai giá (đ)</label>
+                          <input
+                            type="number"
+                            value={editFormData.declared_value}
+                            onChange={(e) => setEditFormData({...editFormData, declared_value: parseFloat(e.target.value) || 0})}
+                            className="w-full h-10 border border-black/10 px-3 focus:outline-none focus:border-accent-purple text-xs text-black font-semibold tracking-wider rounded-lg"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-mute uppercase tracking-widest">Chính sách kiểm hàng</label>
+                        <select
+                          value={editFormData.inspection_policy}
+                          onChange={(e) => setEditFormData({...editFormData, inspection_policy: e.target.value})}
+                          className="w-full h-10 border border-black/10 px-3 focus:outline-none focus:border-accent-purple text-xs text-black font-bold tracking-wider rounded-lg"
+                        >
+                          <option value="KHONG_XEM">Không xem hàng</option>
+                          <option value="XEM_KHONG_THU">Xem không thử</option>
+                          <option value="CHO_THU_HANG">Cho thử hàng</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-6 border-t border-black/5 mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(false)}
+                      className="px-5 py-2.5 bg-black/5 border border-black/10 hover:bg-black/10 text-black text-[10px] font-black uppercase tracking-widest rounded-full transition-all cursor-pointer"
+                    >
+                      Hủy bỏ
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={modalLoading}
+                      className="px-6 py-2.5 bg-accent-purple hover:bg-[#701edd] text-white text-[10px] font-black uppercase tracking-widest rounded-full transition-all cursor-pointer shadow-[0_4px_12px_rgba(94,14,215,0.22)]"
+                    >
+                      {modalLoading ? 'Đang lưu...' : 'Lưu Thay Đổi'}
+                    </button>
+                  </div>
+                </form>
               ) : orderDetail ? (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                   {/* Left Column: Details Grid */}
@@ -752,13 +1017,38 @@ export default function MerchantOrders() {
                 onClick={() => {
                   setIsModalOpen(false);
                   setOrderDetail(null);
+                  setIsEditing(false);
                 }}
                 className="px-5 py-2.5 bg-black/5 border border-black/10 hover:bg-black/10 text-black text-[10px] font-black uppercase tracking-widest rounded-full transition-all cursor-pointer"
               >
                 Đóng
               </button>
-              {orderDetail && (
+              {orderDetail && !isEditing && (
                 <>
+                  {(orderDetail.current_status === 'CHO_THANH_TOAN' || orderDetail.current_status === 'CHO_LAY_HANG') && (
+                    <>
+                      <button
+                        onClick={startEdit}
+                        className="px-5 py-2.5 bg-blue-600/10 border border-blue-600/35 text-blue-600 hover:bg-blue-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-full transition-all cursor-pointer"
+                      >
+                        Sửa Đơn Hàng
+                      </button>
+                      <button
+                        onClick={handleCancelOrder}
+                        className="px-5 py-2.5 bg-rose-600/10 border border-rose-600/35 text-rose-600 hover:bg-rose-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-full transition-all cursor-pointer"
+                      >
+                        Hủy Đơn Hàng
+                      </button>
+                    </>
+                  )}
+                  {orderDetail.current_status === 'CHO_THANH_TOAN' && (
+                    <button
+                      onClick={handlePaymentRedirect}
+                      className="px-6 py-2.5 bg-[#a50064]/10 border border-[#a50064]/35 text-[#a50064] hover:bg-[#a50064] hover:text-white text-[10px] font-black uppercase tracking-widest rounded-full transition-all cursor-pointer shadow-[0_2px_8px_rgba(165,0,100,0.06)]"
+                    >
+                      Thanh Toán Cước (Ví MoMo)
+                    </button>
+                  )}
                   <button 
                     onClick={() => printWaybill(orderDetail)}
                     className="px-6 py-2.5 bg-accent-purple/10 border border-[#5E0ED7]/35 text-[#5E0ED7] hover:bg-[#5E0ED7] hover:text-white text-[10px] font-black uppercase tracking-widest rounded-full transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8px_rgba(94,14,215,0.06)]"

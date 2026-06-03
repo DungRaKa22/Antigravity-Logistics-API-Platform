@@ -925,6 +925,182 @@ def get_warehouse_history():
             })
     return jsonify({"success": True, "data": data})
 
+@order_bp.route('/<order_id>', methods=['PUT'])
+@require_auth
+def update_order(order_id):
+    order = DonHang.query.get(order_id)
+    if not order:
+        return jsonify({"success": False, "message": "Không tìm thấy đơn hàng!"}), 404
+        
+    # Phân quyền: phải là chủ đơn hàng (Shop) hoặc admin/nhân viên điều phối
+    if request.user_role == 'KHACHHANG' and order.MaNguoiGui != request.user_id:
+        return jsonify({"success": False, "message": "Bạn không có quyền sửa đơn hàng này!"}), 403
+        
+    # Chỉ cho phép sửa đơn ở trạng thái chờ xử lý ban đầu
+    if order.TrangThaiHienTai not in ['CHO_THANH_TOAN', 'CHO_LAY_HANG']:
+        return jsonify({"success": False, "message": "Đơn hàng đã được xử lý hoặc đang vận chuyển, không thể chỉnh sửa!"}), 400
+
+    data = request.json or {}
+    
+    # Cập nhật các trường thông tin cơ bản
+    if 'receiver_name' in data:
+        order.TenNguoiNhan = data['receiver_name']
+    if 'receiver_phone' in data:
+        order.SoDienThoaiNhan = data['receiver_phone']
+    if 'description' in data:
+        order.MoTaHangHoa = data['description']
+    if 'inspection_policy' in data:
+        order.QuyenKiemTra = data['inspection_policy']
+    if 'pickup_type' in data:
+        order.HinhThucLayHang = data['pickup_type']
+        
+    address_or_dimensions_changed = False
+    
+    # Địa chỉ nhận thay đổi
+    if 'receiver_address' in data and data['receiver_address'] != order.DiaChiNhan:
+        order.DiaChiNhan = data['receiver_address']
+        lat_r, lon_r = geocode_address(order.DiaChiNhan)
+        is_r_vn = not lat_r or (8.5 <= lat_r <= 23.5 and 102.0 <= lon_r <= 110.0)
+        if not is_r_vn:
+            return jsonify({
+                "success": False,
+                "message": "Antigravity Express chỉ hỗ trợ giao hàng trong phạm vi lãnh thổ Việt Nam!"
+            }), 400
+        order.ViDoNhan = lat_r
+        order.KinhDoNhan = lon_r
+        address_or_dimensions_changed = True
+        
+    # Địa chỉ gửi thay đổi (nếu có truyền)
+    if 'sender_address' in data and data['sender_address'] != (order.DiaChiGui or ''):
+        order.DiaChiGui = data['sender_address']
+        lat_s, lon_s = geocode_address(order.DiaChiGui)
+        is_s_vn = not lat_s or (8.5 <= lat_s <= 23.5 and 102.0 <= lon_s <= 110.0)
+        if not is_s_vn:
+            return jsonify({
+                "success": False,
+                "message": "Antigravity Express chỉ hỗ trợ giao hàng trong phạm vi lãnh thổ Việt Nam!"
+            }), 400
+        order.ViDoGui = lat_s
+        order.KinhDoGui = lon_s
+        address_or_dimensions_changed = True
+
+    # Trọng lượng & Kích thước thay đổi
+    if 'weight_gram' in data and int(data['weight_gram']) != order.TrongLuongGram:
+        order.TrongLuongGram = int(data['weight_gram'])
+        address_or_dimensions_changed = True
+    if 'length_cm' in data and int(data['length_cm']) != order.ChieuDaiCM:
+        order.ChieuDaiCM = int(data['length_cm'])
+        address_or_dimensions_changed = True
+    if 'width_cm' in data and int(data['width_cm']) != order.ChieuRongCM:
+        order.ChieuRongCM = int(data['width_cm'])
+        address_or_dimensions_changed = True
+    if 'height_cm' in data and int(data['height_cm']) != order.ChieuCaoCM:
+        order.ChieuCaoCM = int(data['height_cm'])
+        address_or_dimensions_changed = True
+        
+    # Tiền thu hộ COD thay đổi
+    if 'cod_amount' in data:
+        new_cod = float(data['cod_amount'])
+        if new_cod != order.TienThuHoCOD:
+            order.TienThuHoCOD = new_cod
+            # Tự động mở khóa / khóa chờ thanh toán dựa trên tiền COD mới
+            if order.TrangThaiHienTai in ['CHO_THANH_TOAN', 'CHO_LAY_HANG']:
+                if new_cod == 0:
+                    order.TrangThaiHienTai = 'CHO_THANH_TOAN'
+                    order.TrangThaiThanhToan = 'CHUA_THANH_TOAN'
+                else:
+                    order.TrangThaiHienTai = 'CHO_LAY_HANG'
+        
+    if 'declared_value' in data and float(data['declared_value']) != order.GiaTriKhaiBao:
+        order.GiaTriKhaiBao = float(data['declared_value'])
+        address_or_dimensions_changed = True
+
+    # Tính lại cước phí
+    if address_or_dimensions_changed:
+        length = order.ChieuDaiCM or 0
+        width = order.ChieuRongCM or 0
+        height = order.ChieuCaoCM or 0
+        actual_weight = order.TrongLuongGram or 0
+        
+        vol_weight = calculate_volumetric_weight(length, width, height)
+        order.TrongLuongQuyDoiGram = vol_weight if (length + width + height) >= 100 else 0
+        
+        lat_s = order.ViDoGui
+        lon_s = order.KinhDoGui
+        lat_r = order.ViDoNhan
+        lon_r = order.KinhDoNhan
+        
+        branch_o = find_closest_branch(lat_s, lon_s)
+        branch_d = find_closest_branch(lat_r, lon_r)
+        if branch_o:
+            order.MaChiNhanhGui = branch_o.MaChiNhanh
+        if branch_d:
+            order.MaChiNhanhNhan = branch_d.MaChiNhanh
+
+        if lat_s and lon_s and lat_r and lon_r:
+            direct_dist = calculate_haversine(float(lat_s), float(lon_s), float(lat_r), float(lon_r))
+            if direct_dist < 10.0:
+                dist = direct_dist
+            else:
+                dist = calculate_5point_distance(float(lat_s), float(lon_s), float(lat_r), float(lon_r))
+        else:
+            sender_addr = order.DiaChiGui or ''
+            receiver_addr = order.DiaChiNhan or ''
+            dist = get_smart_distance(sender_addr, receiver_addr, lat_gui=lat_s, lon_gui=lon_s, lat_nhan=lat_r, lon_nhan=lon_r)
+            
+        order.KhoangCachKm = dist
+        order.PhiVanChuyen = calculate_shipping_fee(dist, actual_weight, length, width, height)
+        order.PhiBaoHiem = calculate_insurance_fee(order.GiaTriKhaiBao)
+
+    # Thêm log cập nhật
+    log = LichSu_TrangThai(
+        MaDonHang=order_id,
+        MaTrangThai=order.TrangThaiHienTai,
+        ThongTinViTri="Đơn hàng được cập nhật thông tin chi tiết bởi người gửi.",
+        MaNhanVienCapNhat=request.user_id
+    )
+    db.session.add(log)
+    db.session.commit()
+    
+    return jsonify({
+        "success": True, 
+        "message": "Cập nhật đơn hàng thành công!",
+        "data": {
+            "order_id": order.MaDonHang,
+            "shipping_fee": float(order.PhiVanChuyen),
+            "insurance_fee": float(order.PhiBaoHiem),
+            "status": order.TrangThaiHienTai
+        }
+    })
+
+@order_bp.route('/<order_id>', methods=['DELETE'])
+@require_auth
+def cancel_order(order_id):
+    order = DonHang.query.get(order_id)
+    if not order:
+        return jsonify({"success": False, "message": "Không tìm thấy đơn hàng!"}), 404
+        
+    # Phân quyền: phải là chủ đơn hàng (Shop) hoặc admin/nhân viên điều phối
+    if request.user_role == 'KHACHHANG' and order.MaNguoiGui != request.user_id:
+        return jsonify({"success": False, "message": "Bạn không có quyền hủy đơn hàng này!"}), 403
+        
+    # Chỉ cho phép hủy khi chưa bàn giao lấy hàng
+    if order.TrangThaiHienTai not in ['CHO_THANH_TOAN', 'CHO_LAY_HANG']:
+        return jsonify({"success": False, "message": "Đơn hàng đã được bàn giao vận chuyển, không thể hủy!"}), 400
+        
+    order.TrangThaiHienTai = 'DA_HUY'
+    
+    log = LichSu_TrangThai(
+        MaDonHang=order_id,
+        MaTrangThai='DA_HUY',
+        ThongTinViTri="Đơn hàng đã được hủy thành công bởi người gửi.",
+        MaNhanVienCapNhat=request.user_id
+    )
+    db.session.add(log)
+    db.session.commit()
+    
+    return jsonify({"success": True, "message": "Hủy đơn hàng thành công!"})
+
 @order_bp.route('/events', methods=['GET'])
 def get_order_events():
     q = queue.Queue()

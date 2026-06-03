@@ -166,6 +166,28 @@ export const OrderService = {
     return response.data;
   },
 
+  // Sửa đơn hàng
+  updateOrder: async (orderId, orderData) => {
+    try {
+      const response = await api.put(`/orders/${orderId}`, orderData);
+      return response.data;
+    } catch (error) {
+      console.error("Update Order Error:", error);
+      throw error;
+    }
+  },
+
+  // Hủy đơn hàng
+  cancelOrder: async (orderId) => {
+    try {
+      const response = await api.delete(`/orders/${orderId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Cancel Order Error:", error);
+      throw error;
+    }
+  },
+
   // Tạo đơn hàng vãng lai cho khách lẻ (Không cần đăng nhập)
   createGuestOrder: async (orderData) => {
     try {
