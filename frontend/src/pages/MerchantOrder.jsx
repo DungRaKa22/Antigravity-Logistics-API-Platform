@@ -73,11 +73,27 @@ const hubNeonIcon = L.divIcon({
   popupAnchor: [0, -16],
 });
 
+const branchNeonIcon = L.divIcon({
+  className: 'custom-leaflet-branch-icon',
+  html: `<div class="relative flex items-center justify-center">
+    <div class="absolute w-8 h-8 bg-blue-500 rounded-full animate-ping opacity-35"></div>
+    <div class="relative w-5 h-5 bg-[#140b27] border-3 border-blue-400 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.8)] flex items-center justify-center">
+      <div class="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+    </div>
+  </div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+  popupAnchor: [0, -16],
+});
+
 // Calculate Haversine distance client-side between two coordinates [lat, lng]
 const calculateHaversineDistance = (coords1, coords2) => {
   if (!coords1 || !coords2) return 0;
-  const [lat1, lon1] = coords1;
-  const [lat2, lon2] = coords2;
+  const lat1 = parseFloat(coords1[0]);
+  const lon1 = parseFloat(coords1[1]);
+  const lat2 = parseFloat(coords2[0]);
+  const lon2 = parseFloat(coords2[1]);
+  if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) return 0;
   const R = 6371; // Radius of the earth in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -188,13 +204,13 @@ export default function MerchantOrder() {
             setSelectedAddressId(defaultAddr.id.toString());
             setSenderAddress(defaultAddr.address);
             if (defaultAddr.lat && defaultAddr.lng) {
-              setSenderCoords([defaultAddr.lat, defaultAddr.lng]);
+              setSenderCoords([parseFloat(defaultAddr.lat), parseFloat(defaultAddr.lng)]);
             }
           } else if (res.data.length > 0) {
             setSelectedAddressId(res.data[0].id.toString());
             setSenderAddress(res.data[0].address);
             if (res.data[0].lat && res.data[0].lng) {
-              setSenderCoords([res.data[0].lat, res.data[0].lng]);
+              setSenderCoords([parseFloat(res.data[0].lat), parseFloat(res.data[0].lng)]);
             }
           }
         }
@@ -212,7 +228,7 @@ export default function MerchantOrder() {
     if (chosen) {
       setSenderAddress(chosen.address);
       if (chosen.lat && chosen.lng) {
-        setSenderCoords([chosen.lat, chosen.lng]);
+        setSenderCoords([parseFloat(chosen.lat), parseFloat(chosen.lng)]);
       }
     }
   };
@@ -301,8 +317,9 @@ export default function MerchantOrder() {
   };
 
   const getRegion = (coords) => {
-    if (!coords) return 'BAC';
-    const lat = coords[0];
+    if (!coords || !Array.isArray(coords) || coords.length < 2) return 'BAC';
+    const lat = parseFloat(coords[0]);
+    if (isNaN(lat)) return 'BAC';
     if (lat >= 19.5) return 'BAC';
     if (lat >= 14.0) return 'TRUNG';
     return 'NAM';
@@ -337,14 +354,20 @@ export default function MerchantOrder() {
   };
 
   const plannedPreviewHubs = getPlannedPreviewHubs();
+  const resolvedRoutingPath = estimatedFee && estimatedFee.routing_path && estimatedFee.routing_path.length > 0
+    ? estimatedFee.routing_path
+    : null;
 
   // Fetch OSRM real road geometry when sender/receiver coordinates change
   useEffect(() => {
     if (senderCoords && receiverCoordsList.length > 0) {
       setRouteGeometry(null);
-      let waypoints = [senderCoords];
-      if (receiverCoordsList.length === 1) {
+      let waypoints = [];
+      if (resolvedRoutingPath) {
+        waypoints = resolvedRoutingPath.map(item => [parseFloat(item.coords[0]), parseFloat(item.coords[1])]);
+      } else if (receiverCoordsList.length === 1) {
         // Single stop order: apply dynamic regional routing path preview
+        waypoints = [senderCoords];
         plannedPreviewHubs.forEach(hub => waypoints.push(hub.coords));
         waypoints.push(receiverCoordsList[0].coords);
       } else {
@@ -360,7 +383,7 @@ export default function MerchantOrder() {
     } else {
       setRouteGeometry(null);
     }
-  }, [senderCoords, receiverCoordsList, plannedPreviewHubs.map(h => h.name).join('|')]);
+  }, [senderCoords, receiverCoordsList, plannedPreviewHubs.map(h => h.name).join('|'), JSON.stringify(resolvedRoutingPath)]);
 
   // Real-time Fee Estimation
   useEffect(() => {
@@ -393,6 +416,7 @@ export default function MerchantOrder() {
               insurance_fee: res.data.insurance_fee,
               total_fee: res.data.shipping_fee + res.data.insurance_fee,
               chargeable_weight: res.data.chargeable_weight,
+              routing_path: res.data.routing_path,
               optimized_receivers: []
             });
           }
@@ -917,6 +941,19 @@ export default function MerchantOrder() {
                        <span className="text-[9.5px] text-emerald-600 font-black lowercase tracking-normal">miễn phí bảo hiểm (&lt;1M)</span>
                      )}
                    </div>
+                   {resolvedRoutingPath && (
+                     <div className="text-[10px] text-mute font-bold flex flex-wrap items-center gap-1.5 mt-2 bg-white/50 border border-black/5 p-2 rounded-xl">
+                       <span className="text-[9px] font-black uppercase text-accent-purple shrink-0">Tuyến đường:</span>
+                       {resolvedRoutingPath.map((item, idx) => (
+                         <React.Fragment key={idx}>
+                           <span className={item.type.startsWith('branch') ? 'text-blue-600 font-extrabold' : item.type.startsWith('hub') ? 'text-amber-600 font-extrabold' : 'text-black font-semibold'}>
+                             {item.name}
+                           </span>
+                           {idx < resolvedRoutingPath.length - 1 && <span className="text-mute opacity-50 font-normal">➡️</span>}
+                         </React.Fragment>
+                       ))}
+                     </div>
+                   )}
                  </div>
                  <div className="text-left sm:text-right shrink-0">
                    <p className="text-[9px] text-mute uppercase font-black tracking-widest">
@@ -1107,23 +1144,59 @@ export default function MerchantOrder() {
                 </Marker>
               ))}
 
-              {plannedPreviewHubs.map((hub, idx) => (
-                <Marker key={`preview-hub-${idx}`} position={hub.coords} icon={hubNeonIcon}>
-                  <Popup>
-                    <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
-                      <p className="text-amber-500 font-black">🏢 {hub.name.includes('Miền Bắc') ? 'KHO TRUNG CHUYỂN MIỀN BẮC' : hub.name.includes('Miền Trung') ? 'KHO TRUNG CHUYỂN MIỀN TRUNG' : 'KHO TRUNG CHUYỂN MIỀN NAM'}</p>
-                      <p className="text-black mt-1 font-semibold">{hub.name.split(' (')[1]?.replace(')', '') || 'Trạm trung chuyển'}</p>
-                      <p className="text-[10px] text-mute mt-0.5 leading-normal italic">
-                        {plannedPreviewHubs.length === 1 
-                          ? 'Trạm trung chuyển chặng nội miền bắt buộc.' 
-                          : idx === 0 
-                            ? 'Trạm trung chuyển đầu nguồn (Xuất phát).' 
-                            : 'Trạm trung chuyển cuối nguồn (Đến miền nhận).'}
-                      </p>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
+              {resolvedRoutingPath ? (
+                resolvedRoutingPath.map((item, idx) => {
+                  if (item.type === 'branch_sender' || item.type === 'branch_receiver') {
+                    return (
+                      <Marker key={`branch-${idx}`} position={item.coords} icon={branchNeonIcon}>
+                        <Popup>
+                          <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                            <p className="text-blue-500 font-black">🏢 CHI NHÁNH PHỤ TRÁCH</p>
+                            <p className="text-black mt-1 font-semibold">{item.name}</p>
+                            <p className="text-[10px] text-mute mt-0.5 leading-normal italic">
+                              {item.type === 'branch_sender' ? 'Chi nhánh gom/nhận hàng nguồn.' : 'Chi nhánh phát/giao hàng đầu nhận.'}
+                            </p>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  }
+                  if (item.type === 'hub_sender' || item.type === 'hub_receiver') {
+                    return (
+                      <Marker key={`hub-${idx}`} position={item.coords} icon={hubNeonIcon}>
+                        <Popup>
+                          <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                            <p className="text-amber-500 font-black">🏢 KHO TRUNG CHUYỂN</p>
+                            <p className="text-black mt-1 font-semibold">{item.name}</p>
+                            <p className="text-[10px] text-mute mt-0.5 leading-normal italic">
+                              {item.type === 'hub_sender' ? 'Tổng kho trung chuyển xuất phát.' : 'Tổng kho trung chuyển nhận hàng.'}
+                            </p>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  }
+                  return null;
+                })
+              ) : (
+                plannedPreviewHubs.map((hub, idx) => (
+                  <Marker key={`preview-hub-${idx}`} position={hub.coords} icon={hubNeonIcon}>
+                    <Popup>
+                      <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                        <p className="text-amber-500 font-black">🏢 {hub.name.includes('Miền Bắc') ? 'KHO TRUNG CHUYỂN MIỀN BẮC' : hub.name.includes('Miền Trung') ? 'KHO TRUNG CHUYỂN MIỀN TRUNG' : 'KHO TRUNG CHUYỂN MIỀN NAM'}</p>
+                        <p className="text-black mt-1 font-semibold">{hub.name.split(' (')[1]?.replace(')', '') || 'Trạm trung chuyển'}</p>
+                        <p className="text-[10px] text-mute mt-0.5 leading-normal italic">
+                          {plannedPreviewHubs.length === 1 
+                            ? 'Trạm trung chuyển chặng nội miền bắt buộc.' 
+                            : idx === 0 
+                              ? 'Trạm trung chuyển đầu nguồn (Xuất phát).' 
+                              : 'Trạm trung chuyển cuối nguồn (Đến miền nhận).'}
+                        </p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))
+              )}
 
             </MapContainer>
           </div>

@@ -403,46 +403,75 @@ export default function WarehouseDashboard() {
   // Dynamic geocoding check for transit routing details
   useEffect(() => {
     if (hubOrderData) {
-      const checkRoute = async () => {
-        try {
-          const sRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(hubOrderData.sender_address)}&format=json&limit=1`, { headers: { 'User-Agent': 'Antigravity-Logistics-Staff/1.0' } });
-          await new Promise(r => setTimeout(r, 1200)); // Respect OSM rate limits
-          const rRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(hubOrderData.receiver_address)}&format=json&limit=1`, { headers: { 'User-Agent': 'Antigravity-Logistics-Staff/1.0' } });
-          if (sRes.ok && rRes.ok) {
-            const sData = await sRes.json();
-            const rData = await rRes.json();
-            if (sData[0] && rData[0]) {
-              const latS = parseFloat(sData[0].lat);
-              const latR = parseFloat(rData[0].lat);
-              
-              const getReg = (lat) => {
-                if (lat >= 19.5) return 'BAC';
-                if (lat >= 14.0) return 'TRUNG';
-                return 'NAM';
-              };
-              
-              const getHubName = (reg) => {
-                if (reg === 'BAC') return 'Kho Miền Bắc (Từ Sơn)';
-                if (reg === 'TRUNG') return 'Kho Miền Trung (An Tây)';
-                return 'Kho Miền Nam (Bình Hòa)';
-              };
-              
-              const regS = getReg(latS);
-              const regR = getReg(latR);
-              
-              setHubIsInterRegional(regS !== regR);
-              if (regS === regR) {
-                setHubPlannedPath(`Nội miền: Khách gửi ➡️ ${getHubName(regS)} ➡️ Khách nhận`);
-              } else {
-                setHubPlannedPath(`Liên miền: Khách gửi ➡️ ${getHubName(regS)} ➡️ ${getHubName(regR)} ➡️ Khách nhận`);
+      const latS = hubOrderData.sender_lat;
+      const latR = hubOrderData.receiver_lat;
+
+      if (latS !== undefined && latS !== null && latR !== undefined && latR !== null) {
+        const getReg = (lat) => {
+          const latVal = parseFloat(lat);
+          if (isNaN(latVal)) return 'BAC';
+          if (latVal >= 19.5) return 'BAC';
+          if (latVal >= 14.0) return 'TRUNG';
+          return 'NAM';
+        };
+        
+        const getHubName = (reg) => {
+          if (reg === 'BAC') return 'Kho Miền Bắc (Từ Sơn)';
+          if (reg === 'TRUNG') return 'Kho Miền Trung (An Tây)';
+          return 'Kho Miền Nam (Bình Hòa)';
+        };
+        
+        const regS = getReg(latS);
+        const regR = getReg(latR);
+        
+        setHubIsInterRegional(regS !== regR);
+        if (regS === regR) {
+          setHubPlannedPath(`Nội miền: Khách gửi ➡️ ${getHubName(regS)} ➡️ Khách nhận`);
+        } else {
+          setHubPlannedPath(`Liên miền: Khách gửi ➡️ ${getHubName(regS)} ➡️ ${getHubName(regR)} ➡️ Khách nhận`);
+        }
+      } else {
+        const checkRoute = async () => {
+          try {
+            const sRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(hubOrderData.sender_address)}&format=json&limit=1`, { headers: { 'User-Agent': 'Antigravity-Logistics-Staff/1.0' } });
+            await new Promise(r => setTimeout(r, 1200)); // Respect OSM rate limits
+            const rRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(hubOrderData.receiver_address)}&format=json&limit=1`, { headers: { 'User-Agent': 'Antigravity-Logistics-Staff/1.0' } });
+            if (sRes.ok && rRes.ok) {
+              const sData = await sRes.json();
+              const rData = await rRes.json();
+              if (sData[0] && rData[0]) {
+                const latS_f = parseFloat(sData[0].lat);
+                const latR_f = parseFloat(rData[0].lat);
+                
+                const getReg = (lat) => {
+                  if (lat >= 19.5) return 'BAC';
+                  if (lat >= 14.0) return 'TRUNG';
+                  return 'NAM';
+                };
+                
+                const getHubName = (reg) => {
+                  if (reg === 'BAC') return 'Kho Miền Bắc (Từ Sơn)';
+                  if (reg === 'TRUNG') return 'Kho Miền Trung (An Tây)';
+                  return 'Kho Miền Nam (Bình Hòa)';
+                };
+                
+                const regS_f = getReg(latS_f);
+                const regR_f = getReg(latR_f);
+                
+                setHubIsInterRegional(regS_f !== regR_f);
+                if (regS_f === regR_f) {
+                  setHubPlannedPath(`Nội miền: Khách gửi ➡️ ${getHubName(regS_f)} ➡️ Khách nhận`);
+                } else {
+                  setHubPlannedPath(`Liên miền: Khách gửi ➡️ ${getHubName(regS_f)} ➡️ ${getHubName(regR_f)} ➡️ Khách nhận`);
+                }
               }
             }
+          } catch (e) {
+            console.error(e);
           }
-        } catch (e) {
-          console.error(e);
-        }
-      };
-      checkRoute();
+        };
+        checkRoute();
+      }
     } else {
       setHubPlannedPath('');
       setHubIsInterRegional(false);

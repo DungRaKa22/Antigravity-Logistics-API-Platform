@@ -136,7 +136,7 @@ export default function Tracking() {
       // 1. Sender Coords
       if (orderData.sender_lat !== undefined && orderData.sender_lat !== null &&
           orderData.sender_lng !== undefined && orderData.sender_lng !== null) {
-        setSenderCoords([orderData.sender_lat, orderData.sender_lng]);
+        setSenderCoords([parseFloat(orderData.sender_lat), parseFloat(orderData.sender_lng)]);
       } else if (orderData.sender_address) {
         geocode(orderData.sender_address, setSenderCoords);
       }
@@ -144,7 +144,7 @@ export default function Tracking() {
       // 2. Receiver Coords
       if (orderData.receiver_lat !== undefined && orderData.receiver_lat !== null &&
           orderData.receiver_lng !== undefined && orderData.receiver_lng !== null) {
-        setReceiverCoords([orderData.receiver_lat, orderData.receiver_lng]);
+        setReceiverCoords([parseFloat(orderData.receiver_lat), parseFloat(orderData.receiver_lng)]);
       } else if (orderData.receiver_address) {
         // Sleep 1 second before doing recipient address to avoid overlapping Nominatim API rate limits
         setTimeout(() => {
@@ -206,8 +206,9 @@ export default function Tracking() {
   };
 
   const getRegion = (coords) => {
-    if (!coords) return 'BAC';
-    const lat = coords[0];
+    if (!coords || !Array.isArray(coords) || coords.length < 2) return 'BAC';
+    const lat = parseFloat(coords[0]);
+    if (isNaN(lat)) return 'BAC';
     if (lat >= 19.5) return 'BAC';
     if (lat >= 14.0) return 'TRUNG';
     return 'NAM';

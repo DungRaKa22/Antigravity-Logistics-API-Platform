@@ -63,9 +63,100 @@ def find_closest_branch(lat, lon):
             
     return closest_branch
 
-def calculate_5point_distance(lat_s, lon_s, lat_r, lon_r):
-    branch_o = find_closest_branch(lat_s, lon_s)
-    branch_d = find_closest_branch(lat_r, lon_r)
+def remove_vietnamese_diacritics(s):
+    trans_map = {
+        'à': 'a', 'á': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
+        'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
+        'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
+        'đ': 'd',
+        'è': 'e', 'é': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
+        'ê': 'e', 'ề': 'e', 'ế': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
+        'ì': 'i', 'í': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
+        'ò': 'o', 'ó': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
+        'ô': 'o', 'ồ': 'o', 'ố': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
+        'ơ': 'o', 'ờ': 'o', 'ớ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
+        'ù': 'u', 'ú': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
+        'ư': 'u', 'ừ': 'u', 'ứ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
+        'ỳ': 'y', 'ý': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
+        'À': 'a', 'Á': 'a', 'Ả': 'a', 'Ã': 'a', 'Ạ': 'a',
+        'Ă': 'a', 'Ằ': 'a', 'Ắ': 'a', 'Ẳ': 'a', 'Ẵ': 'a', 'Ặ': 'a',
+        'Â': 'a', 'Ầ': 'a', 'Ấ': 'a', 'Ẩ': 'a', 'Ẫ': 'a', 'Ậ': 'a',
+        'Đ': 'd',
+        'È': 'e', 'É': 'e', 'Ẻ': 'e', 'Ẽ': 'e', 'Ẹ': 'e',
+        'Ê': 'e', 'Ề': 'e', 'Ế': 'e', 'Ể': 'e', 'Ễ': 'e', 'Ệ': 'e',
+        'Ì': 'i', 'Í': 'i', 'Ỉ': 'i', 'Ĩ': 'i', 'Ị': 'i',
+        'Ò': 'o', 'Ó': 'o', 'Ỏ': 'o', 'Õ': 'o', 'Ọ': 'o',
+        'Ô': 'o', 'Ồ': 'o', 'Ố': 'o', 'Ổ': 'o', 'Ỗ': 'o', 'Ộ': 'o',
+        'Ơ': 'o', 'Ờ': 'o', 'Ớ': 'o', 'Ở': 'o', 'Ỡ': 'o', 'Ợ': 'o',
+        'Ù': 'u', 'Ú': 'u', 'Ủ': 'u', 'Ũ': 'u', 'Ụ': 'u',
+        'Ư': 'u', 'Ừ': 'u', 'Ứ': 'u', 'Ử': 'u', 'Ữ': 'u', 'Ự': 'u',
+        'Ỳ': 'y', 'Ý': 'y', 'Ỷ': 'y', 'Ỹ': 'y', 'Ỵ': 'y'
+    }
+    return "".join(trans_map.get(c, c) for c in s)
+
+def clean_prov_name(s):
+    s = s.lower().strip()
+    prefixes = ["thành phố ", "tỉnh ", "tp. ", "tp ", "thành phố."]
+    for p in prefixes:
+        if s.startswith(p):
+            s = s[len(p):].strip()
+    return s
+
+def find_branch_by_address(address, lat=None, lon=None):
+    if not address:
+        return find_closest_branch(lat, lon)
+    
+    # Split tokens and process from right to left
+    tokens = [t.strip() for t in address.split(',')]
+    tokens.reverse()
+    
+    branches = ChiNhanh.query.all()
+    
+    # Build clean branch list
+    branch_map = []
+    for b in branches:
+        name = b.TenChiNhanh
+        if name.startswith("Hub "):
+            idx = name.rfind("(")
+            if idx != -1:
+                name = name[4:idx].strip()
+        cleaned_b = clean_prov_name(name)
+        branch_map.append((b, cleaned_b))
+        
+    for token in tokens:
+        cleaned_token = clean_prov_name(token)
+        if not cleaned_token:
+            continue
+            
+        # 1. Exact match (accented)
+        for b, cleaned_b in branch_map:
+            if cleaned_token == cleaned_b:
+                return b
+                
+        # 2. Exact match (unaccented)
+        cleaned_token_no_accent = remove_vietnamese_diacritics(cleaned_token)
+        for b, cleaned_b in branch_map:
+            cleaned_b_no_accent = remove_vietnamese_diacritics(cleaned_b)
+            if cleaned_token_no_accent == cleaned_b_no_accent:
+                return b
+                
+        # 3. Containment match (accented)
+        for b, cleaned_b in branch_map:
+            if len(cleaned_token) >= 3 and (cleaned_token in cleaned_b or cleaned_b in cleaned_token):
+                return b
+                
+        # 4. Containment match (unaccented)
+        for b, cleaned_b in branch_map:
+            cleaned_b_no_accent = remove_vietnamese_diacritics(cleaned_b)
+            if len(cleaned_token_no_accent) >= 3 and (cleaned_token_no_accent in cleaned_b_no_accent or cleaned_b_no_accent in cleaned_token_no_accent):
+                return b
+                
+    # Fallback to closest branch
+    return find_closest_branch(lat, lon)
+
+def calculate_5point_distance(lat_s, lon_s, lat_r, lon_r, sender_addr=None, receiver_addr=None):
+    branch_o = find_branch_by_address(sender_addr, lat_s, lon_s)
+    branch_d = find_branch_by_address(receiver_addr, lat_r, lon_r)
     
     if not branch_o or not branch_d:
         return 10.5
@@ -136,7 +227,7 @@ def calculate_fee():
         if direct_dist < 10.0:
             dist = direct_dist
         else:
-            dist = calculate_5point_distance(lat_s, lon_s, lat_r, lon_r)
+            dist = calculate_5point_distance(lat_s, lon_s, lat_r, lon_r, sender_addr, receiver_addr)
     else:
         dist = get_smart_distance(sender_addr, receiver_addr, lat_gui=lat_s, lon_gui=lon_s, lat_nhan=lat_r, lon_nhan=lon_r)
     
@@ -153,12 +244,39 @@ def calculate_fee():
     
     declared_value = float(data.get('declared_value', 0))
     insurance = calculate_insurance_fee(declared_value)
+
+    # Xác định các chi nhánh và tổng kho phụ trách để tạo routing_path
+    branch_o = find_branch_by_address(sender_addr, lat_s, lon_s)
+    branch_d = find_branch_by_address(receiver_addr, lat_r, lon_r)
+    hub_o = TongKho.query.get(branch_o.MaTongKhoLienKet) if branch_o else None
+    hub_d = TongKho.query.get(branch_d.MaTongKhoLienKet) if branch_d else None
+
+    routing_path = []
+    if lat_s is not None and lon_s is not None:
+        routing_path.append({"type": "sender", "name": "Khách gửi", "coords": [lat_s, lon_s]})
+    
+    if dist < 10.0:
+        if branch_o and branch_o.ViDo is not None and branch_o.KinhDo is not None:
+            routing_path.append({"type": "branch_sender", "name": branch_o.TenChiNhanh, "coords": [float(branch_o.ViDo), float(branch_o.KinhDo)]})
+    else:
+        if branch_o and branch_o.ViDo is not None and branch_o.KinhDo is not None:
+            routing_path.append({"type": "branch_sender", "name": branch_o.TenChiNhanh, "coords": [float(branch_o.ViDo), float(branch_o.KinhDo)]})
+        if hub_o and hub_o.ViDo is not None and hub_o.KinhDo is not None:
+            routing_path.append({"type": "hub_sender", "name": hub_o.TenTongKho, "coords": [float(hub_o.ViDo), float(hub_o.KinhDo)]})
+        if hub_d and hub_d.ViDo is not None and hub_d.KinhDo is not None and hub_d.MaTongKho != hub_o.MaTongKho:
+            routing_path.append({"type": "hub_receiver", "name": hub_d.TenTongKho, "coords": [float(hub_d.ViDo), float(hub_d.KinhDo)]})
+        if branch_d and branch_d.ViDo is not None and branch_d.KinhDo is not None:
+            routing_path.append({"type": "branch_receiver", "name": branch_d.TenChiNhanh, "coords": [float(branch_d.ViDo), float(branch_d.KinhDo)]})
+            
+    if lat_r is not None and lon_r is not None:
+        routing_path.append({"type": "receiver", "name": "Khách nhận", "coords": [lat_r, lon_r]})
     
     return jsonify({"success": True, "data": {
         "distance_km": dist, 
         "chargeable_weight": chargeable_weight,
         "shipping_fee": fee,
-        "insurance_fee": insurance
+        "insurance_fee": insurance,
+        "routing_path": routing_path
     }})
 
 @order_bp.route('/', methods=['POST'])
@@ -210,7 +328,7 @@ def create_order():
         if direct_dist < 10.0:
             dist = direct_dist
         else:
-            dist = calculate_5point_distance(lat_s, lon_s, lat_r, lon_r)
+            dist = calculate_5point_distance(lat_s, lon_s, lat_r, lon_r, sender_addr, receiver_addr)
     else:
         dist = get_smart_distance(sender_addr, receiver_addr, lat_gui=lat_s, lon_gui=lon_s, lat_nhan=lat_r, lon_nhan=lon_r)
         
@@ -218,9 +336,9 @@ def create_order():
     declared_value = float(data.get('declared_value', 0))
     insurance = calculate_insurance_fee(declared_value)
 
-    # 1. Tìm Chi nhánh gửi/nhận gần nhất bằng Haversine
-    branch_o = find_closest_branch(lat_s, lon_s)
-    branch_d = find_closest_branch(lat_r, lon_r)
+    # 1. Tìm Chi nhánh gửi/nhận bằng thuật toán so khớp địa chỉ hành chính
+    branch_o = find_branch_by_address(sender_addr, lat_s, lon_s)
+    branch_d = find_branch_by_address(receiver_addr, lat_r, lon_r)
     
     # 2. Xác định các Tổng kho tương ứng để vẽ lộ trình
     hub_path = []
@@ -361,7 +479,7 @@ def create_guest_order():
         if direct_dist < 10.0:
             dist = direct_dist
         else:
-            dist = calculate_5point_distance(lat_s, lon_s, lat_r, lon_r)
+            dist = calculate_5point_distance(lat_s, lon_s, lat_r, lon_r, sender_addr, receiver_addr)
     else:
         dist = get_smart_distance(sender_addr, receiver_addr, lat_gui=lat_s, lon_gui=lon_s, lat_nhan=lat_r, lon_nhan=lon_r)
         
@@ -369,9 +487,9 @@ def create_guest_order():
     declared_value = float(data.get('declared_value', 0))
     insurance = calculate_insurance_fee(declared_value)
 
-    # 1. Tìm Chi nhánh gửi/nhận gần nhất bằng Haversine
-    branch_o = find_closest_branch(lat_s, lon_s)
-    branch_d = find_closest_branch(lat_r, lon_r)
+    # 1. Tìm Chi nhánh gửi/nhận bằng thuật toán so khớp địa chỉ hành chính
+    branch_o = find_branch_by_address(sender_addr, lat_s, lon_s)
+    branch_d = find_branch_by_address(receiver_addr, lat_r, lon_r)
     
     # 2. Xác định các Tổng kho tương ứng để vẽ lộ trình
     hub_path = []
@@ -1122,8 +1240,8 @@ def update_order(order_id):
         lat_r = order.ViDoNhan
         lon_r = order.KinhDoNhan
         
-        branch_o = find_closest_branch(lat_s, lon_s)
-        branch_d = find_closest_branch(lat_r, lon_r)
+        branch_o = find_branch_by_address(order.DiaChiGui, lat_s, lon_s)
+        branch_d = find_branch_by_address(order.DiaChiNhan, lat_r, lon_r)
         if branch_o:
             order.MaChiNhanhGui = branch_o.MaChiNhanh
         if branch_d:
@@ -1134,7 +1252,7 @@ def update_order(order_id):
             if direct_dist < 10.0:
                 dist = direct_dist
             else:
-                dist = calculate_5point_distance(float(lat_s), float(lon_s), float(lat_r), float(lon_r))
+                dist = calculate_5point_distance(float(lat_s), float(lon_s), float(lat_r), float(lon_r), order.DiaChiGui, order.DiaChiNhan)
         else:
             sender_addr = order.DiaChiGui or ''
             receiver_addr = order.DiaChiNhan or ''

@@ -72,6 +72,19 @@ const hubNeonIcon = L.divIcon({
   popupAnchor: [0, -16],
 });
 
+const branchNeonIcon = L.divIcon({
+  className: 'custom-leaflet-branch-icon',
+  html: `<div class="relative flex items-center justify-center">
+    <div class="absolute w-8 h-8 bg-blue-500 rounded-full animate-ping opacity-35"></div>
+    <div class="relative w-5 h-5 bg-[#140b27] border-3 border-blue-400 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.8)] flex items-center justify-center">
+      <div class="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+    </div>
+  </div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+  popupAnchor: [0, -16],
+});
+
 const HUBS = {
   BAC: {
     name: 'Kho Trung Chuyển Miền Bắc (Từ Sơn, Bắc Ninh)',
@@ -88,8 +101,9 @@ const HUBS = {
 };
 
 const getRegion = (coords) => {
-  if (!coords) return 'BAC';
-  const lat = coords[0];
+  if (!coords || !Array.isArray(coords) || coords.length < 2) return 'BAC';
+  const lat = parseFloat(coords[0]);
+  if (isNaN(lat)) return 'BAC';
   if (lat >= 19.5) return 'BAC';
   if (lat >= 14.0) return 'TRUNG';
   return 'NAM';
@@ -98,8 +112,11 @@ const getRegion = (coords) => {
 // Calculate Haversine distance client-side between two coordinates [lat, lng]
 const calculateHaversineDistance = (coords1, coords2) => {
   if (!coords1 || !coords2) return 0;
-  const [lat1, lon1] = coords1;
-  const [lat2, lon2] = coords2;
+  const lat1 = parseFloat(coords1[0]);
+  const lon1 = parseFloat(coords1[1]);
+  const lat2 = parseFloat(coords2[0]);
+  const lon2 = parseFloat(coords2[1]);
+  if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) return 0;
   const R = 6371; // Radius of the earth in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -206,6 +223,9 @@ export default function IndividualOrder() {
   };
 
   const plannedPreviewHubs = getPlannedPreviewHubs();
+  const resolvedRoutingPath = estimatedFee && estimatedFee.routing_path && estimatedFee.routing_path.length > 0
+    ? estimatedFee.routing_path
+    : null;
 
   // Geocode home page input once on mount
   useEffect(() => {
@@ -246,9 +266,14 @@ export default function IndividualOrder() {
   useEffect(() => {
     if (senderCoords && receiverCoords) {
       setRouteGeometry(null);
-      const waypoints = [senderCoords];
-      plannedPreviewHubs.forEach(hub => waypoints.push(hub.coords));
-      waypoints.push(receiverCoords);
+      let waypoints = [];
+      if (resolvedRoutingPath) {
+        waypoints = resolvedRoutingPath.map(item => [parseFloat(item.coords[0]), parseFloat(item.coords[1])]);
+      } else {
+        waypoints = [senderCoords];
+        plannedPreviewHubs.forEach(hub => waypoints.push(hub.coords));
+        waypoints.push(receiverCoords);
+      }
 
       fetchRouteGeometry(waypoints).then((geometry) => {
         if (geometry && geometry.length > 0) {
@@ -256,7 +281,7 @@ export default function IndividualOrder() {
         }
       });
     }
-  }, [senderCoords, receiverCoords, plannedPreviewHubs.map(h => h.name).join('|')]);
+  }, [senderCoords, receiverCoords, plannedPreviewHubs.map(h => h.name).join('|'), JSON.stringify(resolvedRoutingPath)]);
 
   // Dynamic Fee Calculation
   useEffect(() => {
@@ -282,6 +307,7 @@ export default function IndividualOrder() {
             insurance_fee: res.data.insurance_fee,
             total_fee: res.data.shipping_fee + res.data.insurance_fee,
             chargeable_weight: res.data.chargeable_weight,
+            routing_path: res.data.routing_path,
           });
         }
       } catch (err) {
@@ -688,6 +714,19 @@ export default function IndividualOrder() {
                        <span>Bảo hiểm: <strong className="text-black">{estimatedFee.insurance_fee?.toLocaleString()}đ</strong></span>
                      )}
                    </div>
+                   {resolvedRoutingPath && (
+                     <div className="text-[10px] text-mute font-bold flex flex-wrap items-center gap-1.5 mt-2 bg-white/50 border border-black/5 p-2 rounded-xl">
+                       <span className="text-[9px] font-black uppercase text-accent-purple shrink-0">Tuyến đường:</span>
+                       {resolvedRoutingPath.map((item, idx) => (
+                         <React.Fragment key={idx}>
+                           <span className={item.type.startsWith('branch') ? 'text-blue-600 font-extrabold' : item.type.startsWith('hub') ? 'text-amber-600 font-extrabold' : 'text-black font-semibold'}>
+                             {item.name}
+                           </span>
+                           {idx < resolvedRoutingPath.length - 1 && <span className="text-mute opacity-50 font-normal">➡️</span>}
+                         </React.Fragment>
+                       ))}
+                     </div>
+                   )}
                  </div>
                  <div className="text-left sm:text-right shrink-0">
                    <p className="text-[9px] text-mute uppercase font-black tracking-widest">
@@ -778,7 +817,7 @@ export default function IndividualOrder() {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               />
-              <ChangeView center={senderCoords} zoom={6} bounds={[senderCoords, receiverCoords, ...plannedPreviewHubs.map(h => h.coords)]} />
+              <ChangeView center={senderCoords} zoom={6} bounds={resolvedRoutingPath ? resolvedRoutingPath.map(item => item.coords) : [senderCoords, receiverCoords, ...plannedPreviewHubs.map(h => h.coords)].filter(Boolean)} />
               
               {/* Sender Pin */}
               {senderCoords && (
@@ -789,14 +828,50 @@ export default function IndividualOrder() {
                 </Marker>
               )}
 
-              {/* Hub Intermediate Pins */}
-              {plannedPreviewHubs.map((hub, idx) => (
-                <Marker key={idx} position={hub.coords} icon={hubNeonIcon}>
-                  <Popup>
-                    <div className="text-xs font-bold text-amber-600">🏢 {hub.name}</div>
-                  </Popup>
-                </Marker>
-              ))}
+              {/* Intermediate Pins (Branch / Hub) */}
+              {resolvedRoutingPath ? (
+                resolvedRoutingPath.map((item, idx) => {
+                  if (item.type === 'branch_sender' || item.type === 'branch_receiver') {
+                    return (
+                      <Marker key={`branch-${idx}`} position={item.coords} icon={branchNeonIcon}>
+                        <Popup>
+                          <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                            <p className="text-blue-500 font-black">🏢 CHI NHÁNH PHỤ TRÁCH</p>
+                            <p className="text-black mt-1 font-semibold">{item.name}</p>
+                            <p className="text-[10px] text-mute mt-0.5 leading-normal italic">
+                              {item.type === 'branch_sender' ? 'Chi nhánh gom/nhận hàng nguồn.' : 'Chi nhánh phát/giao hàng đầu nhận.'}
+                            </p>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  }
+                  if (item.type === 'hub_sender' || item.type === 'hub_receiver') {
+                    return (
+                      <Marker key={`hub-${idx}`} position={item.coords} icon={hubNeonIcon}>
+                        <Popup>
+                          <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                            <p className="text-amber-500 font-black">🏢 KHO TRUNG CHUYỂN</p>
+                            <p className="text-black mt-1 font-semibold">{item.name}</p>
+                            <p className="text-[10px] text-mute mt-0.5 leading-normal italic">
+                              {item.type === 'hub_sender' ? 'Tổng kho trung chuyển xuất phát.' : 'Tổng kho trung chuyển nhận hàng.'}
+                            </p>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  }
+                  return null;
+                })
+              ) : (
+                plannedPreviewHubs.map((hub, idx) => (
+                  <Marker key={idx} position={hub.coords} icon={hubNeonIcon}>
+                    <Popup>
+                      <div className="text-xs font-bold text-amber-600">🏢 {hub.name}</div>
+                    </Popup>
+                  </Marker>
+                ))
+              )}
 
               {/* Receiver Pin */}
               {receiverCoords && (
@@ -813,7 +888,7 @@ export default function IndividualOrder() {
               ) : (
                 senderCoords && receiverCoords && (
                   <Polyline 
-                    positions={[senderCoords, ...plannedPreviewHubs.map(h => h.coords), receiverCoords]} 
+                    positions={resolvedRoutingPath ? resolvedRoutingPath.map(item => item.coords) : [senderCoords, ...plannedPreviewHubs.map(h => h.coords), receiverCoords]} 
                     color="#5E0ED7" 
                     weight={3} 
                     opacity={0.5} 
@@ -899,7 +974,7 @@ export default function IndividualOrder() {
         onClose={() => setShowSenderMap(false)}
         onConfirm={(loc) => {
           setSenderAddress(loc.address);
-          setSenderCoords([loc.lat, loc.lng]);
+          setSenderCoords([parseFloat(loc.lat), parseFloat(loc.lng)]);
         }}
         initialCoords={senderCoords}
         title="Chọn địa chỉ lấy hàng"
@@ -909,7 +984,7 @@ export default function IndividualOrder() {
         onClose={() => setShowReceiverMap(false)}
         onConfirm={(loc) => {
           setReceiverAddress(loc.address);
-          setReceiverCoords([loc.lat, loc.lng]);
+          setReceiverCoords([parseFloat(loc.lat), parseFloat(loc.lng)]);
         }}
         initialCoords={receiverCoords}
         title="Chọn địa chỉ giao hàng"

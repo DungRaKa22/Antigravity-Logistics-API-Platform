@@ -109,7 +109,7 @@ def partner_calculate_fee():
         if direct_dist < 10.0:
             dist = direct_dist
         else:
-            dist = calculate_5point_distance(lat_s, lon_s, lat_r, lon_r)
+            dist = calculate_5point_distance(lat_s, lon_s, lat_r, lon_r, sender_addr, receiver_addr)
     else:
         from app.services.osrm_service import get_smart_distance
         dist = get_smart_distance(sender_addr, receiver_addr, lat_gui=lat_s, lon_gui=lon_s, lat_nhan=lat_r, lon_nhan=lon_r)
@@ -142,7 +142,7 @@ def partner_calculate_fee():
 @require_api_key
 def partner_create_order():
     data = request.json
-    from app.routes.order_routes import generate_order_id, calculate_5point_distance, find_closest_branch, calculate_haversine
+    from app.routes.order_routes import generate_order_id, calculate_5point_distance, find_closest_branch, find_branch_by_address, calculate_haversine
     from app.models import DonHang, LichSu_TrangThai, TongKho
     from app.services.finance_service import calculate_shipping_fee, calculate_insurance_fee, calculate_volumetric_weight
     from app.services.osrm_service import get_smart_distance, geocode_address
@@ -162,7 +162,7 @@ def partner_create_order():
             "success": False,
             "message": "Vận chuyển chỉ hỗ trợ trong phạm vi lãnh thổ Việt Nam!"
         }), 400
-
+ 
     length = int(data.get('length_cm', 10))
     width = int(data.get('width_cm', 10))
     height = int(data.get('height_cm', 10))
@@ -174,16 +174,16 @@ def partner_create_order():
         if direct_dist < 10.0:
             dist = direct_dist
         else:
-            dist = calculate_5point_distance(lat_s, lon_s, lat_r, lon_r)
+            dist = calculate_5point_distance(lat_s, lon_s, lat_r, lon_r, sender_addr, receiver_addr)
     else:
         dist = get_smart_distance(sender_addr, receiver_addr, lat_gui=lat_s, lon_gui=lon_s, lat_nhan=lat_r, lon_nhan=lon_r)
         
     fee = calculate_shipping_fee(dist, actual_weight, length, width, height)
     declared_value = float(data.get('declared_value', 0))
     insurance = calculate_insurance_fee(declared_value)
-
-    branch_o = find_closest_branch(lat_s, lon_s)
-    branch_d = find_closest_branch(lat_r, lon_r)
+ 
+    branch_o = find_branch_by_address(sender_addr, lat_s, lon_s)
+    branch_d = find_branch_by_address(receiver_addr, lat_r, lon_r)
     
     hub_path = []
     hub_o = TongKho.query.get(branch_o.MaTongKhoLienKet) if branch_o else None
