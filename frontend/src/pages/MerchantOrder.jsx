@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Package, Zap, DollarSign, Trash2, Plus, ArrowRight, MapPin, Truck, HelpCircle, CheckCircle2, Copy, Check, Navigation, Printer } from 'lucide-react';
@@ -7,6 +7,7 @@ import { OrderService, AddressService, TrackingService } from '../services/api';
 import { fetchRouteGeometry } from '../utils/routing';
 import { useNavigate } from 'react-router-dom';
 import { printWaybill } from '../utils/waybill';
+import LocationPickerModal from '../components/LocationPickerModal';
 
 // Fix Leaflet's default icon path issues in Vite
 delete L.Icon.Default.prototype._getIconUrl;
@@ -106,6 +107,8 @@ export default function MerchantOrder() {
       receiver_name: '',
       receiver_phone: '',
       receiver_address: '',
+      receiver_lat: null,
+      receiver_lng: null,
       description: '',
       length_cm: '10',
       width_cm: '10',
@@ -115,6 +118,8 @@ export default function MerchantOrder() {
       declared_value: '0'
     }
   ]);
+
+  const [pickerActiveIndex, setPickerActiveIndex] = useState(null);
 
   const [active3dIndex, setActive3dIndex] = useState(0);
 
@@ -142,9 +147,24 @@ export default function MerchantOrder() {
 
   // Dynamic geocoding coordinates states
   const [senderCoords, setSenderCoords] = useState([21.0333, 105.8500]); // Fallback Hanoi
-  const [receiverCoordsList, setReceiverCoordsList] = useState([]);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [routeGeometry, setRouteGeometry] = useState(null); // OSRM real road geometry
+
+  // Derive receiverCoordsList from receivers state
+  const receiverCoordsList = useMemo(() => {
+    return receivers
+      .map((r, idx) => {
+        if (r.receiver_lat && r.receiver_lng) {
+          return {
+            index: idx,
+            coords: [r.receiver_lat, r.receiver_lng],
+            name: r.receiver_name || `Người nhận ${idx + 1}`
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }, [receivers]);
 
   // Success dialog/modal states
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -214,6 +234,8 @@ export default function MerchantOrder() {
         receiver_name: '',
         receiver_phone: '',
         receiver_address: '',
+        receiver_lat: null,
+        receiver_lng: null,
         description: '',
         length_cm: '10',
         width_cm: '10',
@@ -232,19 +254,17 @@ export default function MerchantOrder() {
     setActive3dIndex(prev => Math.min(prev, updated.length - 1));
   };
 
-  // Geocode address changes dynamically with debounce to prevent OpenStreetMap API spam
+  // Simple fallback geocode for sender address if not present in address book entry
   useEffect(() => {
-    const delayDebounce = setTimeout(async () => {
-      if (!senderAddress) return;
-      
-      setIsGeocoding(true);
-      
-      // Check if coordinates already exist in addressBook for the selected sender address
-      const chosen = addressBook.find(item => item.id.toString() === selectedAddressId);
-      if (chosen && chosen.lat && chosen.lng) {
-        setSenderCoords([parseFloat(chosen.lat), parseFloat(chosen.lng)]);
-      } else {
-        // 1. Geocode sender address
+    if (!senderAddress) return;
+    setIsGeocoding(true);
+    
+    const chosen = addressBook.find(item => item.id.toString() === selectedAddressId);
+    if (chosen && chosen.lat && chosen.lng) {
+      setSenderCoords([parseFloat(chosen.lat), parseFloat(chosen.lng)]);
+      setIsGeocoding(false);
+    } else {
+      const delayDebounce = setTimeout(async () => {
         try {
           const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(senderAddress)}&format=json&limit=1`;
           const res = await fetch(url, { headers: { 'User-Agent': 'Antigravity-Logistics/1.0' } });
@@ -256,42 +276,13 @@ export default function MerchantOrder() {
           }
         } catch (err) {
           console.error("Failed to geocode sender address", err);
+        } finally {
+          setIsGeocoding(false);
         }
-      }
-
-      // 2. Geocode receiver addresses in sequence (to respect Nominatim's 1 req/sec limit)
-      const coordsList = [];
-      for (let i = 0; i < receivers.length; i++) {
-        const addr = receivers[i].receiver_address;
-        if (addr) {
-          if (i > 0) {
-            // Wait 1 second before querying OSM for subsequent addresses
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-          try {
-            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1`;
-            const res = await fetch(url, { headers: { 'User-Agent': 'Antigravity-Logistics/1.0' } });
-            if (res.ok) {
-              const data = await res.json();
-              if (data && data.length > 0) {
-                coordsList.push({
-                  index: i,
-                  coords: [parseFloat(data[0].lat), parseFloat(data[0].lon)],
-                  name: receivers[i].receiver_name || `Người nhận ${i + 1}`
-                });
-              }
-            }
-          } catch (err) {
-            console.error(`Failed to geocode receiver address at index ${i}`, err);
-          }
-        }
-      }
-      setReceiverCoordsList(coordsList);
-      setIsGeocoding(false);
-    }, 1200);
-
-    return () => clearTimeout(delayDebounce);
-  }, [senderAddress, receivers.map(r => r.receiver_address).join('|'), addressBook, selectedAddressId]);
+      }, 1000);
+      return () => clearTimeout(delayDebounce);
+    }
+  }, [senderAddress, addressBook, selectedAddressId]);
 
   // Trạm trung chuyển cấu hình tọa độ vùng miền
   const HUBS = {
@@ -391,7 +382,9 @@ export default function MerchantOrder() {
             singleRec.length_cm,
             singleRec.width_cm,
             singleRec.height_cm,
-            singleRec.declared_value
+            singleRec.declared_value,
+            senderCoords,
+            singleRec.receiver_lat && singleRec.receiver_lng ? [singleRec.receiver_lat, singleRec.receiver_lng] : null
           );
           if (res.success && res.data) {
             setEstimatedFee({
@@ -407,10 +400,14 @@ export default function MerchantOrder() {
           // Multi-stop optimizations & calculations
           const payload = {
             sender_address: senderAddress,
+            sender_lat: senderCoords ? senderCoords[0] : null,
+            sender_lng: senderCoords ? senderCoords[1] : null,
             receivers: receivers.map(r => ({
               receiver_name: r.receiver_name,
               receiver_phone: r.receiver_phone,
               receiver_address: r.receiver_address,
+              receiver_lat: r.receiver_lat,
+              receiver_lng: r.receiver_lng,
               description: r.description,
               length_cm: parseInt(r.length_cm),
               width_cm: parseInt(r.width_cm),
@@ -473,7 +470,11 @@ export default function MerchantOrder() {
           cod_amount: singleRec.cod_amount,
           declared_value: singleRec.declared_value,
           pickup_type: pickupType,
-          inspection_policy: inspectionPolicy
+          inspection_policy: inspectionPolicy,
+          sender_lat: senderCoords ? senderCoords[0] : null,
+          sender_lng: senderCoords ? senderCoords[1] : null,
+          receiver_lat: singleRec.receiver_lat,
+          receiver_lng: singleRec.receiver_lng
         };
         const response = await OrderService.createOrder(payload);
         if (response.success) {
@@ -490,6 +491,8 @@ export default function MerchantOrder() {
         // Multi-stop order creation
         const payload = {
           sender_address: senderAddress,
+          sender_lat: senderCoords ? senderCoords[0] : null,
+          sender_lng: senderCoords ? senderCoords[1] : null,
           service_package_id: serviceType === 'express' ? 2 : 1,
           pickup_type: pickupType,
           inspection_policy: inspectionPolicy,
@@ -497,6 +500,8 @@ export default function MerchantOrder() {
             receiver_name: r.receiver_name,
             receiver_phone: r.receiver_phone,
             receiver_address: r.receiver_address,
+            receiver_lat: r.receiver_lat,
+            receiver_lng: r.receiver_lng,
             description: r.description,
             length_cm: parseInt(r.length_cm),
             width_cm: parseInt(r.width_cm),
@@ -564,6 +569,8 @@ export default function MerchantOrder() {
         receiver_name: '',
         receiver_phone: '',
         receiver_address: '',
+        receiver_lat: null,
+        receiver_lng: null,
         description: '',
         length_cm: '10',
         width_cm: '10',
@@ -686,13 +693,24 @@ export default function MerchantOrder() {
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-mute uppercase tracking-widest">Địa chỉ nhận</label>
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-mute uppercase tracking-widest">Địa chỉ nhận</label>
+                      <button
+                        type="button"
+                        onClick={() => setPickerActiveIndex(index)}
+                        className="text-[10px] font-black text-accent-purple uppercase tracking-widest hover:underline transition-all cursor-pointer"
+                      >
+                        📍 Chọn trên bản đồ
+                      </button>
+                    </div>
                     <input
                       type="text"
                       value={rec.receiver_address}
                       onChange={(e) => handleReceiverChange(index, 'receiver_address', e.target.value)}
-                      placeholder="Địa chỉ chi tiết (VD: 123 Lê Lợi, Quận 1, TP.HCM)"
-                      className="input-neon font-semibold text-sm"
+                      placeholder="Chọn địa điểm nhận hàng trên bản đồ"
+                      className="input-neon font-semibold text-sm cursor-pointer bg-white"
+                      onClick={() => setPickerActiveIndex(index)}
+                      readOnly
                       required
                     />
                   </div>
@@ -1214,6 +1232,25 @@ export default function MerchantOrder() {
           </div>
         </div>
       )}
+
+      {/* Modal Chọn Vị Trí Trên Bản Đồ Cho Người Nhận */}
+      <LocationPickerModal
+        isOpen={pickerActiveIndex !== null}
+        onClose={() => setPickerActiveIndex(null)}
+        onConfirm={(loc) => {
+          if (pickerActiveIndex !== null) {
+            handleReceiverChange(pickerActiveIndex, 'receiver_address', loc.address);
+            handleReceiverChange(pickerActiveIndex, 'receiver_lat', loc.lat);
+            handleReceiverChange(pickerActiveIndex, 'receiver_lng', loc.lng);
+          }
+        }}
+        initialCoords={
+          pickerActiveIndex !== null && receivers[pickerActiveIndex]?.receiver_lat && receivers[pickerActiveIndex]?.receiver_lng
+            ? [receivers[pickerActiveIndex].receiver_lat, receivers[pickerActiveIndex].receiver_lng]
+            : (senderCoords || [21.0285, 105.8542])
+        }
+        title={`Chọn địa chỉ giao hàng ${receivers.length > 1 ? `#${pickerActiveIndex + 1}` : ''}`}
+      />
 
     </div>
   );

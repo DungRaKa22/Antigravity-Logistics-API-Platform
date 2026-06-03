@@ -6,6 +6,7 @@ import L from 'leaflet';
 import { OrderService, TrackingService, BACKEND_URL } from '../services/api';
 import { fetchRouteGeometry } from '../utils/routing';
 import { useNavigate, useLocation } from 'react-router-dom';
+import LocationPickerModal from '../components/LocationPickerModal';
 
 // Fix Leaflet default marker icons in Vite
 delete L.Icon.Default.prototype._getIconUrl;
@@ -154,6 +155,8 @@ export default function IndividualOrder() {
   const [receiverCoords, setReceiverCoords] = useState([10.7769, 106.7009]); // Default Saigon
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [routeGeometry, setRouteGeometry] = useState(null);
+  const [showSenderMap, setShowSenderMap] = useState(false);
+  const [showReceiverMap, setShowReceiverMap] = useState(false);
 
   // Success Dialog State
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -204,16 +207,12 @@ export default function IndividualOrder() {
 
   const plannedPreviewHubs = getPlannedPreviewHubs();
 
-  // Debounced Geocoding
+  // Geocode home page input once on mount
   useEffect(() => {
-    const delayDebounce = setTimeout(async () => {
-      if (!senderAddress && !receiverAddress) return;
-      setIsGeocoding(true);
-
-      // Geocode Sender
-      if (senderAddress) {
+    async function geocodeInitial() {
+      if (homeState.pickup) {
         try {
-          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(senderAddress)}&format=json&limit=1`;
+          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(homeState.pickup)}&format=json&limit=1`;
           const res = await fetch(url, { headers: { 'User-Agent': 'Antigravity-Logistics/1.0' } });
           if (res.ok) {
             const data = await res.json();
@@ -222,17 +221,12 @@ export default function IndividualOrder() {
             }
           }
         } catch (err) {
-          console.error("Sender geocoding error", err);
+          console.error("Sender initial geocoding error", err);
         }
       }
-
-      // Respect OSM Nominatim 1 req/sec limit
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Geocode Receiver
-      if (receiverAddress) {
+      if (homeState.dropoff) {
         try {
-          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(receiverAddress)}&format=json&limit=1`;
+          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(homeState.dropoff)}&format=json&limit=1`;
           const res = await fetch(url, { headers: { 'User-Agent': 'Antigravity-Logistics/1.0' } });
           if (res.ok) {
             const data = await res.json();
@@ -241,15 +235,12 @@ export default function IndividualOrder() {
             }
           }
         } catch (err) {
-          console.error("Receiver geocoding error", err);
+          console.error("Receiver initial geocoding error", err);
         }
       }
-
-      setIsGeocoding(false);
-    }, 1200);
-
-    return () => clearTimeout(delayDebounce);
-  }, [senderAddress, receiverAddress]);
+    }
+    geocodeInitial();
+  }, []);
 
   // Fetch OSRM Routing Path
   useEffect(() => {
@@ -280,7 +271,9 @@ export default function IndividualOrder() {
           lengthCm,
           widthCm,
           heightCm,
-          declaredValue
+          declaredValue,
+          senderCoords,
+          receiverCoords
         );
         if (res.success && res.data) {
           setEstimatedFee({
@@ -299,7 +292,7 @@ export default function IndividualOrder() {
     }, 1200);
 
     return () => clearTimeout(delayDebounce);
-  }, [senderAddress, receiverAddress, weightGram, lengthCm, widthCm, heightCm, declaredValue]);
+  }, [senderAddress, receiverAddress, weightGram, lengthCm, widthCm, heightCm, declaredValue, senderCoords, receiverCoords]);
 
   // Submit Handler
   const handleCreateOrder = async (e) => {
@@ -332,7 +325,11 @@ export default function IndividualOrder() {
         pickup_type: pickupType,
         inspection_policy: inspectionPolicy,
         payment_method: paymentMethod,
-        cod_amount: 0 // B2C lẻ cước ship trả trước bắt buộc
+        cod_amount: 0, // B2C lẻ cước ship trả trước bắt buộc
+        sender_lat: senderCoords ? senderCoords[0] : null,
+        sender_lng: senderCoords ? senderCoords[1] : null,
+        receiver_lat: receiverCoords ? receiverCoords[0] : null,
+        receiver_lng: receiverCoords ? receiverCoords[1] : null,
       };
 
       const response = await OrderService.createGuestOrder(payload);
@@ -410,13 +407,24 @@ export default function IndividualOrder() {
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-bold text-mute uppercase tracking-widest">Địa chỉ gửi hàng (Lấy hàng)</label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-[9px] font-bold text-mute uppercase tracking-widest">Địa chỉ gửi hàng (Lấy hàng)</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowSenderMap(true)}
+                      className="text-[10px] font-black text-accent-purple uppercase tracking-widest hover:underline transition-all cursor-pointer"
+                    >
+                      📍 Chọn trên bản đồ
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={senderAddress}
                     onChange={(e) => setSenderAddress(e.target.value)}
-                    placeholder="Địa chỉ chi tiết nơi lấy hàng"
-                    className="input-neon font-semibold text-xs"
+                    placeholder="Chọn địa điểm lấy hàng trên bản đồ"
+                    className="input-neon font-semibold text-xs cursor-pointer bg-white"
+                    onClick={() => setShowSenderMap(true)}
+                    readOnly
                     required
                   />
                 </div>
@@ -454,13 +462,24 @@ export default function IndividualOrder() {
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-bold text-mute uppercase tracking-widest">Địa chỉ nhận hàng (Giao hàng)</label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-[9px] font-bold text-mute uppercase tracking-widest">Địa chỉ nhận hàng (Giao hàng)</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowReceiverMap(true)}
+                      className="text-[10px] font-black text-cyan-500 uppercase tracking-widest hover:underline transition-all cursor-pointer"
+                    >
+                      📍 Chọn trên bản đồ
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={receiverAddress}
                     onChange={(e) => setReceiverAddress(e.target.value)}
-                    placeholder="Địa chỉ chi tiết nơi giao hàng"
-                    className="input-neon font-semibold text-xs"
+                    placeholder="Chọn địa điểm nhận hàng trên bản đồ"
+                    className="input-neon font-semibold text-xs cursor-pointer bg-white"
+                    onClick={() => setShowReceiverMap(true)}
+                    readOnly
                     required
                   />
                 </div>
@@ -874,6 +893,27 @@ export default function IndividualOrder() {
         </div>
       )}
 
+      {/* Modals bản đồ chọn địa chỉ */}
+      <LocationPickerModal
+        isOpen={showSenderMap}
+        onClose={() => setShowSenderMap(false)}
+        onConfirm={(loc) => {
+          setSenderAddress(loc.address);
+          setSenderCoords([loc.lat, loc.lng]);
+        }}
+        initialCoords={senderCoords}
+        title="Chọn địa chỉ lấy hàng"
+      />
+      <LocationPickerModal
+        isOpen={showReceiverMap}
+        onClose={() => setShowReceiverMap(false)}
+        onConfirm={(loc) => {
+          setReceiverAddress(loc.address);
+          setReceiverCoords([loc.lat, loc.lng]);
+        }}
+        initialCoords={receiverCoords}
+        title="Chọn địa chỉ giao hàng"
+      />
     </div>
   );
 }

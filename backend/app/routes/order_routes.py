@@ -101,14 +101,26 @@ def trigger_webhook_async(url, payload):
 
 @order_bp.route('/calculate', methods=['POST'])
 def calculate_fee():
-    data = request.json
+    data = request.json or {}
     
     sender_addr = data.get('sender_address', '')
     receiver_addr = data.get('receiver_address', '')
     
-    # Check Vietnam territory limits
-    lat_s, lon_s = geocode_address(sender_addr)
-    lat_r, lon_r = geocode_address(receiver_addr)
+    lat_s = data.get('sender_lat')
+    lon_s = data.get('sender_lng')
+    if lat_s is None or lon_s is None:
+        lat_s, lon_s = geocode_address(sender_addr)
+    else:
+        lat_s = float(lat_s)
+        lon_s = float(lon_s)
+        
+    lat_r = data.get('receiver_lat')
+    lon_r = data.get('receiver_lng')
+    if lat_r is None or lon_r is None:
+        lat_r, lon_r = geocode_address(receiver_addr)
+    else:
+        lat_r = float(lat_r)
+        lon_r = float(lon_r)
     
     is_s_vn = not lat_s or (8.5 <= lat_s <= 23.5 and 102.0 <= lon_s <= 110.0)
     is_r_vn = not lat_r or (8.5 <= lat_r <= 23.5 and 102.0 <= lon_r <= 110.0)
@@ -153,15 +165,27 @@ def calculate_fee():
 @require_auth
 @require_role(['KHACHHANG'])
 def create_order():
-    data = request.json
+    data = request.json or {}
     order_id = generate_order_id()
     
     sender_addr = data.get('sender_address', '')
     receiver_addr = data.get('receiver_address', '')
     
-    # Check Vietnam territory limits
-    lat_s, lon_s = geocode_address(sender_addr)
-    lat_r, lon_r = geocode_address(receiver_addr)
+    lat_s = data.get('sender_lat')
+    lon_s = data.get('sender_lng')
+    if lat_s is None or lon_s is None:
+        lat_s, lon_s = geocode_address(sender_addr)
+    else:
+        lat_s = float(lat_s)
+        lon_s = float(lon_s)
+        
+    lat_r = data.get('receiver_lat')
+    lon_r = data.get('receiver_lng')
+    if lat_r is None or lon_r is None:
+        lat_r, lon_r = geocode_address(receiver_addr)
+    else:
+        lat_r = float(lat_r)
+        lon_r = float(lon_r)
     
     is_s_vn = not lat_s or (8.5 <= lat_s <= 23.5 and 102.0 <= lon_s <= 110.0)
     is_r_vn = not lat_r or (8.5 <= lat_r <= 23.5 and 102.0 <= lon_r <= 110.0)
@@ -229,6 +253,12 @@ def create_order():
         DiaChiNhan=data['receiver_address'],
         ViDoNhan=lat_r,
         KinhDoNhan=lon_r,
+        
+        # Lưu thông tin gửi
+        DiaChiGui=sender_addr,
+        ViDoGui=lat_s,
+        KinhDoGui=lon_s,
+        
         TrongLuongGram=actual_weight,
         ChieuDaiCM=length,
         ChieuRongCM=width,
@@ -281,7 +311,7 @@ def create_order():
 
 @order_bp.route('/guest', methods=['POST'])
 def create_guest_order():
-    data = request.json
+    data = request.json or {}
     order_id = generate_order_id(is_individual=True)
     
     sender_name = data.get('sender_name', '')
@@ -292,9 +322,21 @@ def create_guest_order():
     receiver_phone = data.get('receiver_phone', '')
     receiver_addr = data.get('receiver_address', '')
     
-    # Check Vietnam territory limits
-    lat_s, lon_s = geocode_address(sender_addr)
-    lat_r, lon_r = geocode_address(receiver_addr)
+    lat_s = data.get('sender_lat')
+    lon_s = data.get('sender_lng')
+    if lat_s is None or lon_s is None:
+        lat_s, lon_s = geocode_address(sender_addr)
+    else:
+        lat_s = float(lat_s)
+        lon_s = float(lon_s)
+        
+    lat_r = data.get('receiver_lat')
+    lon_r = data.get('receiver_lng')
+    if lat_r is None or lon_r is None:
+        lat_r, lon_r = geocode_address(receiver_addr)
+    else:
+        lat_r = float(lat_r)
+        lon_r = float(lon_r)
     
     is_s_vn = not lat_s or (8.5 <= lat_s <= 23.5 and 102.0 <= lon_s <= 110.0)
     is_r_vn = not lat_r or (8.5 <= lat_r <= 23.5 and 102.0 <= lon_r <= 110.0)
@@ -555,7 +597,7 @@ def upload_excel():
 @order_bp.route('/calculate-multistop', methods=['POST'])
 @require_auth
 def calculate_multistop_fee():
-    data = request.json
+    data = request.json or {}
     sender_address = data.get('sender_address')
     receivers = data.get('receivers', [])
     
@@ -564,7 +606,25 @@ def calculate_multistop_fee():
 
     receiver_addresses = [r.get('receiver_address') for r in receivers]
     
-    opt_indices, leg_distances = optimize_multistop_path(sender_address, receiver_addresses)
+    sender_coords = None
+    if 'sender_lat' in data and 'sender_lng' in data:
+        sender_coords = (float(data['sender_lat']), float(data['sender_lng']))
+        
+    receiver_coords = []
+    for r in receivers:
+        r_lat = r.get('receiver_lat')
+        r_lng = r.get('receiver_lng')
+        if r_lat is not None and r_lng is not None:
+            receiver_coords.append((float(r_lat), float(r_lng)))
+        else:
+            receiver_coords.append(None)
+            
+    opt_indices, leg_distances = optimize_multistop_path(
+        sender_address, 
+        receiver_addresses, 
+        sender_coords=sender_coords, 
+        receiver_coords=receiver_coords
+    )
     
     optimized_receivers = []
     total_shipping_fee = 0.0
@@ -618,7 +678,7 @@ def calculate_multistop_fee():
 @require_auth
 @require_role(['KHACHHANG'])
 def create_multistop_order():
-    data = request.json
+    data = request.json or {}
     sender_address = data.get('sender_address')
     receivers = data.get('receivers', [])
     
@@ -627,7 +687,25 @@ def create_multistop_order():
 
     receiver_addresses = [r.get('receiver_address') for r in receivers]
     
-    opt_indices, leg_distances = optimize_multistop_path(sender_address, receiver_addresses)
+    sender_coords = None
+    if 'sender_lat' in data and 'sender_lng' in data:
+        sender_coords = (float(data['sender_lat']), float(data['sender_lng']))
+        
+    receiver_coords = []
+    for r in receivers:
+        r_lat = r.get('receiver_lat')
+        r_lng = r.get('receiver_lng')
+        if r_lat is not None and r_lng is not None:
+            receiver_coords.append((float(r_lat), float(r_lng)))
+        else:
+            receiver_coords.append(None)
+            
+    opt_indices, leg_distances = optimize_multistop_path(
+        sender_address, 
+        receiver_addresses, 
+        sender_coords=sender_coords, 
+        receiver_coords=receiver_coords
+    )
     
     created_order_ids = []
     total_fee = 0.0
@@ -651,6 +729,12 @@ def create_multistop_order():
         
         order_id = generate_order_id()
         
+        lat_r, lon_r = None, None
+        if receiver_coords and opt_idx < len(receiver_coords) and receiver_coords[opt_idx]:
+            lat_r, lon_r = receiver_coords[opt_idx]
+        if lat_r is None or lon_r is None:
+            lat_r, lon_r = geocode_address(rec_data['receiver_address'])
+            
         order = DonHang(
             MaDonHang=order_id,
             MaNguoiGui=request.user_id,
@@ -658,6 +742,14 @@ def create_multistop_order():
             TenNguoiNhan=rec_data['receiver_name'],
             SoDienThoaiNhan=rec_data['receiver_phone'],
             DiaChiNhan=rec_data['receiver_address'],
+            ViDoNhan=lat_r,
+            KinhDoNhan=lon_r,
+            
+            # Lưu địa chỉ và tọa độ gửi
+            DiaChiGui=sender_address,
+            ViDoGui=sender_coords[0] if sender_coords else None,
+            KinhDoGui=sender_coords[1] if sender_coords else None,
+            
             TrongLuongGram=actual_weight,
             ChieuDaiCM=length,
             ChieuRongCM=width,

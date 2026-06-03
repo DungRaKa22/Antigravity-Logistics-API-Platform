@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AddressService } from '../services/api';
 import { Search, Plus, Trash2, X, Star } from 'lucide-react';
+import LocationPickerModal from '../components/LocationPickerModal';
 
 export default function MerchantAddresses() {
   const [addresses, setAddresses] = useState([]);
@@ -15,6 +16,15 @@ export default function MerchantAddresses() {
   const [addressDetail, setAddressDetail] = useState('');
   const [isDefaultForm, setIsDefaultForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [lat, setLat] = useState(null);
+  const [lng, setLng] = useState(null);
+  const [showMapPicker, setShowMapPicker] = useState(false);
+
+  const handleLocationConfirm = (loc) => {
+    setAddressDetail(loc.address);
+    setLat(loc.lat);
+    setLng(loc.lng);
+  };
 
   // Fetch danh sách địa chỉ từ API
   async function fetchAddresses() {
@@ -59,6 +69,8 @@ export default function MerchantAddresses() {
         name: name.trim(),
         phone: phone.trim(),
         address: addressDetail.trim(),
+        lat: lat,
+        lng: lng,
         isDefault: isDefaultForm
       });
 
@@ -69,6 +81,8 @@ export default function MerchantAddresses() {
         setName('');
         setPhone('');
         setAddressDetail('');
+        setLat(null);
+        setLng(null);
         setIsDefaultForm(false);
         setShowModal(false);
       } else {
@@ -263,15 +277,29 @@ export default function MerchantAddresses() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-extrabold text-mute uppercase tracking-widest block">Địa chỉ chi tiết</label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-extrabold text-mute uppercase tracking-widest block">Địa chỉ chi tiết</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowMapPicker(true)}
+                      className="text-[10px] font-black text-accent-purple uppercase tracking-widest hover:underline transition-all flex items-center gap-1"
+                    >
+                      📍 Chọn trên bản đồ
+                    </button>
+                  </div>
                   <textarea
                     required
                     rows="3"
                     value={addressDetail}
                     onChange={(e) => setAddressDetail(e.target.value)}
-                    placeholder="Số nhà, tên đường, phường/xã, quận/huyện..."
+                    placeholder="Số nhà, tên đường, phường/xã, quận/huyện... (hoặc chọn trên bản đồ)"
                     className="w-full input-neon p-4 text-sm text-black placeholder-mute resize-none font-semibold"
                   ></textarea>
+                  {lat && lng && (
+                    <span className="text-[9px] font-extrabold text-emerald-600 uppercase tracking-widest block mt-1">
+                      ✓ Đã định vị tọa độ: {lat.toFixed(5)}, {lng.toFixed(5)}
+                    </span>
+                  )}
                 </div>
                 
                 {/* Default Address Checkbox */}
@@ -310,6 +338,14 @@ export default function MerchantAddresses() {
           </div>
         </div>
       )}
+      {/* Modal Chọn Vị Trí Trên Bản Đồ */}
+      <LocationPickerModal
+        isOpen={showMapPicker}
+        onClose={() => setShowMapPicker(false)}
+        onConfirm={handleLocationConfirm}
+        initialCoords={lat && lng ? [lat, lng] : null}
+        title="Chọn địa chỉ lấy hàng"
+      />
     </div>
   );
 }

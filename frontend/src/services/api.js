@@ -61,9 +61,9 @@ export const AuthService = {
 
 export const OrderService = {
   // Tính cước
-  calculateFee: async (pickup, dropoff, weight, length = 10, width = 10, height = 10, declaredValue = 0) => {
+  calculateFee: async (pickup, dropoff, weight, length = 10, width = 10, height = 10, declaredValue = 0, senderCoords = null, receiverCoords = null) => {
     try {
-      const response = await api.post('/orders/calculate', {
+      const payload = {
         sender_address: pickup,
         receiver_address: dropoff,
         weight_gram: parseInt(weight) || 1000,
@@ -71,7 +71,16 @@ export const OrderService = {
         width_cm: parseInt(width) || 10,
         height_cm: parseInt(height) || 10,
         declared_value: parseFloat(declaredValue) || 0
-      });
+      };
+      if (senderCoords) {
+        payload.sender_lat = senderCoords[0];
+        payload.sender_lng = senderCoords[1];
+      }
+      if (receiverCoords) {
+        payload.receiver_lat = receiverCoords[0];
+        payload.receiver_lng = receiverCoords[1];
+      }
+      const response = await api.post('/orders/calculate', payload);
       return response.data;
     } catch (error) {
       console.error("Calculate Fee Error:", error);
@@ -98,6 +107,14 @@ export const OrderService = {
         pickup_type: orderData.pickup_type || "TU_MANG_RA_BUU_CUC",
         inspection_policy: orderData.inspection_policy || "KHONG_XEM"
       };
+      if (orderData.sender_lat !== undefined && orderData.sender_lng !== undefined) {
+        payload.sender_lat = orderData.sender_lat;
+        payload.sender_lng = orderData.sender_lng;
+      }
+      if (orderData.receiver_lat !== undefined && orderData.receiver_lng !== undefined) {
+        payload.receiver_lat = orderData.receiver_lat;
+        payload.receiver_lng = orderData.receiver_lng;
+      }
       
       const response = await api.post('/orders/', payload);
       return response.data;

@@ -65,13 +65,17 @@ def get_smart_distance(addr_gui: str, addr_nhan: str, lat_gui=None, lon_gui=None
     # Fallback giả định nếu API OSM/OSRM rớt
     return 10.5
 
-def optimize_multistop_path(sender_address: str, receiver_addresses: list):
+def optimize_multistop_path(sender_address: str, receiver_addresses: list, sender_coords: tuple = None, receiver_coords: list = None):
     """
     Tối ưu hóa lộ trình đa điểm (Nearest Neighbor).
     Trả về danh sách địa chỉ nhận đã được sắp xếp tối ưu kèm khoảng cách từng chặng.
     """
     # 1. Geocode sender
-    lat_gui, lon_gui = geocode_address(sender_address)
+    if sender_coords and sender_coords[0] is not None and sender_coords[1] is not None:
+        lat_gui, lon_gui = sender_coords
+    else:
+        lat_gui, lon_gui = geocode_address(sender_address)
+        
     if not lat_gui or not lon_gui:
         # Fallback if geocoding fails
         return list(range(len(receiver_addresses))), [10.5] + [5.0] * (len(receiver_addresses) - 1)
@@ -79,8 +83,14 @@ def optimize_multistop_path(sender_address: str, receiver_addresses: list):
     # 2. Geocode all receivers
     coords = []
     for idx, addr in enumerate(receiver_addresses):
-        lat, lon = geocode_address(addr)
-        coords.append((idx, lat, lon))
+        r_lat, r_lon = None, None
+        if receiver_coords and idx < len(receiver_coords) and receiver_coords[idx] and receiver_coords[idx][0] is not None and receiver_coords[idx][1] is not None:
+            r_lat, r_lon = receiver_coords[idx]
+        
+        if r_lat is None or r_lon is None:
+            r_lat, r_lon = geocode_address(addr)
+            
+        coords.append((idx, r_lat, r_lon))
 
     # Nearest Neighbor routing
     unvisited = list(coords)
