@@ -13,7 +13,7 @@ def create_app(config_name="default"):
 
     # Initialize Extensions
     db.init_app(app)
-    cors.init_app(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+    cors.init_app(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=False)
     socketio.init_app(app)
 
     # Database setup completed under PostgreSQL
