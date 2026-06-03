@@ -44,10 +44,17 @@ export const AuthService = {
     return response.data;
   },
   updateShipperConfig: async (shipperId, configData) => {
-    const response = await api.put(`/auth/users/${shipperId}/shipper-config`, configData);
+    const response = await api.put(`/auth/users/${shipperId}/staff-config`, configData);
+    return response.data;
+  },
+  getAttendance: async (userId) => {
+    const response = await api.get(`/auth/users/${userId}/attendance`);
+    return response.data;
+  },
+  logAttendance: async (userId, attendanceData) => {
+    const response = await api.post(`/auth/users/${userId}/attendance`, attendanceData);
     return response.data;
   }
-
 };
 
 export const OrderService = {
@@ -137,6 +144,35 @@ export const OrderService = {
   staffUpdateOrder: async (orderId, updateData) => {
     const response = await api.put(`/orders/${orderId}/staff-update`, updateData);
     return response.data;
+  },
+
+  // Nhận bưu phẩm tại Kho Trung Chuyển (check-in)
+  hubCheckin: async (orderId, payload = {}) => {
+    const response = await api.put(`/orders/${orderId}/hub-checkin`, payload);
+    return response.data;
+  },
+
+  // Cho bưu phẩm xuất bến rời Kho Trung Chuyển (check-out)
+  hubCheckout: async (orderId, payload = {}) => {
+    const response = await api.put(`/orders/${orderId}/hub-checkout`, payload);
+    return response.data;
+  },
+
+  // Lấy lịch sử quét Nhập/Xuất của nhân viên kho
+  getWarehouseHistory: async () => {
+    const response = await api.get('/orders/warehouse-history');
+    return response.data;
+  },
+
+  // Tạo đơn hàng vãng lai cho khách lẻ (Không cần đăng nhập)
+  createGuestOrder: async (orderData) => {
+    try {
+      const response = await api.post('/orders/guest', orderData);
+      return response.data;
+    } catch (error) {
+      console.error("Create Guest Order Error:", error);
+      throw error;
+    }
   }
 };
 
@@ -188,6 +224,18 @@ export const FinanceService = {
   payInvoice: async (invoiceId) => {
     const response = await api.put(`/reconciliations/invoices/${invoiceId}/pay`);
     return response.data;
+  },
+  
+  // Lấy danh sách COD bưu tá chưa đối soát
+  getShipperCod: async () => {
+    const response = await api.get('/reconciliations/shipper-cod');
+    return response.data;
+  },
+
+  // Phê duyệt đối soát COD bưu tá
+  settleShipperCod: async (shipperId) => {
+    const response = await api.put(`/reconciliations/shipper-cod/${shipperId}/settle`);
+    return response.data;
   }
 };
 
@@ -233,4 +281,78 @@ export const AddressService = {
     }
   }
 };
+
+export const ChatService = {
+  getHistory: async (roomId) => {
+    const response = await api.get(`/chat/history/${roomId}`);
+    return response.data;
+  },
+  uploadFile: async (formData) => {
+    const response = await api.post('/chat/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  },
+  getComplaints: async () => {
+    const response = await api.get('/chat/complaints');
+    return response.data;
+  },
+  createComplaint: async (complaintData) => {
+    const response = await api.post('/chat/complaints', complaintData);
+    return response.data;
+  },
+  updateComplaintStatus: async (ticketId, status) => {
+    const response = await api.put(`/chat/complaints/${ticketId}/status`, { status });
+    return response.data;
+  }
+};
+
+export const SuperAdminService = {
+  login: async (username, password) => {
+    const response = await api.post('/auth/super-admin/login', { username, password });
+    return response.data;
+  },
+  getDashboard: async () => {
+    const response = await api.get('/super-admin/dashboard');
+    return response.data;
+  },
+  createFacility: async (facilityData) => {
+    const response = await api.post('/super-admin/facilities', facilityData);
+    return response.data;
+  },
+  updateFacility: async (type, id, facilityData) => {
+    const response = await api.put(`/super-admin/facilities/${type}/${id}`, facilityData);
+    return response.data;
+  },
+  deleteFacility: async (type, id) => {
+    const response = await api.delete(`/super-admin/facilities/${type}/${id}`);
+    return response.data;
+  },
+  createManager: async (managerData) => {
+    const response = await api.post('/super-admin/facility-managers', managerData);
+    return response.data;
+  },
+  updateManager: async (id, managerData) => {
+    const response = await api.put(`/super-admin/facility-managers/${id}`, managerData);
+    return response.data;
+  },
+  deleteManager: async (id) => {
+    const response = await api.delete(`/super-admin/facility-managers/${id}`);
+    return response.data;
+  }
+};
+
+export const PartnerService = {
+  getMerchantApiKey: async () => {
+    const response = await api.get('/partner/keys/merchant');
+    return response.data;
+  },
+  createMerchantApiKey: async () => {
+    const response = await api.post('/partner/keys/merchant');
+    return response.data;
+  }
+};
+
 

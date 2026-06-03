@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { FinanceService, AuthService } from '../services/api';
 import { RefreshCw, CreditCard, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -16,6 +17,114 @@ const POPULAR_BANKS = [
   'TPBank'
 ];
 
+function numberToVietnameseWords(num) {
+  if (num === 0) return 'Không đồng';
+  const units = ['', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+  const unitsTen = ['', 'mười', 'hai mươi', 'ba mươi', 'bốn mươi', 'năm mươi', 'sáu mươi', 'bảy mươi', 'tám mươi', 'chín mươi'];
+  const levels = ['', 'nghìn', 'triệu', 'tỷ', 'nghìn tỷ', 'triệu tỷ'];
+  
+  let words = [];
+  let absNum = Math.abs(Math.floor(num));
+  
+  const readThreeDigits = (n, showZeroHundred) => {
+    let hundred = Math.floor(n / 100);
+    let ten = Math.floor((n % 100) / 10);
+    let unit = n % 10;
+    let str = '';
+    
+    if (hundred > 0 || showZeroHundred) {
+      str += units[hundred] + ' trăm ';
+    }
+    
+    if (ten > 0) {
+      if (ten === 1) str += 'mười ';
+      else str += units[ten] + ' mươi ';
+    } else if (hundred > 0 && unit > 0) {
+      str += 'lẻ ';
+    }
+    
+    if (unit > 0) {
+      if (unit === 1 && ten > 1) str += 'mốt';
+      else if (unit === 5 && ten > 0) str += 'lăm';
+      else str += units[unit];
+    }
+    return str.trim();
+  };
+  
+  let levelIndex = 0;
+  while (absNum > 0) {
+    let chunk = absNum % 1000;
+    if (chunk > 0 || levelIndex === 0) {
+      let chunkStr = readThreeDigits(chunk, absNum >= 1000);
+      if (chunkStr) {
+        words.unshift(chunkStr + ' ' + levels[levelIndex]);
+      }
+    }
+    absNum = Math.floor(absNum / 1000);
+    levelIndex++;
+  }
+  
+  let result = words.join(' ').trim().replace(/\s+/g, ' ');
+  result = result.charAt(0).toUpperCase() + result.slice(1) + ' đồng';
+  if (num < 0) result = 'Trừ ' + result.toLowerCase();
+  return result;
+}
+
+const exportInvoiceToExcel = (invoice) => {
+  const merchantName = invoice.merchant_name || 'Cửa hàng của tôi';
+  const createdDate = new Date(invoice.created_at).toLocaleString('vi-VN');
+  const statusStr = invoice.status === 'DA_THANH_TOAN' ? 'Đã đối soát' : 'Chờ thanh toán';
+  
+  const data = [
+    ["BÁO CÁO ĐỐI SOÁT COD & CƯỚC PHÍ ANTIGRAVITY"],
+    [],
+    ["Mã hóa đơn đối soát", invoice.invoice_id],
+    ["Merchant cửa hàng", `${merchantName} (ID: ${invoice.merchant_id})`],
+    ["Ngày đối soát lập", createdDate],
+    ["Trạng thái thanh toán", statusStr],
+    ["Tổng tiền thu hộ (COD)", Number(invoice.total_cod) || 0],
+    ["Tổng cước phí trích trừ", Number(invoice.total_fees) || 0],
+    ["Thực nhận cuối cùng (Net)", Number(invoice.net_payout) || 0],
+    [],
+    ["DANH SÁCH CHI TIẾT CÁC BƯU GỬI ĐỐI SOÁT"],
+    ["Mã Đơn Hàng", "Loại Đơn", "Tiền COD Thu Hộ", "Cước Phí Khấu Trừ", "Thực Nhận Chặng"]
+  ];
+
+  invoice.orders.forEach(o => {
+    const type = o.cod > 0 ? "Đơn COD" : "Đơn cước lẻ";
+    data.push([
+      o.order_id,
+      type,
+      Number(o.cod) || 0,
+      Number(o.fee) || 0,
+      Number(o.payout) || 0
+    ]);
+  });
+
+  const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+  // Set column widths
+  worksheet['!cols'] = [
+    { wch: 25 }, // Mã Đơn Hàng / Tiêu đề nhãn
+    { wch: 15 }, // Loại Đơn
+    { wch: 18 }, // Tiền COD Thu Hộ
+    { wch: 18 }, // Cước Phí Khấu Trừ
+    { wch: 18 }  // Thực Nhận Chặng
+  ];
+
+  // Merge headers
+  worksheet['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }, // Title
+    { s: { r: 10, c: 0 }, e: { r: 10, c: 4 } } // Details header
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "DoiSoat_COD");
+
+  const filename = `DoiSoat_${invoice.invoice_id}.xlsx`;
+  XLSX.writeFile(workbook, filename);
+};
+
 export default function MerchantInvoices() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +139,15 @@ export default function MerchantInvoices() {
 
   // Accordion state (Phase 3)
   const [expandedInvoiceId, setExpandedInvoiceId] = useState(null);
+  const [printInvoice, setPrintInvoice] = useState(null);
+
+  const handlePrint = (invoice) => {
+    setPrintInvoice(invoice);
+    setTimeout(() => {
+      window.print();
+      setPrintInvoice(null);
+    }, 150);
+  };
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -95,11 +213,7 @@ export default function MerchantInvoices() {
   };
 
   return (
-    <div className="bg-canvas min-h-screen py-10 px-6 lg:px-16 relative overflow-hidden">
-      {/* Background neon glows */}
-      <div className="neon-aurora-blob bg-accent-purple/10 w-[500px] h-[500px] -top-20 -left-20 animate-pulse"></div>
-      <div className="neon-aurora-blob bg-cyan-500/5 w-[500px] h-[500px] bottom-10 right-10 animate-pulse" style={{ animationDuration: '6s' }}></div>
-
+    <div className="w-full relative animate-fade-in">
       {/* Toast Alert */}
       {toast.show && (
         <div className={`fixed top-5 right-5 z-[9999] flex items-center p-4 rounded-xl shadow-[0_4px_25px_rgba(0,0,0,0.06)] border backdrop-blur-2xl transition-all duration-300 ${
@@ -112,24 +226,12 @@ export default function MerchantInvoices() {
         </div>
       )}
 
-      {/* Header Panel */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-6 border-b border-black/10 pb-6 relative z-10">
-        <div>
-          <span className="text-[10px] font-black text-accent-purple uppercase tracking-widest block mb-1">Financial Reconciliation</span>
-          <h1 className="text-3xl font-black text-black tracking-widest uppercase font-display text-glow-purple">HÓA ĐƠN ĐỐI SOÁT</h1>
-          <p className="mt-2 text-xs text-mute font-bold uppercase tracking-wider">Quản lý các đợt đối soát tài chính cước phí vận chuyển và dòng tiền COD thu hộ</p>
-        </div>
-        <button 
-          onClick={fetchInvoicesAndProfile} 
-          className="btn-secondary px-5 py-3 text-xs uppercase tracking-widest font-extrabold flex items-center gap-2 h-12 self-start md:self-auto cursor-pointer"
-        >
-          <RefreshCw className="w-4 h-4" /> Tải lại danh sách
-        </button>
-      </div>
-
       {error && (
-        <div className="bg-rose-50 text-rose-700 text-xs p-4 rounded-xl mb-8 border border-rose-200 font-bold uppercase tracking-wider relative z-10">
-          {error}
+        <div className="bg-rose-50 border-l-4 border-rose-600 p-4 mb-8 rounded-r-2xl shadow-sm relative z-10">
+          <div className="text-sm font-semibold text-rose-800 flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">error</span>
+            {error}
+          </div>
         </div>
       )}
 
@@ -266,23 +368,30 @@ export default function MerchantInvoices() {
                   {/* Reconcile direction / VietQR billing rendering */}
                   <div className="pt-3 border-t border-dashed border-black/5">
                     {inv.net_payout >= 0 ? (
-                      <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-200/60 text-xs">
-                        <span className="font-black text-emerald-800 uppercase tracking-wider block mb-2 text-[10px]">Thông tin tài khoản nhận tiền của bạn:</span>
-                        {inv.merchant_bank_info ? (
-                          <div className="font-bold text-black leading-relaxed uppercase tracking-wider text-[10px] space-y-1">
-                            <div>Ngân hàng: <span className="text-glow-purple text-black font-black">{inv.merchant_bank_info.bank_name}</span></div>
-                            <div>Số tài khoản: <span className="text-glow-purple text-black font-black">{inv.merchant_bank_info.account_no}</span></div>
-                            <div>Tên chủ tài khoản: <span className="text-glow-purple text-black font-black">{inv.merchant_bank_info.account_name}</span></div>
+                      <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-200/60 text-xs flex flex-col sm:flex-row items-center gap-4">
+                        {inv.vietqr_url && (
+                          <div className="border border-black/10 p-1.5 bg-white rounded-lg flex-shrink-0 shadow-[0_4px_12px_rgba(0,0,0,0.04)] no-print">
+                            <img src={inv.vietqr_url} alt="VietQR Pay-Out" className="h-32 w-32 object-contain" />
                           </div>
-                        ) : (
-                          <span className="text-amber-700 font-bold uppercase tracking-wider text-[10px] block">Bạn chưa cấu hình tài khoản ngân hàng. Vui lòng cập nhật tài khoản ở cột bên trái để hệ thống chuyển khoản đối soát.</span>
                         )}
+                        <div className="flex-1">
+                          <span className="font-black text-emerald-800 uppercase tracking-wider block mb-2 text-[10px]">Thông tin tài khoản nhận tiền của bạn:</span>
+                          {inv.merchant_bank_info ? (
+                            <div className="font-bold text-black leading-relaxed uppercase tracking-wider text-[10px] space-y-1">
+                              <div>Ngân hàng: <span className="text-glow-purple text-black font-black">{inv.merchant_bank_info.bank_name}</span></div>
+                              <div>Số tài khoản: <span className="text-glow-purple text-black font-black">{inv.merchant_bank_info.account_no}</span></div>
+                              <div>Tên chủ tài khoản: <span className="text-glow-purple text-black font-black">{inv.merchant_bank_info.account_name}</span></div>
+                            </div>
+                          ) : (
+                            <span className="text-amber-700 font-bold uppercase tracking-wider text-[10px] block">Bạn chưa cấu hình tài khoản ngân hàng. Vui lòng cập nhật tài khoản ở cột bên trái để hệ thống chuyển khoản đối soát.</span>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <div className="bg-rose-50/50 p-4 rounded-xl border border-rose-200/60 flex flex-col md:flex-row items-center gap-6">
                         {inv.vietqr_url && (
                           <div className="border border-black/10 p-2.5 bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] shrink-0 flex flex-col items-center">
-                            <img src={inv.vietqr_url} alt="VietQR" className="h-32 w-32 object-contain" />
+                            <img src={inv.vietqr_url} alt="VietQR" className="h-36 w-36 object-contain" />
                             <span className="text-[9px] text-mute mt-1.5 font-black uppercase tracking-widest">MB Bank - 0329603475</span>
                           </div>
                         )}
@@ -305,6 +414,24 @@ export default function MerchantInvoices() {
                   {/* Accordion Collapsible order listing detail (Phase 3) */}
                   {inv.orders && inv.orders.length > 0 && (
                     <div className="mt-4 pt-3 border-t border-black/5">
+                      {/* Utility Actions for Print and Excel */}
+                      <div className="flex flex-wrap items-center gap-2 mb-4 no-print">
+                        <button
+                          onClick={() => handlePrint(inv)}
+                          className="px-3.5 py-1.5 bg-black/5 hover:bg-black/10 border border-black/10 rounded-full text-xs font-bold text-black flex items-center gap-1.5 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm">print</span>
+                          <span>In Hóa Đơn (PDF)</span>
+                        </button>
+                        <button
+                          onClick={() => exportInvoiceToExcel(inv)}
+                          className="px-3.5 py-1.5 bg-black/5 hover:bg-black/10 border border-black/10 rounded-full text-xs font-bold text-black flex items-center gap-1.5 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm">download</span>
+                          <span>Tải Báo Cáo Excel</span>
+                        </button>
+                      </div>
+
                       <button
                         onClick={() => toggleInvoiceAccordion(inv.invoice_id)}
                         className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-accent-purple hover:text-[#6e19f1] transition-colors cursor-pointer"
@@ -372,6 +499,136 @@ export default function MerchantInvoices() {
         </div>
 
       </div>
+
+      {/* A4 PRINT ONLY INVOICE TEMPLATE (HIDDEN ON SCREEN) */}
+      {printInvoice && (
+        <div id="print-invoice-area" className="hidden-on-screen text-black font-sans p-8 bg-white border border-black rounded-none max-w-2xl mx-auto">
+          <style>{`
+            @media screen {
+              .hidden-on-screen { display: none !important; }
+            }
+            @media print {
+              body * {
+                visibility: hidden;
+              }
+              #print-invoice-area, #print-invoice-area * {
+                visibility: visible;
+              }
+              #print-invoice-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                display: block !important;
+                background: white !important;
+                color: black !important;
+                padding: 0 !important;
+                margin: 0 !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+            }
+          `}</style>
+          
+          <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-6">
+            <div>
+              <h1 className="text-xl font-black tracking-wider text-black">ANTIGRAVITY EXPRESS</h1>
+              <p className="text-[10px] text-gray-600 font-semibold mt-1">Hệ Thống Logistics & Chuyển Phát Nhanh Công Nghệ Cao</p>
+              <p className="text-[9px] text-gray-500 mt-0.5">Hotline: 1900 8888 • Email: finance@antigravity.vn</p>
+              <p className="text-[9px] text-gray-500">Địa chỉ: Tòa nhà Antigravity, Cầu Giấy, Hà Nội</p>
+            </div>
+            <div className="text-right">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-gray-800">HÓA ĐƠN ĐỐI SOÁT</h2>
+              <p className="text-[10px] font-mono text-gray-900 mt-1">Mã: {printInvoice.invoice_id}</p>
+              <p className="text-[9px] text-gray-600 mt-0.5">Ngày lập: {new Date(printInvoice.created_at).toLocaleDateString('vi-VN')}</p>
+              <p className="text-[9px] text-gray-600">Trạng thái: <span className="font-bold">{printInvoice.status === 'DA_THANH_TOAN' ? 'ĐÃ ĐỐI SOÁT' : 'CHƯA THANH TOÁN'}</span></p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6 text-xs mb-6">
+            <div className="border border-black p-3 rounded">
+              <p className="font-bold uppercase border-b border-black pb-1 mb-2 text-[9px] text-gray-700">ĐƠN VỊ ĐỐI SOÁT (PLATFORM)</p>
+              <p className="font-extrabold text-black">CÔNG TY CỔ PHẦN LOGISTICS ANTIGRAVITY</p>
+              <p className="text-[10px] text-gray-600 mt-1">STK Thu phí: 0329603475 - MB Bank</p>
+              <p className="text-[10px] text-gray-600">Tên TK: CONG TY ANTIGRAVITY EXPRESS</p>
+            </div>
+            <div className="border border-black p-3 rounded">
+              <p className="font-bold uppercase border-b border-black pb-1 mb-2 text-[9px] text-gray-700">KHÁCH HÀNG THỤ HƯỞNG (MERCHANT)</p>
+              <p className="font-extrabold text-black">{printInvoice.merchant_name || 'Cửa hàng của tôi'} (ID: {printInvoice.merchant_id})</p>
+              {printInvoice.merchant_bank_info ? (
+                <div className="text-[10px] text-gray-600 mt-1">
+                  <p>Ngân hàng: {printInvoice.merchant_bank_info.bank_name}</p>
+                  <p>STK nhận: {printInvoice.merchant_bank_info.account_no}</p>
+                  <p>Chủ TK: {printInvoice.merchant_bank_info.account_name}</p>
+                </div>
+              ) : (
+                <p className="text-[10px] text-gray-600 mt-1">Chưa cấu hình tài khoản thụ hưởng.</p>
+              )}
+            </div>
+          </div>
+
+          <table className="w-full text-left text-xs border-collapse border border-black mb-6">
+            <thead>
+              <tr className="bg-gray-100 border-b border-black text-[9px] font-bold uppercase text-gray-700">
+                <th className="border-r border-black px-3 py-2 text-center w-8">STT</th>
+                <th className="border-r border-black px-3 py-2">Mã Vận Đơn</th>
+                <th className="border-r border-black px-3 py-2 text-center">Phân Loại</th>
+                <th className="border-r border-black px-3 py-2 text-right">Tiền Thu Hộ COD</th>
+                <th className="border-r border-black px-3 py-2 text-right">Phí Ship Khấu Trừ</th>
+                <th className="px-3 py-2 text-right">Thực Nhận Chặng</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-black">
+              {printInvoice.orders.map((o, idx) => (
+                <tr key={o.order_id} className="text-[10px]">
+                  <td className="border-r border-black px-3 py-1.5 text-center">{idx + 1}</td>
+                  <td className="border-r border-black px-3 py-1.5 font-bold uppercase font-mono">{o.order_id}</td>
+                  <td className="border-r border-black px-3 py-1.5 text-center">{o.cod > 0 ? 'Đơn COD' : 'Đơn cước lẻ'}</td>
+                  <td className="border-r border-black px-3 py-1.5 text-right">{o.cod.toLocaleString('vi-VN')} đ</td>
+                  <td className="border-r border-black px-3 py-1.5 text-right text-gray-600">-{o.fee.toLocaleString('vi-VN')} đ</td>
+                  <td className="px-3 py-1.5 text-right font-bold">{o.payout.toLocaleString('vi-VN')} đ</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="border border-black p-4 rounded text-xs space-y-2 mb-8 bg-gray-50">
+            <div className="flex justify-between items-center font-bold">
+              <span>1. Tổng tiền thu hộ (COD gom nhận):</span>
+              <span>{printInvoice.total_cod.toLocaleString('vi-VN')} đ</span>
+            </div>
+            <div className="flex justify-between items-center text-gray-600 font-semibold">
+              <span>2. Tổng cước vận chuyển & dịch vụ trích trừ:</span>
+              <span>-{printInvoice.total_fees.toLocaleString('vi-VN')} đ</span>
+            </div>
+            <div className="flex justify-between items-center border-t border-black pt-2 text-sm font-black">
+              <span>3. Thực nhận thanh toán cuối cùng (Net Payout):</span>
+              <span>
+                {printInvoice.net_payout >= 0 ? '+' : ''}{printInvoice.net_payout.toLocaleString('vi-VN')} đ
+              </span>
+            </div>
+            <div className="text-[10px] text-gray-500 font-bold italic pt-1 border-t border-dashed border-gray-300">
+              Bằng chữ: {numberToVietnameseWords(printInvoice.net_payout)}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-8 text-center text-xs mt-12">
+            <div>
+              <p className="font-bold">ĐẠI DIỆN CỬA HÀNG (MERCHANT)</p>
+              <p className="text-[9px] text-gray-500 italic mt-0.5">(Ký, ghi rõ họ tên)</p>
+              <div className="h-20"></div>
+              <p className="font-bold text-gray-400">________________________</p>
+            </div>
+            <div>
+              <p className="font-bold">KẾ TOÁN HỆ THỐNG (ANTIGRAVITY)</p>
+              <p className="text-[9px] text-gray-500 italic mt-0.5">(Ký, ghi rõ họ tên)</p>
+              <div className="h-20"></div>
+              <p className="font-bold text-gray-700">Bộ Phận Kế Toán</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

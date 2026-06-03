@@ -6,20 +6,32 @@ import PublicOnlyRoute from './components/PublicOnlyRoute';
 import Home from './pages/Home';
 import Tracking from './pages/Tracking';
 import MerchantOrder from './pages/MerchantOrder';
+import IndividualOrder from './pages/IndividualOrder';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import MerchantDashboard from './pages/MerchantDashboard';
 import MerchantOrders from './pages/MerchantOrders';
 import MerchantAddresses from './pages/MerchantAddresses';
 import MerchantInvoices from './pages/MerchantInvoices';
+import MerchantApiKeys from './pages/MerchantApiKeys';
 
 // Admin Portals
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
 import AdminInvoices from './pages/AdminInvoices';
+import AdminLayout from './components/AdminLayout';
+import MerchantLayout from './components/MerchantLayout';
 
 // Staff Portals
 import StaffDashboard from './pages/StaffDashboard';
+
+// Super Admin Portals
+import SuperAdminRoute from './components/SuperAdminRoute';
+import SuperAdminLogin from './pages/SuperAdminLogin';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
+
+// Floating Virtual Assistant
+import QuantumGuide from './components/QuantumGuide';
 
 
 function Navbar() {
@@ -30,13 +42,15 @@ function Navbar() {
 
   const getDashboardPath = () => {
     if (!isAuthenticated()) return '/';
-    if (user?.role === 'QUANTRI') return '/admin';
-    if (user?.role === 'NHANVIEN') return '/staff';
+    if (user?.role === 'HR') return '/admin/users';
+    if (user?.role === 'KETOAN') return '/admin/invoices';
+    if (['ADMIN', 'QUANTRI', 'CSKH'].includes(user?.role)) return '/admin';
+    if (['SHIPPER', 'KHO', 'NHANVIEN'].includes(user?.role)) return '/staff';
     return '/merchant';
   };
 
   return (
-    <header className="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-white border-b border-black/5 shadow-[0_2px_15px_rgba(0,0,0,0.01)]">
+    <header className="fixed top-4 left-1/2 -translate-x-1/2 w-[92%] max-w-7xl z-50 flex justify-between items-center px-6 h-16 bg-white/75 backdrop-blur-xl border border-black/10 rounded-full shadow-[0_8px_32px_rgba(94,14,215,0.05)] hover:border-accent-purple/35 transition-all duration-500">
       <div className="flex items-center gap-8">
         <Link to={getDashboardPath()} className="flex flex-col items-start group transition-all duration-300">
           <div className="flex items-center gap-2">
@@ -88,7 +102,7 @@ function Navbar() {
           )}
 
           {/* Merchant Navigation */}
-          {isAuthenticated() && user.role === 'KHACHHANG' && (
+          {isAuthenticated() && ['KHACHHANG', 'DOITAC'].includes(user.role) && (
             <>
               <Link 
                 to="/merchant" 
@@ -149,7 +163,7 @@ function Navbar() {
           )}
 
           {/* Admin Navigation */}
-          {isAuthenticated() && user.role === 'QUANTRI' && (
+          {isAuthenticated() && ['ADMIN', 'QUANTRI', 'HR', 'KETOAN', 'CSKH'].includes(user.role) && (
             <>
               <Link 
                 to="/admin" 
@@ -188,7 +202,7 @@ function Navbar() {
           )}
 
           {/* Shipper Navigation */}
-          {isAuthenticated() && user.role === 'NHANVIEN' && (
+          {isAuthenticated() && ['SHIPPER', 'KHO', 'NHANVIEN'].includes(user.role) && (
             <>
               <Link 
                 to="/staff" 
@@ -196,7 +210,7 @@ function Navbar() {
                   isActive('/staff') ? 'text-black font-extrabold' : 'text-black/60 hover:text-black'
                 }`}
               >
-                Shipper Portal
+                {user?.role === 'KHO' ? 'Warehouse Portal' : 'Shipper Portal'}
                 <span className={`absolute bottom-0 left-0 w-full h-[2px] bg-accent-purple shadow-[0_0_8px_#5E0ED7] transition-transform duration-300 origin-center ${
                   isActive('/staff') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                 }`} />
@@ -241,24 +255,42 @@ function Navbar() {
 function AppContent() {
   const location = useLocation();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  const isAdminPage = location.pathname.startsWith('/admin');
+  const isMerchantPage = location.pathname.startsWith('/merchant');
+  const isStaffPage = location.pathname.startsWith('/staff');
+  const isSuperAdminPage = location.pathname.startsWith('/super-admin') || location.pathname === '/admin-login';
 
   return (
     <div className="min-h-screen flex flex-col bg-canvas">
-      {!isAuthPage && <Navbar />}
-      <main className={`flex-1 bg-canvas ${isAuthPage ? '' : 'pt-16'}`}>
+      {!isAuthPage && !isAdminPage && !isMerchantPage && !isStaffPage && !isSuperAdminPage && <Navbar />}
+      <main className={`flex-1 bg-canvas ${isAuthPage || isAdminPage || isMerchantPage || isStaffPage || isSuperAdminPage ? '' : 'pt-24 md:pt-28'}`}>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<PublicOnlyRoute><Home /></PublicOnlyRoute>} />
           <Route path="/tracking" element={<PublicOnlyRoute><Tracking /></PublicOnlyRoute>} />
+          <Route path="/create-order" element={<IndividualOrder />} />
           <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
           <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+          <Route path="/admin-login" element={<PublicOnlyRoute><SuperAdminLogin /></PublicOnlyRoute>} />
+
+          {/* Super Admin Routes */}
+          <Route
+            path="/super-admin"
+            element={
+              <SuperAdminRoute>
+                <SuperAdminDashboard />
+              </SuperAdminRoute>
+            }
+          />
 
           {/* Protected Merchant Routes */}
           <Route
             path="/merchant"
             element={
               <ProtectedRoute allowedRoles={['KHACHHANG']}>
-                <MerchantDashboard />
+                <MerchantLayout>
+                  <MerchantDashboard />
+                </MerchantLayout>
               </ProtectedRoute>
             }
           />
@@ -266,7 +298,9 @@ function AppContent() {
             path="/merchant/order/new"
             element={
               <ProtectedRoute allowedRoles={['KHACHHANG']}>
-                <MerchantOrder />
+                <MerchantLayout>
+                  <MerchantOrder />
+                </MerchantLayout>
               </ProtectedRoute>
             }
           />
@@ -274,7 +308,9 @@ function AppContent() {
             path="/merchant/orders"
             element={
               <ProtectedRoute allowedRoles={['KHACHHANG']}>
-                <MerchantOrders />
+                <MerchantLayout>
+                  <MerchantOrders />
+                </MerchantLayout>
               </ProtectedRoute>
             }
           />
@@ -282,7 +318,9 @@ function AppContent() {
             path="/merchant/addresses"
             element={
               <ProtectedRoute allowedRoles={['KHACHHANG']}>
-                <MerchantAddresses />
+                <MerchantLayout>
+                  <MerchantAddresses />
+                </MerchantLayout>
               </ProtectedRoute>
             }
           />
@@ -290,7 +328,19 @@ function AppContent() {
             path="/merchant/invoices"
             element={
               <ProtectedRoute allowedRoles={['KHACHHANG']}>
-                <MerchantInvoices />
+                <MerchantLayout>
+                  <MerchantInvoices />
+                </MerchantLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/merchant/api-keys"
+            element={
+              <ProtectedRoute allowedRoles={['KHACHHANG']}>
+                <MerchantLayout>
+                  <MerchantApiKeys />
+                </MerchantLayout>
               </ProtectedRoute>
             }
           />
@@ -299,24 +349,30 @@ function AppContent() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute allowedRoles={['QUANTRI']}>
-                <AdminDashboard />
+              <ProtectedRoute allowedRoles={['ADMIN', 'QUANTRI', 'HR', 'KETOAN', 'CSKH']}>
+                <AdminLayout>
+                  <AdminDashboard />
+                </AdminLayout>
               </ProtectedRoute>
             }
           />
           <Route
             path="/admin/users"
             element={
-              <ProtectedRoute allowedRoles={['QUANTRI']}>
-                <AdminUsers />
+              <ProtectedRoute allowedRoles={['ADMIN', 'QUANTRI', 'HR', 'KETOAN', 'CSKH']}>
+                <AdminLayout>
+                  <AdminUsers />
+                </AdminLayout>
               </ProtectedRoute>
             }
           />
           <Route
             path="/admin/invoices"
             element={
-              <ProtectedRoute allowedRoles={['QUANTRI']}>
-                <AdminInvoices />
+              <ProtectedRoute allowedRoles={['ADMIN', 'QUANTRI', 'HR', 'KETOAN', 'CSKH']}>
+                <AdminLayout>
+                  <AdminInvoices />
+                </AdminLayout>
               </ProtectedRoute>
             }
           />
@@ -325,13 +381,15 @@ function AppContent() {
           <Route
             path="/staff"
             element={
-              <ProtectedRoute allowedRoles={['NHANVIEN']}>
+              <ProtectedRoute allowedRoles={['SHIPPER', 'KHO', 'NHANVIEN']}>
                 <StaffDashboard />
               </ProtectedRoute>
             }
           />
         </Routes>
       </main>
+      {/* Floating chatbot assistant for public pages when not on specialized layouts */}
+      {!isAuthPage && !isAdminPage && !isMerchantPage && !isStaffPage && <QuantumGuide />}
     </div>
   );
 }

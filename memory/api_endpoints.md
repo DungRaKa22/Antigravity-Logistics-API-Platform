@@ -220,7 +220,62 @@
 
 ---
 
-## 6. 🤝 ĐỐI TÁC B2B (REST Keys)
+## 6. 🤝 ĐỐI TÁC B2B (REST Keys & APIs)
 
-### `POST /api/partner/keys` (Chỉ dành cho `QUANTRI`)
-* **Mục tiêu**: Tạo API Key cho đối tác B2B (Header `X-API-Key`).
+### `POST /api/partner/keys` (Chỉ dành cho `ADMIN`/`HR`)
+* **Mục tiêu**: Tạo API Key thủ công cho đối tác.
+* **Request Body**:
+  ```json
+  { "partner_id": 12 }
+  ```
+* **Response (200 OK)**:
+  ```json
+  { "success": true, "message": "Cấp API Key thành công", "data": { "api_key": "AG_PARTNER_..." } }
+  ```
+
+### `GET /api/partner/keys/merchant` (Yêu cầu JWT)
+* **Mục tiêu**: Lấy API Key hiện tại của Merchant đang đăng nhập.
+
+### `POST /api/partner/keys/merchant` (Yêu cầu JWT)
+* **Mục tiêu**: Cấp lại / đổi mới API Key cho Merchant đang đăng nhập.
+
+### `POST /api/partner/calculate-fee` (Yêu cầu Header `X-API-Key`)
+* **Mục tiêu**: B2B API đối tác tính cước phí vận chuyển và bảo hiểm tự động.
+* **Request Body**:
+  ```json
+  {
+    "sender_address": "Cầu Giấy, Hà Nội",
+    "receiver_address": "Hoàn Kiếm, Hà Nội",
+    "weight_gram": 1000,
+    "length_cm": 10,
+    "width_cm": 15,
+    "height_cm": 5,
+    "declared_value": 500000
+  }
+  ```
+
+### `POST /api/partner/create-order` (Yêu cầu Header `X-API-Key`)
+* **Mục tiêu**: Đối tác tạo đơn hàng tự động thông qua M2M API Key.
+* **Request Body**:
+  ```json
+  {
+    "sender_address": "Cầu Giấy, Hà Nội",
+    "receiver_address": "Hoàn Kiếm, Hà Nội",
+    "sender_name": "Shop Sneaker B2B",
+    "sender_phone": "0987654321",
+    "receiver_name": "Nguyễn Văn Nhận",
+    "receiver_phone": "0123456789",
+    "weight_gram": 1000,
+    "length_cm": 10,
+    "width_cm": 15,
+    "height_cm": 5,
+    "declared_value": 500000,
+    "cod_amount": 500000,
+    "service_package_id": 1,
+    "description": "Giày Sneaker B2B"
+  }
+  ```
+
+### `GET /api/partner/track-order/<order_id>` (Yêu cầu Header `X-API-Key`)
+* **Mục tiêu**: Đối tác B2B tra cứu trạng thái hành trình chi tiết của đơn hàng thuộc sở hữu của mình.
+

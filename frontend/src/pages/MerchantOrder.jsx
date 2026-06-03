@@ -59,6 +59,37 @@ const destinationNeonIcon = L.divIcon({
   popupAnchor: [0, -16],
 });
 
+const hubNeonIcon = L.divIcon({
+  className: 'custom-leaflet-hub-icon',
+  html: `<div class="relative flex items-center justify-center">
+    <div class="absolute w-8 h-8 bg-amber-500 rounded-full animate-ping opacity-35"></div>
+    <div class="relative w-5 h-5 bg-[#140b27] border-3 border-amber-400 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.8)] flex items-center justify-center">
+      <div class="w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
+    </div>
+  </div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+  popupAnchor: [0, -16],
+});
+
+// Calculate Haversine distance client-side between two coordinates [lat, lng]
+const calculateHaversineDistance = (coords1, coords2) => {
+  if (!coords1 || !coords2) return 0;
+  const [lat1, lon1] = coords1;
+  const [lat2, lon2] = coords2;
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  const d = R * c; // Distance in km
+  return d;
+};
+
 export default function MerchantOrder() {
   const navigate = useNavigate();
   const [addressBook, setAddressBook] = useState([]);
@@ -84,6 +115,20 @@ export default function MerchantOrder() {
       declared_value: '0'
     }
   ]);
+
+  const [active3dIndex, setActive3dIndex] = useState(0);
+
+  // 3D Visualizer variables based on active package stop
+  const activeRec = receivers[active3dIndex] || receivers[0] || {};
+  const resolvedL = parseInt(activeRec.length_cm) || 10;
+  const resolvedW = parseInt(activeRec.width_cm) || 10;
+  const resolvedH = parseInt(activeRec.height_cm) || 10;
+  const volumetricWeight = (resolvedL * resolvedW * resolvedH) / 6000;
+  const boxStyles = {
+    '--w-3d': `${Math.min(180, Math.max(45, resolvedL * 2.8))}px`,
+    '--h-3d': `${Math.min(180, Math.max(8, resolvedH * 2.8))}px`,
+    '--d-3d': `${Math.min(180, Math.max(45, resolvedW * 2.8))}px`,
+  };
 
   const [isLoading, setIsLoading] = useState(false);
   const [calculatingFee, setCalculatingFee] = useState(false);
@@ -122,9 +167,15 @@ export default function MerchantOrder() {
           if (defaultAddr) {
             setSelectedAddressId(defaultAddr.id.toString());
             setSenderAddress(defaultAddr.address);
+            if (defaultAddr.lat && defaultAddr.lng) {
+              setSenderCoords([defaultAddr.lat, defaultAddr.lng]);
+            }
           } else if (res.data.length > 0) {
             setSelectedAddressId(res.data[0].id.toString());
             setSenderAddress(res.data[0].address);
+            if (res.data[0].lat && res.data[0].lng) {
+              setSenderCoords([res.data[0].lat, res.data[0].lng]);
+            }
           }
         }
       } catch (err) {
@@ -140,6 +191,9 @@ export default function MerchantOrder() {
     const chosen = addressBook.find(item => item.id.toString() === id);
     if (chosen) {
       setSenderAddress(chosen.address);
+      if (chosen.lat && chosen.lng) {
+        setSenderCoords([chosen.lat, chosen.lng]);
+      }
     }
   };
 
@@ -175,6 +229,7 @@ export default function MerchantOrder() {
     if (receivers.length === 1) return;
     const updated = receivers.filter((_, i) => i !== index);
     setReceivers(updated);
+    setActive3dIndex(prev => Math.min(prev, updated.length - 1));
   };
 
   // Geocode address changes dynamically with debounce to prevent OpenStreetMap API spam
@@ -183,18 +238,25 @@ export default function MerchantOrder() {
       if (!senderAddress) return;
       
       setIsGeocoding(true);
-      // 1. Geocode sender address
-      try {
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(senderAddress)}&format=json&limit=1`;
-        const res = await fetch(url, { headers: { 'User-Agent': 'Antigravity-Logistics/1.0' } });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.length > 0) {
-            setSenderCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+      
+      // Check if coordinates already exist in addressBook for the selected sender address
+      const chosen = addressBook.find(item => item.id.toString() === selectedAddressId);
+      if (chosen && chosen.lat && chosen.lng) {
+        setSenderCoords([parseFloat(chosen.lat), parseFloat(chosen.lng)]);
+      } else {
+        // 1. Geocode sender address
+        try {
+          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(senderAddress)}&format=json&limit=1`;
+          const res = await fetch(url, { headers: { 'User-Agent': 'Antigravity-Logistics/1.0' } });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+              setSenderCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+            }
           }
+        } catch (err) {
+          console.error("Failed to geocode sender address", err);
         }
-      } catch (err) {
-        console.error("Failed to geocode sender address", err);
       }
 
       // 2. Geocode receiver addresses in sequence (to respect Nominatim's 1 req/sec limit)
@@ -229,13 +291,76 @@ export default function MerchantOrder() {
     }, 1200);
 
     return () => clearTimeout(delayDebounce);
-  }, [senderAddress, receivers.map(r => r.receiver_address).join('|')]);
+  }, [senderAddress, receivers.map(r => r.receiver_address).join('|'), addressBook, selectedAddressId]);
+
+  // Trạm trung chuyển cấu hình tọa độ vùng miền
+  const HUBS = {
+    BAC: {
+      name: 'Kho Trung Chuyển Miền Bắc (Từ Sơn, Bắc Ninh)',
+      coords: [21.1155, 105.9964]
+    },
+    TRUNG: {
+      name: 'Kho Trung Chuyển Miền Trung (An Tây, Quảng Ngãi)',
+      coords: [15.1205, 108.7925]
+    },
+    NAM: {
+      name: 'Kho Trung Chuyển Miền Nam (Bình Hòa, TP.HCM)',
+      coords: [10.9325, 106.7215]
+    }
+  };
+
+  const getRegion = (coords) => {
+    if (!coords) return 'BAC';
+    const lat = coords[0];
+    if (lat >= 19.5) return 'BAC';
+    if (lat >= 14.0) return 'TRUNG';
+    return 'NAM';
+  };
+
+  const getPlannedPreviewHubs = () => {
+    if (!senderCoords || receiverCoordsList.length !== 1) return [];
+    
+    const recCoords = receiverCoordsList[0].coords;
+    const clientDist = calculateHaversineDistance(senderCoords, recCoords);
+    
+    // If client-side distance is less than 10km, it's always direct
+    if (clientDist < 10.0) return [];
+    
+    const hasEstimated = estimatedFee && estimatedFee.shipping_fee > 0;
+    const distance = hasEstimated ? estimatedFee.distance_km : clientDist;
+    
+    // Skip hubs if distance is less than 10km (direct delivery)
+    const isDirect = distance < 10.0;
+    if (isDirect) return [];
+
+    const senderReg = getRegion(senderCoords);
+    const receiverReg = getRegion(recCoords);
+    const originHub = HUBS[senderReg];
+    const destHub = HUBS[receiverReg];
+    
+    const list = [originHub];
+    if (senderReg !== receiverReg) {
+      list.push(destHub);
+    }
+    return list;
+  };
+
+  const plannedPreviewHubs = getPlannedPreviewHubs();
 
   // Fetch OSRM real road geometry when sender/receiver coordinates change
   useEffect(() => {
     if (senderCoords && receiverCoordsList.length > 0) {
-      const waypoints = [senderCoords, ...receiverCoordsList.sort((a, b) => a.index - b.index).map(r => r.coords)];
       setRouteGeometry(null);
+      let waypoints = [senderCoords];
+      if (receiverCoordsList.length === 1) {
+        // Single stop order: apply dynamic regional routing path preview
+        plannedPreviewHubs.forEach(hub => waypoints.push(hub.coords));
+        waypoints.push(receiverCoordsList[0].coords);
+      } else {
+        // Multi-stop optimized path preview
+        waypoints = [senderCoords, ...receiverCoordsList.sort((a, b) => a.index - b.index).map(r => r.coords)];
+      }
+
       fetchRouteGeometry(waypoints).then((geometry) => {
         if (geometry && geometry.length > 0) {
           setRouteGeometry(geometry);
@@ -244,7 +369,7 @@ export default function MerchantOrder() {
     } else {
       setRouteGeometry(null);
     }
-  }, [senderCoords, receiverCoordsList]);
+  }, [senderCoords, receiverCoordsList, plannedPreviewHubs.map(h => h.name).join('|')]);
 
   // Real-time Fee Estimation
   useEffect(() => {
@@ -274,6 +399,7 @@ export default function MerchantOrder() {
               shipping_fee: res.data.shipping_fee,
               insurance_fee: res.data.insurance_fee,
               total_fee: res.data.shipping_fee + res.data.insurance_fee,
+              chargeable_weight: res.data.chargeable_weight,
               optimized_receivers: []
             });
           }
@@ -462,18 +588,16 @@ export default function MerchantOrder() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-canvas">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-135px)] gap-6 overflow-hidden bg-transparent w-full animate-fade-in">
       
       {/* Left Column: Form Canvas */}
-      <div className="w-full lg:w-1/2 flex flex-col bg-canvas overflow-y-auto border-r border-black/10 custom-scrollbar relative z-10">
-        {/* Advanced Neon Aurora Background Blobs */}
-        <div className="neon-aurora-blob bg-accent-purple/5 w-[400px] h-[400px] -top-10 -left-10 animate-pulse"></div>
-
+      <div className="w-full lg:w-1/2 flex flex-col bg-white/60 border border-black/10 rounded-[24px] shadow-sm overflow-y-auto custom-scrollbar relative z-10 backdrop-blur-md">
+        
         <div className="p-8 max-w-xl mx-auto w-full relative z-10">
           <div className="flex justify-between items-center mb-8 border-b border-black/10 pb-4">
             <div>
               <span className="text-[10px] font-black text-accent-purple uppercase tracking-widest block mb-1">Volumetric Core</span>
-              <h1 className="text-2xl font-black text-black tracking-widest uppercase font-display text-glow">Tạo Vận Đơn</h1>
+              <h1 className="text-2xl font-black text-black tracking-widest uppercase font-display text-glow-purple">Tạo Vận Đơn</h1>
             </div>
             {receivers.length > 1 && (
               <span className="px-3.5 py-1.5 bg-accent-purple text-white text-[10px] font-black tracking-widest rounded-full uppercase shadow-[0_0_15px_rgba(94,14,215,0.2)] animate-pulse">
@@ -754,19 +878,33 @@ export default function MerchantOrder() {
              
              {/* Live Fee Breakdown */}
              {senderAddress && estimatedFee.total_fee > 0 && (
-               <div className="mb-4 bg-black/5 border border-black/10 p-4 rounded-2xl flex justify-between items-center text-xs shadow-inner animate-clip-1">
-                 <div className="space-y-1">
-                   <p className="text-[9px] font-black text-accent-purple uppercase tracking-widest">Lộ trình: {estimatedFee.distance_km?.toFixed(1)} km</p>
-                   <div className="flex gap-4 text-[10px] font-extrabold uppercase tracking-widest text-mute">
+               <div className="mb-4 bg-black/5 border border-black/10 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs shadow-inner gap-3 animate-clip-1">
+                 <div className="space-y-1.5 w-full sm:w-auto">
+                   <div className="flex flex-wrap items-center gap-2">
+                     <p className="text-[9px] font-black text-accent-purple uppercase tracking-widest">Lộ trình: {estimatedFee.distance_km?.toFixed(1)} km</p>
+                     <span className="text-[9px] font-extrabold text-white bg-accent-purple/80 px-2 py-0.5 rounded-full uppercase tracking-wider scale-90">
+                       {estimatedFee.distance_km <= 30.0 ? 'Nội tỉnh' : estimatedFee.distance_km <= 300.0 ? 'Nội miền' : 'Liên miền'}
+                     </span>
+                     {receivers[0] && (parseInt(receivers[0].length_cm || 0) + parseInt(receivers[0].width_cm || 0) + parseInt(receivers[0].height_cm || 0)) < 100 && (
+                       <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-200/50 px-2 py-0.5 rounded-full uppercase tracking-wider scale-90">
+                         Miễn cồng kềnh (&lt;100cm)
+                       </span>
+                     )}
+                   </div>
+                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-extrabold uppercase tracking-widest text-mute">
                      <span>Cước ship: <strong className="text-black">{estimatedFee.shipping_fee?.toLocaleString()}đ</strong></span>
-                     {estimatedFee.insurance_fee > 0 && (
+                     {estimatedFee.insurance_fee > 0 ? (
                        <span>Bảo hiểm: <strong className="text-black">{estimatedFee.insurance_fee?.toLocaleString()}đ</strong></span>
+                     ) : (
+                       <span className="text-[9.5px] text-emerald-600 font-black lowercase tracking-normal">miễn phí bảo hiểm (&lt;1M)</span>
                      )}
                    </div>
                  </div>
-                 <div className="text-right">
-                   <p className="text-[9px] text-mute uppercase font-black tracking-widest">Ước tính tổng cước:</p>
-                   <p className="text-lg font-black text-black text-glow font-display">
+                 <div className="text-left sm:text-right shrink-0">
+                   <p className="text-[9px] text-mute uppercase font-black tracking-widest">
+                     Tính cước: {estimatedFee.chargeable_weight ? `${((estimatedFee.chargeable_weight) / 1000).toFixed(2)} kg` : '...'}
+                   </p>
+                   <p className="text-lg font-black text-black text-glow font-display mt-0.5">
                      {calculatingFee ? '...' : `${estimatedFee.total_fee.toLocaleString()}đ`}
                    </p>
                  </div>
@@ -786,107 +924,191 @@ export default function MerchantOrder() {
         </div>
       </div>
 
-      {/* Right Column: Map & Optimized Path Display */}
-      <div className="hidden lg:block w-1/2 h-full bg-canvas-soft relative z-10">
-        {estimatedFee.optimized_receivers && estimatedFee.optimized_receivers.length > 0 ? (
-          <div className="absolute top-6 left-6 right-6 z-[1000] bg-white/80 backdrop-blur-xl p-5 rounded-2xl border border-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.05)] space-y-4 max-w-md animate-fadeIn">
-            <h4 className="text-[10px] font-black text-black uppercase tracking-widest text-glow">Lộ trình Nearest-Neighbor tối ưu</h4>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-xs">
-                <span className="w-5 h-5 bg-black/10 text-black rounded-full flex items-center justify-center font-bold text-[9px]">G</span>
-                <span className="font-semibold text-mute truncate flex-1">Xuất phát: {senderAddress}</span>
-              </div>
-              {estimatedFee.optimized_receivers.map((rec, legIdx) => (
-                <div key={legIdx} className="flex items-center gap-3 text-xs">
-                  <span className="w-5 h-5 bg-accent-purple text-white rounded-full flex items-center justify-center font-black text-[9px] shadow-[0_0_8px_#5E0ED7]">{legIdx + 1}</span>
-                  <div className="flex-1 font-semibold text-black flex justify-between items-center">
-                    <span className="truncate max-w-[200px] text-mute">{rec.receiver_name} ({rec.receiver_address})</span>
-                    <span className="text-accent-purple font-black text-glow">{rec.distance_km.toFixed(1)} km</span>
-                  </div>
-                </div>
+      {/* Right Column: Dynamic 3D Box & Leaflet Maps */}
+      <div className="hidden lg:flex w-1/2 flex-col gap-6 h-full relative z-10">
+        
+        {/* Top Pane: 3D Holographic box visualizer */}
+        <div className="scene3d neon-glow-grid relative w-full h-[38%] rounded-[24px] border border-black/10 overflow-hidden bg-[#090314]/95 flex items-center justify-center">
+          <div className="absolute inset-0 bg-[radial-gradient(rgba(139,92,246,0.15)_1.5px,transparent_1.5px)] bg-[size:16px_16px] pointer-events-none" />
+          
+          <div className="cube3d" style={boxStyles}>
+            <div className="face3d face3d-front">
+              <span className="face3d-label">FRONT</span>
+              <span className="text-[9.5px] font-extrabold text-purple-300 mt-1">{resolvedL}cm</span>
+            </div>
+            <div className="face3d face3d-back">
+              <span className="face3d-label">BACK</span>
+            </div>
+            <div className="face3d face3d-left">
+              <span className="face3d-label">LEFT</span>
+              <span className="text-[9.5px] font-extrabold text-purple-300 mt-1">{resolvedW}cm</span>
+            </div>
+            <div className="face3d face3d-right">
+              <span className="face3d-label">RIGHT</span>
+            </div>
+            <div className="face3d face3d-top">
+              <span className="face3d-label">TOP</span>
+              <span className="text-[8.5px] font-extrabold text-purple-300 mt-1">{resolvedL} x {resolvedW}</span>
+            </div>
+            <div className="face3d face3d-bottom">
+              <span className="face3d-label">BOTTOM</span>
+            </div>
+          </div>
+
+          {/* Package visualizer selector tabs for multi-stop orders */}
+          {receivers.length > 1 ? (
+            <div className="absolute top-4 left-4 z-[1000] flex gap-1.5 bg-black/60 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-lg">
+              {receivers.map((_, rIdx) => (
+                <button
+                  key={rIdx}
+                  type="button"
+                  onClick={() => setActive3dIndex(rIdx)}
+                  className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                    active3dIndex === rIdx
+                      ? 'bg-accent-purple text-white shadow-[0_0_10px_#5E0ED7]'
+                      : 'text-white/60 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Gói #{rIdx + 1}
+                </button>
               ))}
             </div>
-            <div className="text-[9px] text-mute border-t border-black/10 pt-2.5 leading-relaxed font-bold uppercase tracking-wider">
-              💡 Lộ trình đa điểm: Chặng 1 nguyên cước. Các chặng tiếp theo đi cùng tuyến đường được <span className="text-accent-purple text-glow">chiết khấu 30% cước phí</span>.
+          ) : (
+            <div className="absolute top-4 left-4 flex gap-1.5 items-center">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+              <span className="text-[8px] font-black text-emerald-400 tracking-wider uppercase">3D Render Projection</span>
             </div>
+          )}
+
+          <div className="absolute bottom-4 right-4 px-3 py-1 bg-white/95 backdrop-blur-md rounded-full text-[9px] font-black tracking-widest text-black border border-black/5 shadow-md">
+            TRỌNG LƯỢNG QUY ĐỔI: {volumetricWeight.toFixed(2)} kg (Gói {receivers.length > 1 ? `#${active3dIndex + 1}` : ''})
           </div>
-        ) : (
-          <div className="absolute top-6 left-6 z-[1000] bg-white/80 backdrop-blur-xl px-4 py-2.5 rounded-xl border border-black/10 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-[10px] font-black uppercase tracking-widest text-black flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5 text-accent-purple animate-pulse" />
-            <span>📍 Chế độ giao hàng tiêu chuẩn</span>
+        </div>
+
+        {/* Bottom Pane: Route map */}
+        <div className="w-full h-[58%] bg-white/60 border border-black/10 rounded-[24px] shadow-sm overflow-hidden relative backdrop-blur-md">
+          {estimatedFee.optimized_receivers && estimatedFee.optimized_receivers.length > 0 ? (
+            <div className="absolute top-4 left-4 z-[1000] bg-white/90 backdrop-blur-xl p-4.5 rounded-2xl border border-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.05)] space-y-3 max-w-sm animate-fadeIn">
+              <h4 className="text-[9px] font-black text-black uppercase tracking-widest text-glow">Lộ trình đa điểm tối ưu</h4>
+              <div className="space-y-2 max-h-[140px] overflow-y-auto custom-scrollbar">
+                <div className="flex items-center gap-2.5 text-[11px]">
+                  <span className="w-4.5 h-4.5 bg-black/10 text-black rounded-full flex items-center justify-center font-bold text-[8.5px]">G</span>
+                  <span className="font-semibold text-mute truncate flex-1">Xuất phát: {senderAddress}</span>
+                </div>
+                {estimatedFee.optimized_receivers.map((rec, legIdx) => (
+                  <div key={legIdx} className="flex items-center gap-2.5 text-[11px]">
+                    <span className="w-4.5 h-4.5 bg-accent-purple text-white rounded-full flex items-center justify-center font-black text-[8.5px] shadow-[0_0_8px_#5E0ED7]">{legIdx + 1}</span>
+                    <div className="flex-1 font-semibold text-black flex justify-between items-center">
+                      <span className="truncate max-w-[150px] text-mute">{rec.receiver_name}</span>
+                      <span className="text-accent-purple font-black text-glow">{rec.distance_km.toFixed(1)} km</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="absolute top-4 left-4 z-[1000] bg-white/80 backdrop-blur-xl px-4 py-2.5 rounded-xl border border-black/10 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-[10px] font-black uppercase tracking-widest text-black flex items-center gap-2">
+              <MapPin className="w-3.5 h-3.5 text-accent-purple animate-pulse" />
+              <span>📍 Chế độ giao hàng tiêu chuẩn</span>
+            </div>
+          )}
+
+          <div className="w-full h-full absolute inset-0 z-0">
+            <MapContainer 
+              center={senderCoords || [21.0333, 105.8500]} 
+              zoom={10} 
+              style={{ height: '100%', width: '100%' }}
+              zoomControl={false}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+              
+              <ChangeView 
+                center={senderCoords} 
+                bounds={[senderCoords, ...receiverCoordsList.map(r => r.coords)]} 
+              />
+
+              {/* Route path: OSRM real road geometry or fallback straight line */}
+              {(() => {
+                let straightLine = [senderCoords, ...receiverCoordsList.sort((a, b) => a.index - b.index).map(r => r.coords)];
+                if (receiverCoordsList.length === 1) {
+                  straightLine = [
+                    senderCoords,
+                    ...plannedPreviewHubs.map(hub => hub.coords),
+                    receiverCoordsList[0].coords
+                  ];
+                }
+                const positions = routeGeometry || (straightLine.length >= 2 ? straightLine : null);
+                if (!positions) return null;
+                return (
+                  <>
+                    {/* Shadow glow layer */}
+                    <Polyline 
+                      positions={positions} 
+                      color="#5E0ED7" 
+                      weight={10} 
+                      opacity={0.12} 
+                      lineCap="round" 
+                      lineJoin="round"
+                    />
+                    {/* Main route line */}
+                    <Polyline 
+                      positions={positions} 
+                      color="#5E0ED7" 
+                      weight={5} 
+                      opacity={0.85} 
+                      lineCap="round" 
+                      lineJoin="round"
+                    />
+                  </>
+                );
+              })()}
+
+              {senderCoords && (
+                <Marker position={senderCoords} icon={purplePulsingIcon}>
+                  <Popup>
+                    <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                      <p className="text-accent-purple">📍 ĐIỂM GỬI HÀNG</p>
+                      <p className="text-[10px] text-mute mt-1">{senderAddress || 'Địa chỉ người gửi'}</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
+
+              {receiverCoordsList.map((rec, rIdx) => (
+                <Marker key={rIdx} position={rec.coords} icon={destinationNeonIcon}>
+                  <Popup>
+                    <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                      <p className="text-accent-purple">📍 ĐIỂM NHẬN #{rec.index + 1}</p>
+                      <p className="text-black mt-1 font-semibold">{rec.name}</p>
+                      <p className="text-[10px] text-mute mt-0.5">{receivers[rec.index]?.receiver_address}</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+
+              {plannedPreviewHubs.map((hub, idx) => (
+                <Marker key={`preview-hub-${idx}`} position={hub.coords} icon={hubNeonIcon}>
+                  <Popup>
+                    <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                      <p className="text-amber-500 font-black">🏢 {hub.name.includes('Miền Bắc') ? 'KHO TRUNG CHUYỂN MIỀN BẮC' : hub.name.includes('Miền Trung') ? 'KHO TRUNG CHUYỂN MIỀN TRUNG' : 'KHO TRUNG CHUYỂN MIỀN NAM'}</p>
+                      <p className="text-black mt-1 font-semibold">{hub.name.split(' (')[1]?.replace(')', '') || 'Trạm trung chuyển'}</p>
+                      <p className="text-[10px] text-mute mt-0.5 leading-normal italic">
+                        {plannedPreviewHubs.length === 1 
+                          ? 'Trạm trung chuyển chặng nội miền bắt buộc.' 
+                          : idx === 0 
+                            ? 'Trạm trung chuyển đầu nguồn (Xuất phát).' 
+                            : 'Trạm trung chuyển cuối nguồn (Đến miền nhận).'}
+                      </p>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+
+            </MapContainer>
           </div>
-        )}
-
-        <div className="w-full h-full absolute inset-0 z-0">
-          <MapContainer 
-            center={senderCoords || [21.0333, 105.8500]} 
-            zoom={10} 
-            style={{ height: '100%', width: '100%' }}
-            zoomControl={false}
-          >
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-              attribution='&copy; CARTO'
-            />
-            
-            <ChangeView 
-              center={senderCoords} 
-              bounds={[senderCoords, ...receiverCoordsList.map(r => r.coords)]} 
-            />
-
-            {/* Route path: OSRM real road geometry or fallback straight line */}
-            {(() => {
-              const straightLine = [senderCoords, ...receiverCoordsList.sort((a, b) => a.index - b.index).map(r => r.coords)];
-              const positions = routeGeometry || (straightLine.length >= 2 ? straightLine : null);
-              if (!positions) return null;
-              return (
-                <>
-                  {/* Shadow glow layer */}
-                  <Polyline 
-                    positions={positions} 
-                    color="#5E0ED7" 
-                    weight={10} 
-                    opacity={0.12} 
-                    lineCap="round" 
-                    lineJoin="round"
-                  />
-                  {/* Main route line */}
-                  <Polyline 
-                    positions={positions} 
-                    color="#5E0ED7" 
-                    weight={5} 
-                    opacity={0.85} 
-                    lineCap="round" 
-                    lineJoin="round"
-                  />
-                </>
-              );
-            })()}
-
-            {senderCoords && (
-              <Marker position={senderCoords} icon={purplePulsingIcon}>
-                <Popup>
-                  <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
-                    <p className="text-accent-purple">📍 ĐIỂM GỬI HÀNG</p>
-                    <p className="text-[10px] text-mute mt-1">{senderAddress || 'Địa chỉ người gửi'}</p>
-                  </div>
-                </Popup>
-              </Marker>
-            )}
-
-            {receiverCoordsList.map((rec, rIdx) => (
-              <Marker key={rIdx} position={rec.coords} icon={destinationNeonIcon}>
-                <Popup>
-                  <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
-                    <p className="text-accent-purple">📍 ĐIỂM NHẬN #{rec.index + 1}</p>
-                    <p className="text-black mt-1 font-semibold">{rec.name}</p>
-                    <p className="text-[10px] text-mute mt-0.5">{receivers[rec.index]?.receiver_address}</p>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-
-          </MapContainer>
         </div>
       </div>
 

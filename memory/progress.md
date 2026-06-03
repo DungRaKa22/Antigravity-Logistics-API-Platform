@@ -1,8 +1,8 @@
 # 📊 Tiến độ thực hiện - Logistics API Platform
 
 > **Bắt đầu**: 2026-04-07  
-> **Cập nhật lần cuối**: 2026-05-20  
-> **Trạng thái tổng**: 🟢 **DỰ ÁN HOÀN THÀNH 100% (PHASE 5 NÂNG CẤP ĐÃ BÀN GIAO)**
+> **Cập nhật lần cuối**: 2026-06-03  
+> **Trạng thái tổng**: 🟢 **DỰ ÁN HOÀN THÀNH 100% (PHASE 7 CHUẨN BỊ DEPLOY & VIẾT BÁO CÁO DỰ ÁN)**
 
 ---
 
@@ -13,7 +13,9 @@ Phase 1 - Database & Setup      [██████████] 100%
 Phase 2 - Backend API Core      [██████████] 100%
 Phase 3 - Client Web App        [██████████] 100%
 Phase 4 - Integration & Test    [██████████] 100%
-Phase 5 - Docs & Deploy         [██████████] 100%
+Phase 5 - Backend Deep Integr.  [██████████] 100%
+Phase 6 - Premium Aesthetics    [██████████] 100%
+Phase 7 - Deploy & Report       [██████████] 100%
 ─────────────────────────────────────────────
 TỔNG THỂ                        [██████████] 100%
 ```
@@ -25,14 +27,14 @@ TỔNG THỂ                        [██████████] 100%
 | # | Task | Trạng thái | Ngày bắt đầu | Ngày hoàn thành | Ghi chú |
 |---|------|-----------|--------------|-----------------|---------|
 | 1.1 | Cài đặt Python 3.11+ | ✅ Xong | 2026-04-09 | 2026-04-09 | Python 3.13.6 |
-| 1.2 | Cài đặt SQL Server | ✅ Xong | 2026-04-09 | 2026-04-09 | SQL Server 2022 Developer |
+| 1.2 | Cài đặt PostgreSQL | ✅ Xong | 2026-04-09 | 2026-04-09 | PostgreSQL 15+ local |
 | 1.3 | Cài đặt JDK 17+ | ✅ Xong | 2026-04-09 | 2026-04-09 | JDK 21.0.9 LTS |
 | 1.4 | Khởi tạo cấu trúc thư mục dự án | ✅ Xong | 2026-04-09 | 2026-04-09 | Thư mục & config |
 | 1.5 | Khởi tạo Git repository | ✅ Xong | 2026-04-09 | 2026-04-09 | Git + GitHub |
-| 1.6 | Thiết kế Database Schema | ✅ Xong | 2026-04-07 | 2026-04-09 | Thiết kế 7 bảng Việt hóa |
-| 1.7 | Viết script `init_database.sql` | ✅ Xong | 2026-04-09 | 2026-04-09 | Tables + indexes |
-| 1.8 | Viết script `seed_data.sql` | ✅ Xong | 2026-04-09 | 2026-04-09 | Mock data |
-| 1.9 | Test kết nối DB Python | ✅ Xong | 2026-04-09 | 2026-04-09 | Windows Auth |
+| 1.6 | Thiết kế Database Schema | ✅ Xong | 2026-04-07 | 2026-04-09 | Thiết kế 14 bảng Việt hóa |
+| 1.7 | Viết script khởi tạo DB | ✅ Xong | 2026-04-09 | 2026-04-09 | Tables + indexes |
+| 1.8 | Viết script `seed_postgres.py` | ✅ Xong | 2026-04-09 | 2026-04-09 | Mock data và hubs |
+| 1.9 | Test kết nối DB Python | ✅ Xong | 2026-04-09 | 2026-04-09 | SQLAlchemy ORM |
 
 **Trạng thái Phase 1**: ✅ Hoàn thành (9/9)
 
@@ -107,6 +109,22 @@ TỔNG THỂ                        [██████████] 100%
 
 ---
 
+## Phase 6: Premium Aesthetics, Cloud & Hotfixes (Tuần 12)
+
+| # | Task | Trạng thái | Ngày hoàn thành | Ghi chú |
+|---|------|-----------|-----------------|---------|
+| 6.1 | Nâng cấp giao diện Dark-Neon Glassmorphic | ✅ Xong | 2026-05-24 | Toàn bộ Admin, Merchant, Staff & Public Navbar |
+| 6.2 | Tích hợp Bento Grid & Volumetric Package Visualizer | ✅ Xong | 2026-05-24 | Trang chủ bento động, visualizer 3D-like, API sandbox |
+| 6.3 | Sửa lỗi Geocoding rate-limit song song | ✅ Xong | 2026-05-24 | Trễ 1200ms cho Nominatim trong MerchantOrders |
+| 6.4 | Hotfix trắng màn hình khi xem chi tiết đơn Admin | ✅ Xong | 2026-05-24 | Sửa kiểu dữ liệu timeline và an toàn Array.isArray |
+| 6.5 | Tệp cấu hình phân phối Vercel (rewrites) | ✅ Xong | 2026-05-25 | `vercel.json` định tuyến cho Single Page App |
+| 6.6 | Cấu hình Dockerfile hỗ trợ SQL Server | ✅ Xong | 2026-05-25 | Tự động tải driver unixodbc & msodbcsql17 trên Linux |
+| 6.7 | Lập trình Trợ lý ảo tương tác Option-based Chatbot | ✅ Xong | 2026-05-27 | Cấu phần `QuantumGuide.jsx` lơ lửng chàm neon hỗ trợ đa chặng tự phục vụ |
+
+**Trạng thái Phase 6**: ✅ Hoàn thành (7/7)
+
+---
+
 ## Nhật ký thay đổi (Changelog)
 
 | Ngày | Nội dung | Người thực hiện |
@@ -124,3 +142,23 @@ TỔNG THỂ                        [██████████] 100%
 | 2026-05-22 | **Tích hợp Nghiệp Vụ Chuyên Sâu**: Ví Merchant, In tem vận đơn A6 SPX/GHN độc lập, Quét mã hành trình định vị tím pulsing, Accordion hóa đơn đối soát cước âm của Đơn 0đ vs Đơn COD | Antigravity |
 | 2026-05-22 | **Shipper Portal & Quản trị Quota**: Hoàn thiện Tab Lịch sử (timeline inline) và Tab Tài khoản của Shipper. Thêm hạn mức ngày và Ghi chú nhân sự vào CSDL. Xây dựng Trung tâm Shipper & Quỹ lương 3.000đ/đơn ở Admin. | Antigravity |
 | 2026-05-23 | **Xuất báo cáo Excel XLSX**: Chuyển đổi tệp xuất CSV sang tệp `.xlsx` nguyên bản qua SheetJS, tự động giãn độ rộng cột, viết tiếng Việt chuẩn xác và hỗ trợ phân đoạn khoảng bưu tá. | Antigravity |
+| 2026-05-24 | **Phase 6: Siêu phẩm Dark-Neon & Hotfix**: Triển khai thiết kế Zero-Gravity, Bento Grid trang chủ, bản đồ shipper Leaflet và sửa lỗi geocoding song song. Hotfix lỗi trắng màn hình xem chi tiết đơn hàng Admin. | Antigravity |
+| 2026-05-25 | **Cấu hình Vercel & Docker Cloud**: Thiết lập `vercel.json` hỗ trợ SPA và `Dockerfile` hỗ trợ Flask chạy ổn định trên Render/Railway. | Antigravity |
+| 2026-05-27 | **Tích hợp Trợ lý ảo Quantum Guide**: Triển khai cấu phần `QuantumGuide.jsx` lơ lửng tối chàm neon, hỗ trợ cây quyết định đa chặng, restart conversation và quay lui chặng cha, tích hợp toàn cục. | Antigravity |
+| 2026-05-29 | **Đồng bộ hóa Tài liệu Memory & README**: Cập nhật toàn diện CSDL 14 bảng PostgreSQL, 8 nhóm vai trò, 3D Volumetric Box, Quantum Guide Live Chat/Timeline, Signature Canvas, Proof Photo và geocode protection. | Antigravity |
+| 2026-06-03 | **Phase 7: Chuẩn bị Deploy & Báo Cáo**: Reset sạch CSDL, cấu hình 63 tỉnh thành & accounts phân quyền; tạo vercel.json và Dockerfile deploy; viết báo cáo đồ án tốt nghiệp | Antigravity |
+
+---
+
+## Phase 7: Chuẩn Bị Deploy & Báo Cáo Tốt Nghiệp (Tuần 13)
+
+| # | Task | Trạng thái | Ngày hoàn thành | Ghi chú |
+|---|------|-----------|-----------------|---------|
+| 7.1 | Seed sạch dữ liệu 63 tỉnh thành | ✅ Xong | 2026-06-03 | Seeder seed_postgres.py 63 Hub con và 315 tài khoản nhân sự |
+| 7.2 | Cấu hình SPA routing trên Vercel | ✅ Xong | 2026-06-03 | Tạo vercel.json frontend |
+| 7.3 | Cấu hình Docker & Build Render backend | ✅ Xong | 2026-06-03 | Dockerfile hỗ trợ PostgreSQL driver |
+| 7.4 | Soạn thảo Báo cáo Đồ án tốt nghiệp | ✅ Xong | 2026-06-03 | Viết BaoCao_Antigravity_Logistics.md cấu trúc chuẩn học thuật |
+| 7.5 | Cấu hình Docker Compose & Nginx VPS | ✅ Xong | 2026-06-03 | Tạo docker-compose.yml, nginx.conf & Dockerfile frontend |
+| 7.6 | Sửa lỗi địa chỉ & Định tuyến <10km | ✅ Xong | 2026-06-03 | Sửa geocoding Sổ địa chỉ & Haversine client-side |
+| 7.7 | Dọn dẹp dự án & Viết tài liệu B2B API | ✅ Xong | 2026-06-03 | Xóa tệp nháp rác, viết docs/partner_api_guide.md |
+

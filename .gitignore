@@ -53,3 +53,9 @@ temp/
 
 # Project docs
 *.docx
+
+# === Scratch / Temp ===
+scratch/
+*scratch*
+**/scratch_*
+

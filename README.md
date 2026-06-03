@@ -1,28 +1,34 @@
-# 📦 Antigravity Express - Logistics API Platform
+# 📦 Antigravity Express - Enterprise Logistics & Finance API Platform
 
-> **Nền tảng Quản lý Vận chuyển & Đối soát Tài chính API-First Tích hợp Bản đồ Số Thời gian thực**
+> **Hệ thống Quản lý Vận đơn, Định tuyến Thông minh & Đối soát COD Tự động quy mô Doanh nghiệp**
 > 
-> Được xây dựng với kiến trúc 3 lớp (3-Tier Architecture) hiện đại, sở hữu giao diện **Premium Dark-Neon Glassmorphism** sang trọng và cơ chế phân quyền RBAC chặt chẽ cho 3 nhóm đối tượng (Khách hàng, Nhân viên/Shipper, Quản trị viên).
+> Được thiết kế theo kiến trúc 3 lớp (3-Tier Architecture) hiện đại, sở hữu giao diện **Premium Dark-Neon Glassmorphism** tối tân và cơ chế phân quyền RBAC chặt chẽ cho **8 nhóm vai trò nghiệp vụ** (Chủ shop, Khách cá nhân, CSKH, Kế toán, HR, Quản lý kho, Shipper, Super Admin).
 
 ---
 
 ## 🧭 Cấu Trúc Hệ Thống (Directory Structure)
 
-Thư mục dự án được tổ chức khoa học, tách biệt hoàn toàn giữa Tầng giao diện (Frontend) và Tầng xử lý nghiệp vụ/dữ liệu (Backend):
+Thư mục dự án được tổ chức khoa học, tách biệt hoàn toàn giữa Tầng giao diện (Frontend React) và Tầng xử lý nghiệp vụ/dữ liệu (Backend Flask):
 
 ```text
 hyperProject/
-├── backend/               # Flask RESTful API Backend
-│   ├── app/               # Logic ứng dụng (Routes, Models, Services)
-│   ├── requirements.txt   # Danh sách thư viện Python cần thiết
-│   └── run.py             # Điểm chạy máy chủ backend (Port 5000)
+├── backend/               # Flask RESTful API & WebSocket Backend
+│   ├── app/               # Logic ứng dụng (Routes, Models, Sockets, Services)
+│   │   ├── routes/        # Phân hệ API blueprints (Auth, Order, Chat, Tracking, Payment...)
+│   │   ├── models.py      # Định nghĩa cấu trúc 14 bảng PostgreSQL (SQLAlchemy ORM)
+│   │   └── sockets.py     # Xử lý sự kiện WebSocket thời gian thực (Flask-SocketIO)
+│   ├── requirements.txt   # Thư viện Python (psycopg2-binary, Flask-SocketIO, openpyxl...)
+│   └── run.py             # Cổng khởi chạy máy chủ backend (Port 5000)
 ├── frontend/              # React SPA Frontend (Vite)
-│   ├── src/               # Mã nguồn React (Pages, Components, Context)
-│   ├── package.json       # Scripts chạy & Dependencies của React (gồm xlsx SheetJS)
-│   └── vite.config.js     # Cấu hình đóng gói Vite
-├── database/              # Chứa kịch bản SQL khởi tạo cơ sở dữ liệu
+│   ├── src/               
+│   │   ├── components/    # Cấu phần giao diện tái sử dụng (QuantumGuide, Layouts...)
+│   │   ├── pages/         # Các phân hệ Dashboard (Admin, Merchant, Staff, Tracking, Home...)
+│   │   ├── services/      # Axios API Wrapper & Token Interceptor
+│   │   └── index.css      # Hệ thống CSS Design System kính mờ chàm neon
+│   ├── package.json       # Scripts chạy & Dependencies (SheetJS, Leaflet, Socket.io...)
+│   └── vite.config.js     # Đóng gói và biên dịch siêu tốc Vite
 ├── memory/                # Hệ thống tệp tài liệu lưu giữ bộ nhớ kỹ thuật
-└── README.md              # Tài liệu hướng dẫn sử dụng và chạy hệ thống (File này)
+└── README.md              # Hướng dẫn chạy và tài liệu vận hành (File này)
 ```
 
 ---
@@ -31,135 +37,160 @@ hyperProject/
 
 Để chạy được hệ thống, máy tính của bạn cần cài đặt các nền tảng sau:
 
-### 1. Hệ quản trị Cơ sở Dữ liệu
-*   **Microsoft SQL Server 2022** (Developer hoặc Express Edition).
-*   **SQLite** (Tự động kích hoạt làm cơ chế dự phòng - Fallback Database nếu không tìm thấy SQL Server).
-*   *Yêu cầu kết nối:* Trình điều khiển kết nối **ODBC Driver 17/18 for SQL Server**.
+### 1. Cơ sở Dữ liệu (Database)
+*   **PostgreSQL 15+** (Primary DB tối ưu cho điện toán đám mây Render/Railway).
+*   *Thông số kết nối mặc định:* Database `LogisticsDB`, User `postgres`, Password `Dung@48691412`.
 
-### 2. Backend & Xử lý Dữ liệu
+### 2. Tầng Nghiệp Vụ Backend
 *   **Python 3.11+** (Đã kiểm thử mượt mà trên Python 3.13.6).
-*   **Flask Framework** (RESTful API).
-*   **SQLAlchemy ORM** (Ánh xạ các bảng cơ sở dữ liệu Việt hóa).
-*   **openpyxl** (Thư viện xử lý Excel phục vụ lên đơn hàng loạt ở Backend).
-*   **PyJWT** (Cấp phát mã Token JWT bảo mật).
+*   **Flask Framework** (RESTful API) & **Flask-SocketIO** (WebSocket chat trực tuyến).
+*   **SQLAlchemy ORM** (Ánh xạ PostgreSQL schema hoàn toàn Việt hóa).
+*   **openpyxl** (Phục vụ nhập đơn hàng loạt ở Backend).
+*   **PyJWT** (Cấp phát Token JWT an toàn phân quyền).
 
-### 3. Frontend & Giao diện
-*   **Node.js v18+ hoặc v20+** (Công cụ quản lý npm).
-*   **React 19 / Vite 8** (Xây dựng Single Page Application).
+### 3. Tầng Giao Diện Frontend
+*   **React 19 / Vite 8** (Single Page Application).
 *   **Tailwind CSS v4** (Hệ thống thiết kế CSS-first hiện đại).
-*   **SheetJS (xlsx)** (Thư viện xuất báo cáo Excel `.xlsx` chuyên nghiệp ở Client-side).
-*   **Lucide React** (Bộ thư viện biểu tượng vector tinh tế).
-*   **Axios** (Đóng gói API Wrapper & Token Interceptor).
+*   **SheetJS (xlsx)** (Xuất báo cáo tài chính Kế toán `.xlsx` chuyên dụng ở Client-side).
+*   **Leaflet Maps** (Bản đồ số định vị OSRM và vẽ segmented line lộ trình shipper).
+*   **Socket.io-client** (Kết nối chat trực tuyến CSKH hai chiều).
+
+---
+
+## 🚀 Các Tính Năng Đột Phá Đã Triển Khai (Phase 6 Premium Aesthetics)
+
+1.  **Mô Phỏng Hộp Hàng 3D CSS Tương Tác (True 3D Volumetric Box):** Tích hợp khối hộp lập thể `preserve-3d` lơ lửng, tự động xoay 360 độ neon tại trang chủ. Người dùng có thể kéo 3 thanh trượt **Dài - Rộng - Cao** để co giãn hộp 3D và tự tính cước phí + volumetric weight tức thời.
+2.  **Quantum Guide Trực Tuyến & Live Chat Handover:** Trợ lý ảo hỗ trợ cây quyết định đa chặng, tích hợp ô nhập mã vận đơn để **vẽ Timeline hành trình phát sáng neon trực tiếp trong bong bóng chat**. Hỗ trợ nút *"Gặp nhân viên CSKH"* tự động tạo ticket và kết nối Socket.io chuyển tiếp chat trực tiếp tới tổng đài viên Admin.
+3.  **Shipper Touch Signature Canvas:** Phân hệ bưu tá di động tối neon [StaffDashboard.jsx](file:///c:/Documents/dev/hyperProject/frontend/src/pages/StaffDashboard.jsx) tích hợp bảng vẽ canvas điện tử cho khách hàng ký tên bằng tay/chuột chặng cuối khi giao thành công.
+4.  **Proof Photo Camera Simulator:** Shipper kích hoạt chụp ảnh bằng chứng giao hàng thành công/thất bại thực địa chặng cuối và đồng bộ hóa vết lưu trữ vào PostgreSQL.
+5.  **Nominatim Rate-Limit Sleep Protection:** Áp dụng trễ `1200ms` giữa các yêu cầu geocoding Nominatim địa chỉ gửi/nhận giúp bản đồ Leaflet không bao giờ bị trống hoặc bị chặn từ chối dịch vụ.
 
 ---
 
 ## ⚙️ Hướng Dẫn Cài Đặt Chi Tiết (Installation Guide)
 
-> [!IMPORTANT]
-> Hãy thực hiện cài đặt theo đúng thứ tự: **Khởi tạo Database ➡️ Thiết lập Backend ➡️ Khởi động Frontend**.
+### Bước 1: Khởi Tạo Cơ Sở Dữ Liệu PostgreSQL
 
-### Bước 1: Khởi Tạo Cơ Sở Dữ Liệu (Database Setup)
-
-Hệ thống sử dụng **8 bảng nghiệp vụ cốt lõi đã được Việt hóa hoàn toàn** nhằm đảm bảo tính tối ưu trong lưu trữ và truy vấn:
-1. `NguoiDung`: Lưu trữ tài khoản, thông tin ngân hàng và vai trò (RBAC), hạn ngạch giao hàng của Shipper.
-2. `SoDiaChi`: Danh bạ địa chỉ của các khách hàng (hỗ trợ cờ `LaMacDinh`).
-3. `GoiDichVu`: Định cấu hình giá cước cơ sở (Standard/Express).
-4. `DonHang`: Quản lý vận đơn, khối lượng thể tích, phí bảo hiểm, COD, Shipper giao hàng.
-5. `LichSu_TrangThai`: Ghi vết chi tiết hành trình vận chuyển và lý do thất bại.
-6. `DoiSoat`: Quản lý các giao dịch đối soát tài chính COD và phí ship của từng đơn.
-7. `HoaDonDoiSoat`: Gom các giao dịch đối soát thành hóa đơn định kỳ để thanh toán đồng loạt.
-8. `KhoaAPI`: Cấp phát API Key dài 64 ký tự cho Đối tác tích hợp B2B.
-
-**Thao tác khởi tạo:**
-1. Mở phần mềm quản lý **SQL Server Management Studio (SSMS)**.
-2. Kết nối vào máy chủ SQL Server của bạn.
-3. Tạo cơ sở dữ liệu mới tên là `LogisticsDB`.
-4. Tìm và thực thi các tệp tin SQL trong thư mục [database/](file:///c:/Documents/dev/hyperProject/database):
-   * Chạy file khởi tạo cấu trúc bảng: `init_database.sql`
-   * Chạy file nạp dữ liệu mẫu cấu hình dịch vụ & tài khoản: `seed_data.sql`
+1.  Mở **pgAdmin 4** hoặc kịch bản lệnh dòng lệnh psql.
+2.  Tạo cơ sở dữ liệu mới mang tên `LogisticsDB`:
+    ```sql
+    CREATE DATABASE "LogisticsDB";
+    ```
+3.  Kết nối vào cơ sở dữ liệu `LogisticsDB` và thực thi script khởi tạo cấu trúc bảng và dữ liệu mẫu có sẵn trong dự án:
+    *   Thao tác qua backend script tự động:
+        ```bash
+        cd backend
+        python seed_postgres.py
+        ```
+    *(Script này tự động tạo cấu trúc 14 bảng Việt hóa và nạp dữ liệu mẫu các bưu cục, tài khoản thử nghiệm).*
 
 ---
 
 ### Bước 2: Thiết Lập & Chạy Backend API
-
-1. Mở cửa sổ **PowerShell** hoặc **Command Prompt** tại thư mục `backend/`:
-   ```powershell
-   cd backend
-   ```
-2. Khởi tạo môi trường ảo Python (Virtual Environment) để cô lập thư viện:
-   ```powershell
-   python -m venv venv
-   ```
-3. Kích hoạt môi trường ảo:
-   * **Trên Windows (PowerShell):**
-     ```powershell
-     .\venv\Scripts\Activate.ps1
-     ```
-   * **Trên Windows (Command Prompt):**
-     ```cmd
-     .\venv\Scripts\activate.bat
-     ```
-4. Cài đặt các thư viện phụ thuộc từ tệp tin `requirements.txt`:
-   ```powershell
-   pip install -r requirements.txt
-   ```
-5. Sao chép tệp tin cấu hình môi trường gốc:
-   * Copy file `.env.example` ở ngoài thư mục gốc và dán vào thư mục `backend/` dưới tên `.env`.
-   * Mở file `backend/.env` và cập nhật thông tin kết nối SQL Server (Tài khoản, Mật khẩu, Driver) tương ứng với máy của bạn.
-6. Khởi chạy máy chủ Backend Flask:
-   ```powershell
-   python run.py
-   ```
-   > [!NOTE]
-   > Mặc định Backend sẽ chạy tại địa chỉ `http://127.0.0.1:5000`. Khi khởi chạy thành công, cửa sổ terminal sẽ hiển thị log kiểm tra kết nối CSQL. Nếu SQL Server không có sẵn, hệ thống sẽ tự động sinh tệp tin `LogisticsDB.db` (SQLite) tại chỗ để chạy thử nghiệm độc lập.
+1.  Mở thư mục `backend/` trong PowerShell/Terminal:
+    ```bash
+    cd backend
+    ```
+2.  Khởi tạo môi trường ảo Python và kích hoạt:
+    *   **Windows:**
+        ```powershell
+        python -m venv venv
+        .\venv\Scripts\Activate.ps1
+        ```
+3.  Cài đặt các thư viện phụ thuộc:
+    ```bash
+    pip install -r requirements.txt
+    ```
+4.  Khởi chạy máy chủ API & WebSockets (Port 5000):
+    ```bash
+    python run.py
+    ```
 
 ---
 
-### Bước 3: Thiết Lập & Chạy Frontend Web App
-
-1. Mở một tab terminal mới và chuyển hướng đến thư mục `frontend/`:
-   ```powershell
-   cd frontend
-   ```
-2. Cài đặt toàn bộ gói thư viện node_modules:
-   ```powershell
-   npm install
-   ```
-3. Khởi chạy máy chủ phát triển (Development Server):
-   ```powershell
-   npm run dev
-   ```
-4. Mở trình duyệt và truy cập liên kết: **`http://localhost:5173`** để bắt đầu trải nghiệm ứng dụng.
-
----
-
-## 🎨 Trải Nghiệm Giao Diện Premium Dark-Neon Glassmorphism
-
-Giao diện của Antigravity Express được thiết kế tỉ mỉ nhằm đem lại trải nghiệm tinh tế nhất:
-
-*   **Dark-Neon Glassmorphic:** Sử dụng tông màu tối sâu thẳm kết hợp hiệu ứng kính mờ (glassmorphism) sang trọng, điểm phát quang neon nổi bật, viền màu lục emerald (thành công) và hồng rose (thất bại).
-*   **Trang đăng nhập/Đăng ký cách ly thông minh:** Thiết kế dạng Card bo tròn (`rounded-2xl`) trôi nổi trên nền lưới điểm tròn (`radial-gradient`) xám đen sâu thẳm. Thanh Navbar và khoảng đệm được ẩn tự động trên các trang này để chống đè chữ tuyệt đối khi zoom phóng lớn, có tích hợp nút Quay lại (Back button) thanh lịch.
-*   **Tem vận đơn A6 tự sinh mã vạch:** Lên đơn xong có thể in ngay tem nhãn A6 chuẩn e-commerce nhúng mã vạch Code128 trực quan bằng SVG, có CSS `@media print` tối ưu hóa chỉ in tem.
-*   **Cổng di động cho Shipper (`/staff`):** Cung cấp giao diện tối ưu dọc cho điện thoại, tích hợp thanh BottomNavBar dễ dàng thao tác bằng một ngón tay. Shipper cập nhật trạng thái đơn hàng (kèm lý do nếu thất bại), quản lý thông tin cá nhân và thiết lập tài khoản ngân hàng nhận lương ngay trên máy điện thoại.
-*   **Tính cước thông minh thời gian thực:** Lên đơn hàng lẻ với công nghệ OSRM tự động đo khoảng cách km và Nominatim phân tích địa chỉ. Tự động quy đổi khối lượng theo kích thước thể tích `(D x R x C) / 5000` và tính phí bảo hiểm 0.5% tức thì khi gõ phím.
-*   **Báo cáo lương Excel chuyên nghiệp (.xlsx):** Admin và Kế toán xuất trực tiếp báo cáo lương của Shipper theo đơn giá 3.000đ/đơn hoàn thành. File xuất định dạng chuẩn `.xlsx` có thiết lập độ rộng cột tối ưu và tương thích font tiếng Việt UTF-8.
+### Bước 3: Khởi Động Frontend Web App
+1.  Mở thư mục `frontend/` trong một cửa sổ Terminal mới:
+    ```bash
+    cd frontend
+    ```
+2.  Cài đặt các gói Node.js:
+    ```bash
+    npm install
+    ```
+3.  Khởi chạy máy chủ phát triển Vite (Port 5173):
+    ```bash
+    npm run dev
+    ```
+4.  Truy cập hệ thống tại trình duyệt: [http://localhost:5173](http://localhost:5173).
 
 ---
 
-## 📚 Hệ Thống Tài Liệu Kỹ Thuật (Project Memory)
+## 🔑 Thông Tin Tài Khoản Thử Nghiệm (RBAC Mẫu 63 Tỉnh Thành)
 
-Bạn có thể tìm hiểu sâu hơn các khía cạnh kỹ thuật chi tiết của hệ thống qua các tài liệu cấu trúc trong thư mục `memory/`:
+Để đăng nhập chạy thử nghiệm, bạn sử dụng các tài khoản có sẵn đã được seeding tự động theo cấu trúc chuẩn hóa:
 
-*   **Tổng quan thiết kế:** [architecture.md (Kiến trúc & Luồng dữ liệu)](file:///c:/Documents/dev/hyperProject/memory/architecture.md)
-*   **Nghiệp vụ chi tiết:** [goals.md (Tiêu chí nghiệm thu tính năng)](file:///c:/Documents/dev/hyperProject/memory/goals.md)
-*   **Thiết kế Dữ liệu:** [database_schema.md (Chi tiết 8 bảng Việt hóa)](file:///c:/Documents/dev/hyperProject/memory/database_schema.md)
-*   **Đầu nối dịch vụ:** [api_endpoints.md (Danh sách RESTful API)](file:///c:/Documents/dev/hyperProject/memory/api_endpoints.md)
-*   **Kế hoạch phát triển:** [implementation_plan.md (Nhật ký chặng hành trình)](file:///c:/Documents/dev/hyperProject/memory/implementation_plan.md)
-*   **Ghi chú vận hành:** [notes.md (Cơ chế fallback & bảo trì hệ thống)](file:///c:/Documents/dev/hyperProject/memory/notes.md)
-*   **Nhật ký cập nhật:** [progress.md (Tiến trình nghiệm thu 100% Phase)](file:///c:/Documents/dev/hyperProject/memory/progress.md)
-*   **Trang chủ Memory:** [README.md (Tóm tắt tài liệu bộ nhớ)](file:///c:/Documents/dev/hyperProject/memory/README.md)
+### 1. Tài Khoản Quản Trị & Khách Hàng Chung
+
+| Tài khoản (Username) | Mật khẩu (Password) | Vai trò hệ thống (Role) | Họ và Tên / Đơn vị | Nơi làm việc / Chi nhánh | Tính năng kiểm thử chính |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **superadmin** | `super123` | **SUPER_ADMIN** | Đặng Tiến Dũng | Tổng công ty (Đăng nhập cổng Super Admin) | Bento Grid doanh thu toàn quốc, xem bản đồ bưu cục OSRM, theo dõi danh sách bưu tá. |
+| **shop1** | `shop123` | **KHACHHANG (Merchant)** | Sneaker World | Hub Hà Nội (Đăng nhập cổng Thường) | Lập đơn OSRM (3D Box co giãn), in tem nhãn A6 SPX, nạp Excel hàng loạt, xem ví đối soát COD, chat Quantum Guide. |
+| **khach_le** | `khachle123` | **KHACHHANG (Guest)** | Khách Cá Nhân | Hub Hà Nội (Đăng nhập cổng Thường) | Tạo đơn hàng lẻ B2C trực tiếp, tính cước phí. |
+| **cskh1** | `cskh123` | **CSKH (Support Desk)** | Nguyễn Hồng Nhung | Trung tâm CSKH (Đăng nhập cổng Thường) | Quầy chat hai chiều Socket.io (Double-Pane) tiếp nhận khiếu nại, chat Quantum Guide handover. |
 
 ---
 
-> **Antigravity Express** - Vận chuyển không trọng lực, kết nối dòng chảy tương lai.
+### 2. Hệ Thống Tài Khoản 63 Tỉnh Thành Toàn Quốc
 
+Hệ thống tự động sinh 5 tài khoản nhân viên cho **từng tỉnh/thành phố trong số 63 tỉnh thành Việt Nam**. Cú pháp đăng nhập và mật khẩu như sau:
+
+*   **Tên Đăng Nhập:** `[RolePrefix]-[MãTỉnhThành]`
+*   **Mật Khẩu:** `[role_prefix_lowercase]123`
+
+#### Ví dụ cho Hub Hà Nội (Mã: `HN`):
+- **Quản lý bưu cục (ADMIN):** `Quanly-HN` / Mật khẩu: `quanly123`
+- **Kế toán bưu cục (KETOAN):** `Ketoan-HN` / Mật khẩu: `ketoan123`
+- **Nhân sự bưu cục (HR):** `Hr-HN` / Mật khẩu: `hr123`
+- **Bưu tá bưu cục (SHIPPER):** `Shipper-HN` / Mật khẩu: `shipper123`
+- **Nhân viên kho bưu cục (KHO):** `Kho-HN` / Mật khẩu: `kho123`
+
+#### Ví dụ cho Hub TP. Hồ Chí Minh (Mã: `HCM`):
+- **Quản lý bưu cục (ADMIN):** `Quanly-HCM` / Mật khẩu: `quanly123`
+- **Bưu tá bưu cục (SHIPPER):** `Shipper-HCM` / Mật khẩu: `shipper123`
+
+#### Ví dụ cho các tỉnh thành khác (Mã tương ứng như: `HP` - Hải Phòng, `DN` - Đà Nẵng, `CT` - Cần Thơ, `BN` - Bắc Ninh, ...):
+Sử dụng mã viết tắt của tỉnh tương ứng (e.g. `Quanly-HP`, `Shipper-DN`, `Ketoan-CT`, ...).
+
+---
+
+## 🌐 Hướng Dẫn Triển Khai (Deployment Guide)
+
+Hệ thống hỗ trợ triển khai linh hoạt qua hai phương án chính:
+
+### Phương Án A: Triển khai VPS với Docker Compose (Khuyên dùng cho Production)
+Đóng gói toàn bộ hệ thống (PostgreSQL, Backend Flask, Frontend React & Nginx Reverse Proxy) trong 1 câu lệnh duy nhất:
+1. Chuẩn bị file `.env` ở thư mục gốc chứa các khóa mật khẩu.
+2. Chạy lệnh: `docker compose up -d --build`
+3. Khởi tạo dữ liệu: `docker compose exec backend python seed_postgres.py`
+
+*Xem chi tiết hướng dẫn thiết lập SSL HTTPS bằng Certbot tại [docs/deployment_guide.md](file:///c:/Documents/dev/hyperProject/docs/deployment_guide.md).*
+
+### Phương Án B: Triển khai Đám mây độc lập (Cloud PaaS)
+- **Frontend:** Deploy lên **Vercel** hoặc **Netlify** (sử dụng cấu hình chuyển tiếp [vercel.json](file:///c:/Documents/dev/hyperProject/frontend/vercel.json) sẵn có).
+- **Backend:** Deploy lên **Render.com** (sử dụng [Dockerfile](file:///c:/Documents/dev/hyperProject/backend/Dockerfile) tự động đóng gói môi trường của backend).
+- **Database:** Sử dụng Managed PostgreSQL trên **Supabase** hoặc **Neon.tech**.
+
+---
+
+## 🔌 Hướng Dẫn Tích Hợp B2B API (Partner API Integration)
+
+Antigravity Express cung cấp cổng API tích hợp chuẩn hóa dành cho các đối tác B2B (E-commerce, ERP) để:
+*   Tính cước phí & Khoảng cách động: `/api/partner/calculate-fee` (POST)
+*   Tạo vận đơn trực tiếp qua API: `/api/partner/create-order` (POST)
+*   Tra cứu hành trình & Chữ ký của shipper: `/api/partner/track-order/<order_id>` (GET)
+
+*Để xem tài liệu kỹ thuật chi tiết về tham số đầu vào/ra và cấu hình Header `X-API-Key`, vui lòng truy cập [docs/partner_api_guide.md](file:///c:/Documents/dev/hyperProject/docs/partner_api_guide.md).*
+
+---
+
+Hệ thống đã được thiết lập, kiểm thử ổn định 100% trên môi trường cục bộ (Local) và sẵn sàng deploy!

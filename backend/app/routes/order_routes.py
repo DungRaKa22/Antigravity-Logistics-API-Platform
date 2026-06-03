@@ -3,12 +3,13 @@ import string
 import openpyxl
 import queue
 import json
+import math
 from io import BytesIO
 from flask import Blueprint, request, jsonify, Response
 from app.extensions import db
-from app.models import DonHang, LichSu_TrangThai, DoiSoat, KhoaAPI, NguoiDung
+from app.models import DonHang, LichSu_TrangThai, DoiSoat, KhoaAPI, NguoiDung, ChiNhanh, TongKho
 from app.utils.security import require_auth, require_role, require_api_key
-from app.services.osrm_service import get_smart_distance, optimize_multistop_path
+from app.services.osrm_service import get_smart_distance, optimize_multistop_path, geocode_address, calculate_osrm_distance
 from app.services.finance_service import calculate_shipping_fee, calculate_final_payout, calculate_insurance_fee, calculate_volumetric_weight
 from datetime import datetime
 import threading
@@ -29,9 +30,68 @@ def broadcast_event(event_type, payload):
 
 order_bp = Blueprint('order', __name__)
 
-def generate_order_id():
+def generate_order_id(is_individual=False):
     suffix = ''.join(random.choices(string.digits, k=6))
+    if is_individual:
+        return f"AG-IND-{suffix}"
     return f"AG-{suffix}"
+
+def calculate_haversine(lat1, lon1, lat2, lon2):
+    R = 6371.0 # Bán kính Trái Đất tính bằng km
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+def find_closest_branch(lat, lon):
+    if lat is None or lon is None:
+        return ChiNhanh.query.first()
+    
+    branches = ChiNhanh.query.all()
+    if not branches:
+        return None
+        
+    closest_branch = None
+    min_dist = float('inf')
+    
+    for b in branches:
+        dist = calculate_haversine(float(lat), float(lon), float(b.ViDo), float(b.KinhDo))
+        if dist < min_dist:
+            min_dist = dist
+            closest_branch = b
+            
+    return closest_branch
+
+def calculate_5point_distance(lat_s, lon_s, lat_r, lon_r):
+    branch_o = find_closest_branch(lat_s, lon_s)
+    branch_d = find_closest_branch(lat_r, lon_r)
+    
+    if not branch_o or not branch_d:
+        return 10.5
+        
+    hub_o = TongKho.query.get(branch_o.MaTongKhoLienKet)
+    hub_d = TongKho.query.get(branch_d.MaTongKhoLienKet)
+    
+    if not hub_o or not hub_d:
+        return 10.5
+        
+    # Đo các chặng đi:
+    # 1. Shop -> Chi nhánh gửi
+    d1 = calculate_osrm_distance(lat_s, lon_s, float(branch_o.ViDo), float(branch_o.KinhDo)) or 5.0
+    # 2. Chi nhánh gửi -> Tổng kho gửi
+    d2 = calculate_osrm_distance(float(branch_o.ViDo), float(branch_o.KinhDo), float(hub_o.ViDo), float(hub_o.KinhDo)) or 20.0
+    # 3. Tổng kho gửi -> Tổng kho nhận (Nếu khác vùng miền)
+    d3 = 0.0
+    if hub_o.MaTongKho != hub_d.MaTongKho:
+        d3 = calculate_osrm_distance(float(hub_o.ViDo), float(hub_o.KinhDo), float(hub_d.ViDo), float(hub_d.KinhDo)) or 300.0
+    # 4. Tổng kho nhận -> Chi nhánh nhận
+    d4 = calculate_osrm_distance(float(hub_d.ViDo), float(hub_d.KinhDo), float(branch_d.ViDo), float(branch_d.KinhDo)) or 20.0
+    # 5. Chi nhánh nhận -> Khách nhận
+    d5 = calculate_osrm_distance(float(branch_d.ViDo), float(branch_d.KinhDo), lat_r, lon_r) or 5.0
+    
+    total_dist = d1 + d2 + d3 + d4 + d5
+    return round(total_dist, 2)
 
 def trigger_webhook_async(url, payload):
     try:
@@ -42,7 +102,31 @@ def trigger_webhook_async(url, payload):
 @order_bp.route('/calculate', methods=['POST'])
 def calculate_fee():
     data = request.json
-    dist = get_smart_distance(data.get('sender_address', ''), data.get('receiver_address', ''))
+    
+    sender_addr = data.get('sender_address', '')
+    receiver_addr = data.get('receiver_address', '')
+    
+    # Check Vietnam territory limits
+    lat_s, lon_s = geocode_address(sender_addr)
+    lat_r, lon_r = geocode_address(receiver_addr)
+    
+    is_s_vn = not lat_s or (8.5 <= lat_s <= 23.5 and 102.0 <= lon_s <= 110.0)
+    is_r_vn = not lat_r or (8.5 <= lat_r <= 23.5 and 102.0 <= lon_r <= 110.0)
+    
+    if not is_s_vn or not is_r_vn:
+        return jsonify({
+            "success": False,
+            "message": "Antigravity Express chỉ hỗ trợ giao hàng trong phạm vi lãnh thổ Việt Nam!"
+        }), 400
+
+    if lat_s and lon_s and lat_r and lon_r:
+        direct_dist = calculate_haversine(lat_s, lon_s, lat_r, lon_r)
+        if direct_dist < 10.0:
+            dist = direct_dist
+        else:
+            dist = calculate_5point_distance(lat_s, lon_s, lat_r, lon_r)
+    else:
+        dist = get_smart_distance(sender_addr, receiver_addr, lat_gui=lat_s, lon_gui=lon_s, lat_nhan=lat_r, lon_nhan=lon_r)
     
     length = int(data.get('length_cm', 0))
     width = int(data.get('width_cm', 0))
@@ -50,9 +134,10 @@ def calculate_fee():
     actual_weight = int(data.get('weight_gram', 0))
     
     vol_weight = calculate_volumetric_weight(length, width, height)
-    chargeable_weight = max(actual_weight, vol_weight)
+    # Apply standard chargeable weight check
+    chargeable_weight = max(actual_weight, vol_weight) if (length + width + height) >= 100 else actual_weight
     
-    fee = calculate_shipping_fee(dist, chargeable_weight)
+    fee = calculate_shipping_fee(dist, actual_weight, length, width, height)
     
     declared_value = float(data.get('declared_value', 0))
     insurance = calculate_insurance_fee(declared_value)
@@ -71,19 +156,68 @@ def create_order():
     data = request.json
     order_id = generate_order_id()
     
+    sender_addr = data.get('sender_address', '')
+    receiver_addr = data.get('receiver_address', '')
+    
+    # Check Vietnam territory limits
+    lat_s, lon_s = geocode_address(sender_addr)
+    lat_r, lon_r = geocode_address(receiver_addr)
+    
+    is_s_vn = not lat_s or (8.5 <= lat_s <= 23.5 and 102.0 <= lon_s <= 110.0)
+    is_r_vn = not lat_r or (8.5 <= lat_r <= 23.5 and 102.0 <= lon_r <= 110.0)
+    
+    if not is_s_vn or not is_r_vn:
+        return jsonify({
+            "success": False,
+            "message": "Antigravity Express chỉ hỗ trợ giao hàng trong phạm vi lãnh thổ Việt Nam!"
+        }), 400
+
     # Kích thước & Khối lượng
     length = int(data.get('length_cm', 0))
     width = int(data.get('width_cm', 0))
     height = int(data.get('height_cm', 0))
     actual_weight = int(data.get('weight_gram', 0))
     vol_weight = calculate_volumetric_weight(length, width, height)
-    chargeable_weight = max(actual_weight, vol_weight)
+    chargeable_weight = max(actual_weight, vol_weight) if (length + width + height) >= 100 else actual_weight
     
     # Tính cước & bảo hiểm
-    dist = get_smart_distance(data.get('sender_address'), data.get('receiver_address'))
-    fee = calculate_shipping_fee(dist, chargeable_weight)
+    if lat_s and lon_s and lat_r and lon_r:
+        direct_dist = calculate_haversine(lat_s, lon_s, lat_r, lon_r)
+        if direct_dist < 10.0:
+            dist = direct_dist
+        else:
+            dist = calculate_5point_distance(lat_s, lon_s, lat_r, lon_r)
+    else:
+        dist = get_smart_distance(sender_addr, receiver_addr, lat_gui=lat_s, lon_gui=lon_s, lat_nhan=lat_r, lon_nhan=lon_r)
+        
+    fee = calculate_shipping_fee(dist, actual_weight, length, width, height)
     declared_value = float(data.get('declared_value', 0))
     insurance = calculate_insurance_fee(declared_value)
+
+    # 1. Tìm Chi nhánh gửi/nhận gần nhất bằng Haversine
+    branch_o = find_closest_branch(lat_s, lon_s)
+    branch_d = find_closest_branch(lat_r, lon_r)
+    
+    # 2. Xác định các Tổng kho tương ứng để vẽ lộ trình
+    hub_path = []
+    hub_o = TongKho.query.get(branch_o.MaTongKhoLienKet) if branch_o else None
+    hub_d = TongKho.query.get(branch_d.MaTongKhoLienKet) if branch_d else None
+    
+    if dist < 10.0:
+        if branch_o:
+            hub_path.append(f"Giao trực tiếp (Chi nhánh {branch_o.TenChiNhanh})")
+        else:
+            hub_path.append("Giao trực tiếp")
+    else:
+        if branch_o and hub_o:
+            hub_path.append(branch_o.TenChiNhanh)
+            hub_path.append(hub_o.TenTongKho)
+            if branch_d and hub_d:
+                if hub_o.MaTongKho != hub_d.MaTongKho:
+                    hub_path.append(hub_d.TenTongKho)
+                hub_path.append(branch_d.TenChiNhanh)
+        else:
+            hub_path.append("Kho Trung Chuyển Miền Bắc (Từ Sơn, Bắc Ninh)")
 
     # Tạo Order
     order = DonHang(
@@ -93,11 +227,13 @@ def create_order():
         TenNguoiNhan=data['receiver_name'],
         SoDienThoaiNhan=data['receiver_phone'],
         DiaChiNhan=data['receiver_address'],
+        ViDoNhan=lat_r,
+        KinhDoNhan=lon_r,
         TrongLuongGram=actual_weight,
         ChieuDaiCM=length,
         ChieuRongCM=width,
         ChieuCaoCM=height,
-        TrongLuongQuyDoiGram=vol_weight,
+        TrongLuongQuyDoiGram=vol_weight if (length + width + height) >= 100 else 0,
         MoTaHangHoa=data.get('description', 'Hàng hóa thông thường'),
         GiaTriKhaiBao=declared_value,
         PhiBaoHiem=insurance,
@@ -106,30 +242,203 @@ def create_order():
         TienThuHoCOD=float(data.get('cod_amount', 0)),
         QuyenKiemTra=data.get('inspection_policy', 'KHONG_XEM'),
         HinhThucLayHang=data.get('pickup_type', 'TU_MANG_RA_BUU_CUC'),
-        TrangThaiHienTai='CHO_LAY_HANG'
+        TrangThaiHienTai='CHO_THANH_TOAN' if float(data.get('cod_amount', 0)) == 0 else 'CHO_LAY_HANG',
+        TrangThaiThanhToan='CHUA_THANH_TOAN',
+        
+        # Lưu chi nhánh gửi/nhận
+        MaChiNhanhGui=branch_o.MaChiNhanh if branch_o else None,
+        MaChiNhanhNhan=branch_d.MaChiNhanh if branch_d else None
     )
     db.session.add(order)
 
     # Khởi tạo log TrackingHistory
-    # Dùng 1 đại diện ID=1 làm Admin system update ban đầu
+    is_non_cod = (float(data.get('cod_amount', 0)) == 0)
+    initial_status = 'CHO_THANH_TOAN' if is_non_cod else 'CHO_LAY_HANG'
+    
+    if is_non_cod:
+        initial_location = f"Đơn hàng khởi tạo thành công, đang chờ thanh toán trực tuyến qua Momo (Lộ trình định tuyến: Khách gửi ➡️ {' ➡️ '.join(hub_path)} ➡️ Khách nhận)"
+    else:
+        initial_location = f"Đơn hàng khởi tạo thành công (Lộ trình định tuyến: Khách gửi ➡️ {' ➡️ '.join(hub_path)} ➡️ Khách nhận)"
+        
     log = LichSu_TrangThai(
         MaDonHang=order_id,
-        MaTrangThai='CHO_LAY_HANG',
-        ThongTinViTri='Đơn hàng khởi tạo thành công',
+        MaTrangThai=initial_status,
+        ThongTinViTri=initial_location,
         MaNhanVienCapNhat=request.user_id 
     )
     db.session.add(log)
     db.session.commit()
 
-    return jsonify({"success": True, "message": "Tạo đơn thành công", "data": {"order_id": order_id, "shipping_fee": fee}}), 201
+    response_data = {
+        "order_id": order_id, 
+        "shipping_fee": fee,
+        "status": initial_status
+    }
+    if is_non_cod:
+        response_data["payment_url"] = f"/api/payment/simulate-checkout/{order_id}"
+
+    return jsonify({"success": True, "message": "Tạo đơn thành công", "data": response_data}), 201
+
+@order_bp.route('/guest', methods=['POST'])
+def create_guest_order():
+    data = request.json
+    order_id = generate_order_id(is_individual=True)
+    
+    sender_name = data.get('sender_name', '')
+    sender_phone = data.get('sender_phone', '')
+    sender_addr = data.get('sender_address', '')
+    
+    receiver_name = data.get('receiver_name', '')
+    receiver_phone = data.get('receiver_phone', '')
+    receiver_addr = data.get('receiver_address', '')
+    
+    # Check Vietnam territory limits
+    lat_s, lon_s = geocode_address(sender_addr)
+    lat_r, lon_r = geocode_address(receiver_addr)
+    
+    is_s_vn = not lat_s or (8.5 <= lat_s <= 23.5 and 102.0 <= lon_s <= 110.0)
+    is_r_vn = not lat_r or (8.5 <= lat_r <= 23.5 and 102.0 <= lon_r <= 110.0)
+    
+    if not is_s_vn or not is_r_vn:
+        return jsonify({
+            "success": False,
+            "message": "Antigravity Express chỉ hỗ trợ giao hàng trong phạm vi lãnh thổ Việt Nam!"
+        }), 400
+
+    # Kích thước & Khối lượng
+    length = int(data.get('length_cm', 10))
+    width = int(data.get('width_cm', 10))
+    height = int(data.get('height_cm', 10))
+    actual_weight = int(data.get('weight_gram', 1000))
+    vol_weight = calculate_volumetric_weight(length, width, height)
+    chargeable_weight = max(actual_weight, vol_weight) if (length + width + height) >= 100 else actual_weight
+    
+    # Tính cước & bảo hiểm
+    if lat_s and lon_s and lat_r and lon_r:
+        direct_dist = calculate_haversine(lat_s, lon_s, lat_r, lon_r)
+        if direct_dist < 10.0:
+            dist = direct_dist
+        else:
+            dist = calculate_5point_distance(lat_s, lon_s, lat_r, lon_r)
+    else:
+        dist = get_smart_distance(sender_addr, receiver_addr, lat_gui=lat_s, lon_gui=lon_s, lat_nhan=lat_r, lon_nhan=lon_r)
+        
+    fee = calculate_shipping_fee(dist, actual_weight, length, width, height)
+    declared_value = float(data.get('declared_value', 0))
+    insurance = calculate_insurance_fee(declared_value)
+
+    # 1. Tìm Chi nhánh gửi/nhận gần nhất bằng Haversine
+    branch_o = find_closest_branch(lat_s, lon_s)
+    branch_d = find_closest_branch(lat_r, lon_r)
+    
+    # 2. Xác định các Tổng kho tương ứng để vẽ lộ trình
+    hub_path = []
+    hub_o = TongKho.query.get(branch_o.MaTongKhoLienKet) if branch_o else None
+    hub_d = TongKho.query.get(branch_d.MaTongKhoLienKet) if branch_d else None
+    
+    if dist < 10.0:
+        if branch_o:
+            hub_path.append(f"Giao trực tiếp (Chi nhánh {branch_o.TenChiNhanh})")
+        else:
+            hub_path.append("Giao trực tiếp")
+    else:
+        if branch_o and hub_o:
+            hub_path.append(branch_o.TenChiNhanh)
+            hub_path.append(hub_o.TenTongKho)
+            if branch_d and hub_d:
+                if hub_o.MaTongKho != hub_d.MaTongKho:
+                    hub_path.append(hub_d.TenTongKho)
+                hub_path.append(branch_d.TenChiNhanh)
+        else:
+            hub_path.append("Kho Trung Chuyển Miền Bắc (Từ Sơn, Bắc Ninh)")
+
+    # Lấy tài khoản khách lẻ mặc định
+    guest_user = NguoiDung.query.filter_by(TenDangNhap="khach_le").first()
+    guest_user_id = guest_user.MaNguoiDung if guest_user else 1
+
+    # Tạo Order
+    order = DonHang(
+        MaDonHang=order_id,
+        MaNguoiGui=guest_user_id,
+        MaGoi=data.get('service_package_id', 1), # Mặc định 1: Standard
+        
+        # Điền thông tin người gửi lẻ trực tiếp
+        TenNguoiGui=sender_name,
+        SoDienThoaiGui=sender_phone,
+        DiaChiGui=sender_addr,
+        ViDoGui=lat_s,
+        KinhDoGui=lon_s,
+        
+        TenNguoiNhan=receiver_name,
+        SoDienThoaiNhan=receiver_phone,
+        DiaChiNhan=receiver_addr,
+        ViDoNhan=lat_r,
+        KinhDoNhan=lon_r,
+        TrongLuongGram=actual_weight,
+        ChieuDaiCM=length,
+        ChieuRongCM=width,
+        ChieuCaoCM=height,
+        TrongLuongQuyDoiGram=vol_weight if (length + width + height) >= 100 else 0,
+        MoTaHangHoa=data.get('description', 'Hàng hóa thông thường'),
+        GiaTriKhaiBao=declared_value,
+        PhiBaoHiem=insurance,
+        KhoangCachKm=dist,
+        PhiVanChuyen=fee,
+        TienThuHoCOD=float(data.get('cod_amount', 0)),
+        QuyenKiemTra=data.get('inspection_policy', 'KHONG_XEM'),
+        HinhThucLayHang=data.get('pickup_type', 'TU_MANG_RA_BUU_CUC'),
+        TrangThaiHienTai='CHO_THANH_TOAN', # Luôn khóa chờ thanh toán trước
+        TrangThaiThanhToan='CHUA_THANH_TOAN',
+        
+        # Lưu chi nhánh gửi/nhận
+        MaChiNhanhGui=branch_o.MaChiNhanh if branch_o else None,
+        MaChiNhanhNhan=branch_d.MaChiNhanh if branch_d else None
+    )
+    db.session.add(order)
+
+    # Khởi tạo log TrackingHistory
+    initial_location = f"Đơn hàng cá nhân khởi tạo thành công, đang chờ thanh toán trực tuyến (Lộ trình định tuyến: Khách gửi ➡️ {' ➡️ '.join(hub_path)} ➡️ Khách nhận)"
+        
+    log = LichSu_TrangThai(
+        MaDonHang=order_id,
+        MaTrangThai='CHO_THANH_TOAN',
+        ThongTinViTri=initial_location,
+        MaNhanVienCapNhat=guest_user_id 
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    # Xác định loại phương thức thanh toán
+    payment_method = data.get('payment_method', 'momo')
+    
+    response_data = {
+        "order_id": order_id, 
+        "shipping_fee": fee,
+        "status": "CHO_THANH_TOAN",
+        "payment_url": f"/api/payment/simulate-checkout/{order_id}?method={payment_method}"
+    }
+
+    return jsonify({"success": True, "message": "Tạo đơn khách lẻ thành công", "data": response_data}), 201
 
 @order_bp.route('/', methods=['GET'])
 @require_auth
 def get_orders():
     if request.user_role == 'KHACHHANG':
-        orders = DonHang.query.filter_by(MaNguoiGui=request.user_id).all()
-    else:  # QUANTRI
-        orders = DonHang.query.all()
+        orders = DonHang.query.filter_by(MaNguoiGui=request.user_id).order_by(DonHang.NgayTao.desc()).all()
+    elif request.user_role in ['SHIPPER', 'KHO']:
+        orders = DonHang.query.filter(DonHang.TrangThaiHienTai != 'CHO_THANH_TOAN').order_by(DonHang.NgayTao.desc()).all()
+    else:  # QUANTRI / ADMIN / HR / KETOAN / CSKH
+        from app.models import NguoiDung, ChiNhanh
+        current_user = NguoiDung.query.get(request.user_id)
+        query = DonHang.query
+        if current_user:
+            if current_user.MaChiNhanh is not None:
+                query = query.filter((DonHang.MaChiNhanhGui == current_user.MaChiNhanh) | (DonHang.MaChiNhanhNhan == current_user.MaChiNhanh))
+            elif current_user.MaTongKho is not None:
+                linked_branches = db.session.query(ChiNhanh.MaChiNhanh).filter(ChiNhanh.MaTongKhoLienKet == current_user.MaTongKho).all()
+                linked_branch_ids = [b[0] for b in linked_branches]
+                query = query.filter((DonHang.MaChiNhanhGui.in_(linked_branch_ids)) | (DonHang.MaChiNhanhNhan.in_(linked_branch_ids)))
+        orders = query.order_by(DonHang.NgayTao.desc()).all()
 
     data = [{
         "order_id": o.MaDonHang,
@@ -154,7 +463,7 @@ def get_orders():
 
 @order_bp.route('/<order_id>/status', methods=['PUT'])
 @require_auth
-@require_role(['QUANTRI'])
+@require_role(['ADMIN', 'QUANTRI', 'CSKH', 'HR', 'KETOAN'])
 def update_status(order_id):
     data = request.json
     new_status = data.get('status')
@@ -270,9 +579,9 @@ def calculate_multistop_fee():
         height = int(rec_data.get('height_cm', 0))
         actual_weight = int(rec_data.get('weight_gram', 0))
         vol_weight = calculate_volumetric_weight(length, width, height)
-        chargeable_weight = max(actual_weight, vol_weight)
+        chargeable_weight = max(actual_weight, vol_weight) if (length + width + height) >= 100 else actual_weight
         
-        std_fee = calculate_shipping_fee(leg_dist, chargeable_weight)
+        std_fee = calculate_shipping_fee(leg_dist, actual_weight, length, width, height)
         discounted_fee = std_fee if leg_idx == 0 else round(std_fee * 0.7, 2)
         
         declared_val = float(rec_data.get('declared_value', 0))
@@ -332,9 +641,9 @@ def create_multistop_order():
         height = int(rec_data.get('height_cm', 0))
         actual_weight = int(rec_data.get('weight_gram', 0))
         vol_weight = calculate_volumetric_weight(length, width, height)
-        chargeable_weight = max(actual_weight, vol_weight)
+        chargeable_weight = max(actual_weight, vol_weight) if (length + width + height) >= 100 else actual_weight
         
-        std_fee = calculate_shipping_fee(leg_dist, chargeable_weight)
+        std_fee = calculate_shipping_fee(leg_dist, actual_weight, length, width, height)
         discounted_fee = std_fee if leg_idx == 0 else round(std_fee * 0.7, 2)
         
         declared_val = float(rec_data.get('declared_value', 0))
@@ -353,7 +662,7 @@ def create_multistop_order():
             ChieuDaiCM=length,
             ChieuRongCM=width,
             ChieuCaoCM=height,
-            TrongLuongQuyDoiGram=vol_weight,
+            TrongLuongQuyDoiGram=vol_weight if (length + width + height) >= 100 else 0,
             MoTaHangHoa=rec_data.get('description', 'Đơn hàng đa điểm'),
             GiaTriKhaiBao=declared_val,
             PhiBaoHiem=insurance,
@@ -390,7 +699,7 @@ def create_multistop_order():
 
 @order_bp.route('/<order_id>/assign', methods=['PUT'])
 @require_auth
-@require_role(['QUANTRI'])
+@require_role(['ADMIN', 'QUANTRI', 'HR', 'CSKH'])
 def assign_shipper(order_id):
     data = request.json
     shipper_id = data.get('shipper_id')
@@ -399,7 +708,7 @@ def assign_shipper(order_id):
         return jsonify({"success": False, "message": "Thiếu mã nhân viên shipper!"}), 400
         
     shipper = NguoiDung.query.get(shipper_id)
-    if not shipper or shipper.VaiTro != 'NHANVIEN':
+    if not shipper or shipper.VaiTro not in ['NHANVIEN', 'SHIPPER']:
         return jsonify({"success": False, "message": "Nhân viên không tồn tại hoặc không phải là Shipper!"}), 400
         
     order = DonHang.query.get(order_id)
@@ -449,25 +758,30 @@ def assign_shipper(order_id):
 
 @order_bp.route('/assigned', methods=['GET'])
 @require_auth
-@require_role(['NHANVIEN'])
+@require_role(['NHANVIEN', 'SHIPPER', 'KHO'])
 def get_assigned_orders():
-    orders = DonHang.query.filter_by(MaNhanVienGiao=request.user_id).all()
+    orders = DonHang.query.filter_by(MaNhanVienGiao=request.user_id).order_by(DonHang.NgayTao.desc()).all()
     data = [{
         "order_id": o.MaDonHang,
         "receiver_name": o.TenNguoiNhan,
         "receiver_phone": o.SoDienThoaiNhan,
         "receiver_address": o.DiaChiNhan,
+        "receiver_lat": float(o.ViDoNhan) if o.ViDoNhan is not None else None,
+        "receiver_lng": float(o.KinhDoNhan) if o.KinhDoNhan is not None else None,
+        "sender_lat": float(o.ViDoGui) if o.ViDoGui is not None else None,
+        "sender_lng": float(o.KinhDoGui) if o.KinhDoGui is not None else None,
         "fee": float(o.PhiVanChuyen),
         "cod": float(o.TienThuHoCOD),
         "status": o.TrangThaiHienTai,
         "created_at": o.NgayTao.isoformat(),
-        "description": o.MoTaHangHoa
+        "description": o.MoTaHangHoa,
+        "distance_km": float(o.KhoangCachKm) if o.KhoangCachKm is not None else 0.0
     } for o in orders]
     return jsonify({"success": True, "data": data})
 
 @order_bp.route('/<order_id>/staff-update', methods=['PUT'])
 @require_auth
-@require_role(['NHANVIEN'])
+@require_role(['NHANVIEN', 'SHIPPER', 'KHO'])
 def staff_update_order(order_id):
     data = request.json
     new_status = data.get('status')
@@ -520,6 +834,96 @@ def staff_update_order(order_id):
     })
     
     return jsonify({"success": True, "message": "Cập nhật trạng thái đơn hàng thành công!"})
+
+# API Cổng Trung Chuyển (Xác nhận tới kho trung chuyển)
+@order_bp.route('/<order_id>/hub-checkin', methods=['PUT'])
+@require_auth
+@require_role(['ADMIN', 'QUANTRI', 'NHANVIEN', 'SHIPPER', 'KHO'])
+def hub_checkin(order_id):
+    order = DonHang.query.get(order_id)
+    if not order:
+        return jsonify({"success": False, "message": "Không tìm thấy đơn hàng!"}), 404
+        
+    data = request.json or {}
+    hub_name = data.get('hub_name', 'Kho Trung Chuyển Miền Bắc (Từ Sơn, Bắc Ninh)')
+        
+    order.TrangThaiHienTai = 'DEN_KHO_TRUNG_CHUYEN'
+    
+    log = LichSu_TrangThai(
+        MaDonHang=order_id,
+        MaTrangThai='DEN_KHO_TRUNG_CHUYEN',
+        ThongTinViTri=f'Đã nhận bưu phẩm tại {hub_name} - Đã xác minh thông tin',
+        MaNhanVienCapNhat=request.user_id
+    )
+    db.session.add(log)
+    db.session.commit()
+    
+    # Broadcast realtime event
+    broadcast_event("order_update", {
+        "order_id": order_id,
+        "status": 'DEN_KHO_TRUNG_CHUYEN',
+        "location": f'Đã nhận bưu phẩm tại {hub_name}',
+        "updated_at": datetime.utcnow().isoformat()
+    })
+    
+    return jsonify({"success": True, "message": f"Xác nhận tới {hub_name} thành công!"})
+
+# API Cổng Trung Chuyển (Xác nhận rời kho trung chuyển)
+@order_bp.route('/<order_id>/hub-checkout', methods=['PUT'])
+@require_auth
+@require_role(['ADMIN', 'QUANTRI', 'NHANVIEN', 'SHIPPER', 'KHO'])
+def hub_checkout(order_id):
+    order = DonHang.query.get(order_id)
+    if not order:
+        return jsonify({"success": False, "message": "Không tìm thấy đơn hàng!"}), 404
+        
+    data = request.json or {}
+    hub_name = data.get('hub_name', 'Kho Trung Chuyển Miền Bắc (Từ Sơn, Bắc Ninh)')
+        
+    order.TrangThaiHienTai = 'ROI_KHO_TRUNG_CHUYEN'
+    
+    log = LichSu_TrangThai(
+        MaDonHang=order_id,
+        MaTrangThai='ROI_KHO_TRUNG_CHUYEN',
+        ThongTinViTri=f'Bưu phẩm đã xuất bến rời {hub_name} - Đang trung chuyển chặng chéo',
+        MaNhanVienCapNhat=request.user_id
+    )
+    db.session.add(log)
+    db.session.commit()
+    
+    # Broadcast realtime event
+    broadcast_event("order_update", {
+        "order_id": order_id,
+        "status": 'ROI_KHO_TRUNG_CHUYEN',
+        "location": f'Bưu phẩm đã rời {hub_name}',
+        "updated_at": datetime.utcnow().isoformat()
+    })
+    
+    return jsonify({"success": True, "message": f"Xác nhận rời {hub_name} thành công!"})
+
+# API Lấy lịch sử Nhập/Xuất của nhân viên kho
+@order_bp.route('/warehouse-history', methods=['GET'])
+@require_auth
+@require_role(['KHO', 'ADMIN', 'QUANTRI'])
+def get_warehouse_history():
+    logs = LichSu_TrangThai.query.filter_by(MaNhanVienCapNhat=request.user_id).order_by(LichSu_TrangThai.ThoiGian.desc()).all()
+    data = []
+    for log in logs:
+        order = DonHang.query.get(log.MaDonHang)
+        if order:
+            data.append({
+                "log_id": log.MaLichSu,
+                "order_id": log.MaDonHang,
+                "status": log.MaTrangThai,
+                "location_info": log.ThongTinViTri,
+                "time": log.ThoiGian.isoformat(),
+                "receiver_name": order.TenNguoiNhan,
+                "receiver_phone": order.SoDienThoaiNhan,
+                "receiver_address": order.DiaChiNhan,
+                "service_package": order.MoTaHangHoa or "Gói bưu phẩm",
+                "created_at": order.NgayTao.isoformat()
+            })
+    return jsonify({"success": True, "data": data})
 
 @order_bp.route('/events', methods=['GET'])
 def get_order_events():

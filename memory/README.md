@@ -1,59 +1,65 @@
-# 📦 Logistics API Platform - Project Memory
+# 📦 Logistics API Platform - Project Memory (Phase 6 Updated)
 
-> **Nền tảng Dịch vụ Vận chuyển tích hợp Bản đồ và Tính toán Cước phí Thời gian thực theo mô hình API-First**
+> **Hệ thống Quản lý Vận đơn, Định tuyến OSRM 5 điểm & Đối soát COD Tự động quy mô Doanh nghiệp - Thiết kế Dark-Neon Glassmorphic**
 
----
-
-## 📂 Cấu trúc thư mục Memory
-
-| File | Mô tả | Trạng thái |
-|---|---|---|
-| [README.md](./README.md) | Tổng quan dự án, Tech Stack & Trạng thái | 🟢 Hoàn thành |
-| [goals.md](./goals.md) | Mục tiêu chi tiết và trạng thái nghiệm thu tính năng | 🟢 Hoàn thành |
-| [implementation_plan.md](./implementation_plan.md) | Kế hoạch và các chặng phát triển thực tế | 🟢 Hoàn thành |
-| [architecture.md](./architecture.md) | Kiến trúc 3 lớp, luồng dữ liệu & giải pháp kĩ thuật | 🟢 Hoàn thành |
-| [database_schema.md](./database_schema.md) | Schema chi tiết 8 bảng cơ sở dữ liệu đã Việt hóa | 🟢 Hoàn thành |
-| [api_endpoints.md](./api_endpoints.md) | Danh mục thiết kế API Endpoints thực tế | 🟢 Hoàn thành |
-| [frontend_requirements.md](./frontend_requirements.md) | Yêu cầu nghiệp vụ & Giao diện người dùng Merchant/Admin/Shipper | 🟢 Hoàn thành |
-| [progress.md](./progress.md) | 📊 Theo dõi tiến độ chi tiết & Nhật ký phát triển | 🟢 Hoàn thành |
-| [notes.md](./notes.md) | Ghi chú kĩ thuật, cơ chế fallback & lưu ý vận hành | 🟢 Hoàn thành |
+Chào mừng bạn đến với trung tâm lưu trữ tài liệu bộ nhớ kỹ thuật của dự án **Antigravity Express**. Bộ tài liệu này đã được đồng bộ hóa và cập nhật 100% sau khi hoàn thành xuất sắc **Giai Đoạn 6** (Premium Aesthetics, Quantum Guide Upgrades & Mobile Shipper & Kho).
 
 ---
 
-## 🎯 Tóm tắt dự án
+## 📂 Danh Mục Hệ Thống Tài Liệu Memory
 
-- **Loại hình**: Hệ thống quản lý vận đơn, điều phối giao nhận, tính lương shipper và đối soát tài chính
-- **Kiến trúc**: API-First, Client-Server, 3-Tier Architecture
-- **Quy mô phân hệ**: Hỗ trợ 3 nhóm đối tượng qua cơ chế RBAC (Khách hàng, Nhân viên/Shipper, Quản trị)
-- **Trạng thái**: 🟢 Hoàn thành toàn diện Phase 5 (Hệ thống đã triển khai, kiểm thử và vận hành mượt mà)
+| Tài liệu (File Link) | Mô tả chi tiết nội dung | Trạng thái kỹ thuật |
+| :--- | :--- | :--- |
+| [README.md](./README.md) | Tổng quan cấu trúc thư mục, Tech Stack mới & RBAC tài khoản. | 🟢 Hoàn thành |
+| [goals.md](./goals.md) | Các mục tiêu kinh doanh, nghiệp vụ và nghiệm thu kỹ thuật. | 🟢 Hoàn thành |
+| [implementation_plan.md](./implementation_plan.md) | Lộ trình thực hiện chi tiết từ Phase 1 đến Phase 6. | 🟢 Hoàn thành |
+| [architecture.md](./architecture.md) | Kiến trúc 3 lớp, thiết kế WebSockets, SSE và sơ đồ định tuyến OSRM. | 🟢 Hoàn thành |
+| [database_schema.md](./database_schema.md) | Đặc tả 14 bảng cơ sở dữ liệu PostgreSQL Việt hóa tối ưu hóa index. | 🟢 Hoàn thành |
+| [api_endpoints.md](./api_endpoints.md) | Danh mục thiết kế API Endpoints thực tế chặng cuối. | 🟢 Hoàn thành |
+| [frontend_requirements.md](./frontend_requirements.md) | Yêu cầu thiết kế giao diện Dark-Neon và responsive di động. | 🟢 Hoàn thành |
+| [progress.md](./progress.md) | 📊 Bảng theo dõi tiến độ chi tiết & Nhật ký thay đổi (Changelog). | 🟢 Hoàn thành |
+| [notes.md](./notes.md) | Ghi chú vận hành local, xử lý Nominatim rate-limit và thông tin tài khoản. | 🟢 Hoàn thành |
 
 ---
 
-## 🛠️ Tech Stack thực tế
+## 🎯 Tóm Tắt Dự Án Mới Nhất
+
+*   **Tên nền tảng:** Antigravity Express Enterprise Logistics Platform.
+*   **Kiến trúc:** API-First, Client-Server, 3-Tier Architecture.
+*   **Quy mô phân hệ:** Hỗ trợ phân quyền RBAC chặt chẽ cho **8 nhóm vai trò nghiệp vụ** (Admin, CSKH, Kế toán, HR, Quản lý kho, Shipper, Merchant, Retail).
+*   **Trạng thái tổng thể:** 🟢 Hoàn thành xuất sắc Giai Đoạn 6 trên môi trường Local, sẵn sàng vận hành ổn định.
+
+---
+
+## 🛠️ Tech Stack Kỹ Thuật Thực Tế
 
 | Tầng (Layer) | Công nghệ sử dụng | Chi tiết vai trò |
-|---|---|---|
-| **Frontend Web** | React 19, Vite, Tailwind CSS v4, SheetJS | Single Page Application (SPA), sử dụng **Lucide React** cho icons, thư viện **SheetJS (xlsx)** cho xuất báo cáo lương. Thiết kế **Dark-Neon Glassmorphism** sang trọng, hiện đại. |
-| **Backend API** | Python 3.11+ (Flask) | Cung cấp hệ thống RESTful API an toàn, xử lý nghiệp vụ đối soát, parsing Excel và tích hợp OSRM. |
-| **Database** | SQL Server 2022 | Cơ sở dữ liệu quan hệ lưu trữ dữ liệu với **8 bảng nghiệp vụ Việt hóa hoàn toàn** bao gồm cả bảng `HoaDonDoiSoat`. Sử dụng SQLAlchemy làm ORM. |
-| **Định vị & Bản đồ** | OSRM API + Nominatim (OSM) | Trích xuất khoảng cách km thực tế từ kinh độ/vĩ độ (Geocoding) để tính toán cước phí tự động. |
-| **Bảo mật & Auth** | JWT (JSON Web Tokens) | Cơ chế Bearer Token cho Web Client và API Key (B2B) bảo mật cho Partner. |
+| :--- | :--- | :--- |
+| **Frontend Web** | React 19, Vite 8, Tailwind CSS v4 | Thiết kế **Premium Dark-Neon Glassmorphic** lôi cuốn. Tích hợp mô phỏng hộp hàng 3D CSS tương tác co giãn, camera chụp bằng chứng chặng cuối và Signature Canvas cho khách hàng ký nhận trực tiếp. |
+| **Backend API** | Python 3.13 (Flask) | Cung cấp hệ thống RESTful API an toàn, tích hợp **Flask-SocketIO** chat realtime, luồng background Server-Sent Events (SSE) đẩy thông báo và openpyxl parser Excel. |
+| **Database** | PostgreSQL | Hệ quản trị cơ sở dữ liệu chính thức, lưu trữ dữ liệu thông qua **14 bảng nghiệp vụ Việt hóa hoàn toàn**. Sử dụng SQLAlchemy làm ORM kết nối. |
+| **Định vị & Bản đồ** | OSRM API + Nominatim (OSM) | Trích xuất tọa độ địa lý và đo đạc khoảng cách thực tế. Áp dụng cơ chế bảo vệ Nominatim rate-limit trễ `1200ms` giữa các lượt geocoding. |
+| **Bảo mật & Auth** | JWT & API Key (B2B) | Cơ chế Bearer Token phân quyền RBAC an toàn và API Key 64 ký tự dành riêng cho Đối tác B2B. |
 
 ---
 
 ## 👥 Đối tượng & Phân quyền Sử dụng (RBAC)
 
-1. **Khách hàng (`KHACHHANG`)**:
-   - Chủ shop/doanh nghiệp sử dụng Merchant Portal.
-   - Quản lý sổ địa chỉ (thiết lập địa chỉ mặc định).
-   - Tạo đơn lẻ (tính cước thời gian thực có in tem A6) hoặc tải hàng loạt từ Excel.
-   - Xem sao kê đối soát tài chính (`DoiSoat`), theo dõi hóa đơn.
-2. **Nhân viên / Shipper (`NHANVIEN`)**:
-   - Sử dụng Shipper Mobile Portal để nhận đơn được chỉ định.
-   - Cập nhật trạng thái đơn hàng (Đang giao, Thành công, Thất bại kèm lý do).
-   - Thiết lập thông tin cá nhân và tài khoản ngân hàng nhận lương.
-3. **Quản trị viên (`QUANTRI`)**:
-   - Điều phối đơn hàng, chỉ định Shipper và quản lý hạn mức giao hàng (`GioiHanDonNgay`).
-   - Duyệt chi đối soát COD (`UNPAID` ➡️ `PAID`) cho chủ shop.
-   - Quản lý nhân sự, xem báo cáo, tính lương Shipper 3.000đ/đơn và xuất báo cáo Excel (.xlsx) qua SheetJS.
-   - Cấp phát API Key cho các Đối tác (`DOITAC`) tích hợp B2B.
+1.  **Khách hàng (Merchant/Retail):**
+    *   Tạo đơn lẻ (tự động tính cước OSRM) hoặc tạo đơn hàng loạt bằng Excel.
+    *   Đăng ký Web Push hành trình bưu phẩm. Tra cứu định vị Timeline phát sáng trực tiếp trong chatbot Quantum Guide.
+2.  **Nhân viên Bưu Tá (Shipper):**
+    *   Nhận đơn được gán tại chi nhánh, ôm đơn giao hàng, cập nhật vị trí thời gian thực.
+    *   Cho khách ký xác nhận bằng chữ ký số cảm ứng (Signature Canvas) và chụp ảnh camera thực địa.
+3.  **Nhân viên CSKH (Customer Service):**
+    *   Giao diện chat hai chiều thời gian thực Double-Pane hỗ trợ giải quyết khiếu nại của khách hàng, đính kèm hình ảnh và liên thông dữ liệu đơn.
+4.  **Hành chính Kế toán (Accountant):**
+    *   Sao kê đối soát dòng tiền COD bưu tá, tính lương tự động (Cơ bản + thưởng doanh số), xuất tệp Excel bằng SheetJS.
+5.  **Quản lý Nhân sự (HR Manager):**
+    *   Kiểm soát chấm công điện tử nhân viên bưu cục, điều chỉnh quotas hạn mức ôm đơn Shipper hàng ngày.
+6.  **Super Admin (Quản trị tối cao):**
+    *   Giám sát doanh thu vùng miền bento grid, bổ nhiệm điều động nhân viên vào các Chi nhánh/Tổng kho liên kết, kiểm soát logs hoạt động toàn hệ thống.
+
+---
+
+Bộ tài liệu memory này đóng vai trò là xương sống thông tin cho toàn bộ vòng đời vận hành và bảo trì của Antigravity Express!

@@ -22,9 +22,9 @@ def get_tracking(order_id):
     if not sender_addr:
         sender_addr = SoDiaChi.query.filter_by(MaNguoiDung=order.MaNguoiGui).first()
 
-    sender_name = sender_addr.TenLienHe if sender_addr else order.nguoi_gui.HoTen
-    sender_phone = sender_addr.SoDienThoai if sender_addr else ""
-    sender_address_text = sender_addr.DiaChiChiTiet if sender_addr else "Kho bưu cục Antigravity"
+    sender_name = order.TenNguoiGui or (sender_addr.TenLienHe if sender_addr else order.nguoi_gui.HoTen)
+    sender_phone = order.SoDienThoaiGui or (sender_addr.SoDienThoai if sender_addr else "")
+    sender_address_text = order.DiaChiGui or (sender_addr.DiaChiChiTiet if sender_addr else "Kho bưu cục Antigravity")
 
     return jsonify({
         "success": True, 
@@ -34,13 +34,17 @@ def get_tracking(order_id):
             "created_at": order.NgayTao.isoformat(),
             "timeline": timeline,
             
-            # Thông tin liên hệ
+            # Thông tin liên hệ & Tọa độ định vị
             "sender_name": sender_name,
             "sender_phone": sender_phone,
             "sender_address": sender_address_text,
+            "sender_lat": float(order.ViDoGui) if order.ViDoGui is not None else (float(sender_addr.ViDo) if (sender_addr and sender_addr.ViDo is not None) else None),
+            "sender_lng": float(order.KinhDoGui) if order.KinhDoGui is not None else (float(sender_addr.KinhDo) if (sender_addr and sender_addr.KinhDo is not None) else None),
             "receiver_name": order.TenNguoiNhan,
             "receiver_phone": order.SoDienThoaiNhan,
             "receiver_address": order.DiaChiNhan,
+            "receiver_lat": float(order.ViDoNhan) if order.ViDoNhan is not None else None,
+            "receiver_lng": float(order.KinhDoNhan) if order.KinhDoNhan is not None else None,
             
             # Thông số hàng hóa
             "description": order.MoTaHangHoa,
@@ -56,7 +60,8 @@ def get_tracking(order_id):
             "insurance_fee": float(order.PhiBaoHiem),
             "inspection_policy": order.QuyenKiemTra,
             "pickup_type": order.HinhThucLayHang,
-            "service_package": order.goi_dich_vu.TenGoi if order.goi_dich_vu else "STANDARD"
+            "service_package": order.goi_dich_vu.TenGoi if order.goi_dich_vu else "STANDARD",
+            "distance_km": float(order.KhoangCachKm) if order.KhoangCachKm is not None else 0.0
         }
     })
 

@@ -13,8 +13,7 @@ export default function MerchantDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Realtime Toast State
-  const [realtimeToast, setRealtimeToast] = useState({ show: false, message: '', type: '' });
+  // Silent auto refresh trigger
 
   const getFormattedDate = () => {
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -47,28 +46,12 @@ export default function MerchantDashboard() {
     fetchData();
   }, []);
 
-  // Real-time EventSource (SSE) Connection
+  // Real-time EventSource (SSE) Connection (Silent Auto-refresh)
   useEffect(() => {
     const eventSource = new EventSource('http://localhost:5000/api/orders/events');
     
-    eventSource.addEventListener('connect', (e) => {
-      console.log("SSE connected successfully:", e.data);
-    });
-
     eventSource.addEventListener('order_update', (e) => {
-      try {
-        const payload = JSON.parse(e.data);
-        setRealtimeToast({
-          show: true,
-          message: `ĐƠN HÀNG ${payload.order_id} CẬP NHẬT: Trạng thái [${payload.status}] • Vị trí: "${payload.location}" • Nhân viên: ${payload.shipper_name}`,
-          type: 'info'
-        });
-        
-        // Auto refresh dashboard metrics in background
-        fetchData();
-      } catch (err) {
-        console.error(err);
-      }
+      fetchData(); // Silently sync dashboard metrics when order status changes in backend!
     });
 
     return () => {
@@ -152,63 +135,13 @@ export default function MerchantDashboard() {
   };
 
   return (
-    <div className="bg-canvas min-h-screen py-10 px-6 lg:px-16 relative overflow-hidden text-black">
-      {/* Advanced Neon Aurora Background Blobs */}
-      <div className="neon-aurora-blob bg-accent-purple/5 w-[600px] h-[600px] -top-20 -left-20 animate-pulse"></div>
-      <div className="neon-aurora-blob bg-cyan-500/5 w-[500px] h-[500px] bottom-10 right-10 animate-pulse" style={{ animationDuration: '6s' }}></div>
-
-      {/* Real-time Toast Notification Panel */}
-      {realtimeToast.show && (
-        <div className="fixed bottom-6 right-6 z-[9999] max-w-md bg-white/95 backdrop-blur-2xl text-black p-5 rounded-2xl shadow-[0_15px_35px_rgba(0,0,0,0.06)] border border-black/10 flex items-start gap-4 animate-slide-up-card">
-          <div className="p-2.5 bg-accent-purple/10 border border-accent-purple/20 rounded-xl text-accent-purple shrink-0">
-            <Bell className="w-5 h-5 animate-pulse" />
-          </div>
-          <div>
-            <div className="text-[10px] font-black text-accent-purple uppercase tracking-widest flex justify-between items-center">
-              <span>Hệ thống thời gian thực (SSE)</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            </div>
-            <p className="text-xs font-bold leading-relaxed mt-2 text-black">{realtimeToast.message}</p>
-            <button
-              onClick={() => setRealtimeToast({ show: false, message: '', type: '' })}
-              className="text-[10px] text-accent-purple font-extrabold uppercase tracking-widest hover:text-black mt-3 block transition-colors duration-300"
-            >
-              Đóng thông báo
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Header Section */}
-      <header className="mb-10 relative z-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-black/10">
-          <div>
-            <span className="text-[10px] font-black text-accent-purple uppercase tracking-widest mb-1 block">Control Panel</span>
-            <h1 className="text-3xl font-black text-black tracking-widest uppercase font-display text-glow-purple">
-              Kênh Cửa Hàng (Merchant Portal)
-            </h1>
-            <p className="text-mute text-xs font-bold uppercase tracking-wider mt-1">{getFormattedDate()}</p>
-          </div>
-          <div className="flex gap-4">
-            <Link 
-              to="/merchant/invoices" 
-              className="btn-secondary px-6 py-3 text-xs uppercase tracking-widest font-extrabold h-12 flex items-center"
-            >
-              Hóa đơn Đối soát
-            </Link>
-            <button
-              onClick={() => navigate('/merchant/order/new')}
-              className="btn-primary px-6 py-3 text-xs uppercase tracking-widest font-extrabold h-12 flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" /> Tạo vận đơn mới
-            </button>
-          </div>
-        </div>
-      </header>
-
+    <div className="w-full relative animate-fade-in">
       {error && (
-        <div className="bg-red-500/10 text-red-700 text-xs p-4 rounded-xl mb-8 border border-red-500/20 font-bold uppercase tracking-wider relative z-10">
-          {error}
+        <div className="bg-rose-50 border-l-4 border-rose-600 p-4 mb-8 rounded-r-2xl shadow-sm relative z-10">
+          <div className="text-sm font-semibold text-rose-800 flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">error</span>
+            {error}
+          </div>
         </div>
       )}
 

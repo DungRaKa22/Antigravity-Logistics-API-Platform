@@ -241,3 +241,143 @@
   background: rgba(94, 14, 215, 0.2);
 }
 
+/* ==========================================================================
+   3D Volumetric Box Visualizer - Phase 6 Premium Aesthetics
+   ========================================================================== */
+.scene3d {
+  width: 240px;
+  height: 240px;
+  perspective: 800px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.cube3d {
+  width: 0px;
+  height: 0px;
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateX(-22deg) rotateY(38deg);
+  animation: floatSpin3d 16s infinite linear;
+  transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+@keyframes floatSpin3d {
+  0% {
+    transform: rotateX(-22deg) rotateY(0deg) translateY(0px);
+  }
+  50% {
+    transform: rotateX(-14deg) rotateY(180deg) translateY(-8px);
+  }
+  100% {
+    transform: rotateX(-22deg) rotateY(360deg) translateY(0px);
+  }
+}
+
+.cube3d:hover {
+  animation-play-state: paused;
+}
+
+.face3d {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border: 1.5px solid rgba(139, 92, 246, 0.65); /* Vibrant Violet Neon */
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.18) 0%, rgba(94, 14, 215, 0.08) 100%);
+  box-shadow: inset 0 0 18px rgba(139, 92, 246, 0.3), 0 0 12px rgba(139, 92, 246, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+  backface-visibility: visible;
+  border-radius: 4px;
+}
+
+/* Glowing text on faces */
+.face3d-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 0 8px rgba(139, 92, 246, 0.8);
+}
+
+/* Face specific coordinate projections */
+.face3d-front {
+  width: var(--w-3d, 120px);
+  height: var(--h-3d, 80px);
+  margin-left: calc(var(--w-3d, 120px) / -2);
+  margin-top: calc(var(--h-3d, 80px) / -2);
+  transform: rotateY(0deg) translateZ(calc(var(--d-3d, 60px) / 2));
+}
+
+.face3d-back {
+  width: var(--w-3d, 120px);
+  height: var(--h-3d, 80px);
+  margin-left: calc(var(--w-3d, 120px) / -2);
+  margin-top: calc(var(--h-3d, 80px) / -2);
+  transform: rotateY(180deg) translateZ(calc(var(--d-3d, 60px) / 2));
+}
+
+.face3d-left {
+  width: var(--d-3d, 60px);
+  height: var(--h-3d, 80px);
+  margin-left: calc(var(--d-3d, 60px) / -2);
+  margin-top: calc(var(--h-3d, 80px) / -2);
+  transform: rotateY(-90deg) translateZ(calc(var(--w-3d, 120px) / 2));
+}
+
+.face3d-right {
+  width: var(--d-3d, 60px);
+  height: var(--h-3d, 80px);
+  margin-left: calc(var(--d-3d, 60px) / -2);
+  margin-top: calc(var(--h-3d, 80px) / -2);
+  transform: rotateY(90deg) translateZ(calc(var(--w-3d, 120px) / 2));
+}
+
+.face3d-top {
+  width: var(--w-3d, 120px);
+  height: var(--d-3d, 60px);
+  margin-left: calc(var(--w-3d, 120px) / -2);
+  margin-top: calc(var(--d-3d, 60px) / -2);
+  transform: rotateX(90deg) translateZ(calc(var(--h-3d, 80px) / 2));
+}
+
+.face3d-bottom {
+  width: var(--w-3d, 120px);
+  height: var(--d-3d, 60px);
+  margin-left: calc(var(--w-3d, 120px) / -2);
+  margin-top: calc(var(--d-3d, 60px) / -2);
+  transform: rotateX(-90deg) translateZ(calc(var(--h-3d, 80px) / 2));
+}
+
+/* Holographic Scanner Animation */
+@keyframes scannerLine {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+.animate-scanner-line {
+  animation: scannerLine 3s infinite linear;
+}
+.text-shadow-cyan {
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4);
+}
+
+

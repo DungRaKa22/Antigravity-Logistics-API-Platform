@@ -1,6 +1,6 @@
 from flask import Flask, jsonify
 from .config import config_map
-from .extensions import db, cors
+from .extensions import db, cors, socketio
 
 def create_app(config_name="default"):
     app = Flask(__name__)
@@ -14,36 +14,9 @@ def create_app(config_name="default"):
     # Initialize Extensions
     db.init_app(app)
     cors.init_app(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+    socketio.init_app(app)
 
-    # Safe SQL Server migrations on startup
-    with app.app_context():
-        from sqlalchemy import text
-        try:
-            db.session.execute(text("""
-                IF NOT EXISTS (
-                    SELECT * FROM sys.columns 
-                    WHERE object_id = OBJECT_ID(N'NguoiDung') 
-                    AND name = N'GioiHanDonNgay'
-                )
-                BEGIN
-                    ALTER TABLE NguoiDung ADD GioiHanDonNgay INT NOT NULL DEFAULT 100;
-                END
-            """))
-            db.session.execute(text("""
-                IF NOT EXISTS (
-                    SELECT * FROM sys.columns 
-                    WHERE object_id = OBJECT_ID(N'NguoiDung') 
-                    AND name = N'GhiChuNhanSu'
-                )
-                BEGIN
-                    ALTER TABLE NguoiDung ADD GhiChuNhanSu NVARCHAR(1000) NULL;
-                END
-            """))
-            db.session.commit()
-            app.logger.info("Safe database schema migration completed.")
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error(f"Error checking/migrating schema: {e}")
+    # Database setup completed under PostgreSQL
 
 
     # Health Check Endpoint
@@ -72,6 +45,10 @@ def create_app(config_name="default"):
     from .routes.tracking_routes import tracking_bp
     from .routes.finance_routes import finance_bp
     from .routes.partner_routes import partner_bp
+    from .routes.payment_routes import payment_bp
+    from .routes.notification_routes import notification_bp
+    from .routes.chat_routes import chat_bp
+    from .routes.super_admin_routes import super_admin_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(address_bp, url_prefix='/api/address-book')
@@ -79,5 +56,13 @@ def create_app(config_name="default"):
     app.register_blueprint(tracking_bp, url_prefix='/api/tracking')
     app.register_blueprint(finance_bp, url_prefix='/api/reconciliations')
     app.register_blueprint(partner_bp, url_prefix='/api/partner')
+    app.register_blueprint(payment_bp, url_prefix='/api/payment')
+    app.register_blueprint(notification_bp, url_prefix='/api/notifications')
+    app.register_blueprint(chat_bp, url_prefix='/api/chat')
+    app.register_blueprint(super_admin_bp, url_prefix='/api/super-admin')
+
+    # Import sockets inside app context to register event handlers
+    with app.app_context():
+        from app import sockets
 
     return app

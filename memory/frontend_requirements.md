@@ -55,6 +55,24 @@ Hệ thống được thiết kế Single Page Application (SPA) với các phâ
 ### 3. Xuất Báo Cáo Lương Shipper Chuyên Nghiệp (.xlsx)
 - Bảng Excel báo cáo lương được thiết kế cấu trúc khoa học theo chiều ngang:
   - Cột cố định: Mã Shipper, Họ & Tên.
-  - Các cột động: Biểu diễn từng ngày trong tháng được lọc (ví dụ: ngày 01, ngày 02... ngày 30). Mỗi ô hiển thị số lượng đơn giao thành công của Shipper trong ngày tương ứng (ví dụ: 5, 12, 8...).
-  - Cột tổng hợp: Tổng số đơn thất bại trong tháng, Tổng số đơn giao thành công, và Tổng lương thực lĩnh.
+  - Các cột động: Biểu diễn từng ngày trong tháng được lọc (ví dụ: ngày 01, ngày 02... ngày 30). Mỗi ô hiển thị số lượng đơn giao thành công của Shipper trong ngày tương ứng.
 - Sử dụng SheetJS (`xlsx`) giúp tải file cực nhanh, định dạng file chuẩn `.xlsx` tương thích hoàn hảo với Microsoft Excel, Google Sheets mà không bị lỗi font chữ tiếng Việt (UTF-8).
+
+---
+
+## 🪐 4. Tính Năng Giao Diện Premium (Phase 6 Aesthetics)
+
+### 1. Khối Hộp 3D Lập Thể (True 3D Volumetric Box)
+- Trang chủ tích hợp mô hình hộp hàng 3D thực tế bằng CSS 3D Transforms (`transform-style: preserve-3d`), tự động xoay neon ảo diệu.
+- Thao tác kéo 3 thanh trượt **Dài - Rộng - Cao** co giãn khối hộp 3D mượt mà chênh lệch tỷ lệ thực tế, ước lượng thể tích và cước phí tự động tức thì.
+
+### 2. Trợ lý Quantum Guide & Sockets Chat Handover
+- Widget trò chuyện tròn neon ở góc phải màn hình, hỗ trợ cây quyết định đa chặng, xem timeline bưu kiện phát sáng trực tuyến ngay trong chat bong bóng.
+- Tích hợp kết nối hai chiều qua **Socket.io-client** khi khách click *"Gặp nhân viên CSKH"*, chuyển đổi liền mạch sang quầy CSKH của Admin/CSKH.
+
+### 3. Shipper Touch Signature Canvas & Camera Photo Proofs
+- Bưu tá chặng cuối có thể kích hoạt bảng vẽ cảm ứng **Signature Canvas** cho khách ký tay trực tiếp bằng ngón tay trên di động.
+- Trình giả lập **Proof Photo Camera** chụp ảnh bằng chứng giao hàng, lưu vết chứng nhận base64/text-proof trực tiếp về CSDL PostgreSQL.
+
+### 4. OSM Nominatim Geocoding Sleep (1200ms)
+- Áp dụng trễ `1200ms` giữa các request Nominatim trên giao diện tạo đơn giúp chống bị máy chủ OpenStreetMap chặn IP/từ chối dịch vụ.

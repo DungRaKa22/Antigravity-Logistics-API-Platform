@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { OrderService, TrackingService } from '../services/api';
 import { printWaybill } from '../utils/waybill';
 import { Search, Plus, ChevronLeft, ChevronRight, Filter, X, MapPin, Package, Phone, Truck, ShieldCheck, DollarSign, Loader2, Navigation, CheckCircle2, Printer } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { fetchRouteGeometry } from '../utils/routing';
 import L from 'leaflet';
@@ -41,6 +41,32 @@ const destinationNeonIcon = L.divIcon({
   popupAnchor: [0, -16],
 });
 
+const hubNeonIcon = L.divIcon({
+  className: 'custom-leaflet-hub-icon',
+  html: `<div class="relative flex items-center justify-center">
+    <div class="absolute w-8 h-8 bg-amber-500 rounded-full animate-ping opacity-35"></div>
+    <div class="relative w-5 h-5 bg-[#140b27] border-3 border-amber-400 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.8)] flex items-center justify-center">
+      <div class="w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
+    </div>
+  </div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+  popupAnchor: [0, -16],
+});
+
+// ChangeView component to dynamically fit bounds of geocoded markers
+function ChangeView({ center, zoom, bounds }) {
+  const map = useMap();
+  useEffect(() => {
+    if (bounds && bounds.length > 0) {
+      map.fitBounds(bounds, { padding: [40, 40] });
+    } else if (center) {
+      map.setView(center, zoom || 13);
+    }
+  }, [center, zoom, bounds, map]);
+  return null;
+}
+
 export default function MerchantOrders() {
   const navigate = useNavigate();
 
@@ -63,6 +89,47 @@ export default function MerchantOrders() {
   const [modalSenderCoords, setModalSenderCoords] = useState(null);
   const [modalReceiverCoords, setModalReceiverCoords] = useState(null);
   const [modalRouteGeometry, setModalRouteGeometry] = useState(null); // OSRM real road geometry for modal
+
+  // Trạm trung chuyển tọa độ và cấu hình vùng miền
+  const HUBS = {
+    BAC: {
+      name: 'Kho Trung Chuyển Miền Bắc (Từ Sơn, Bắc Ninh)',
+      coords: [21.1155, 105.9964]
+    },
+    TRUNG: {
+      name: 'Kho Trung Chuyển Miền Trung (An Tây, Quảng Ngãi)',
+      coords: [15.1205, 108.7925]
+    },
+    NAM: {
+      name: 'Kho Trung Chuyển Miền Nam (Bình Hòa, TP.HCM)',
+      coords: [10.9325, 106.7215]
+    }
+  };
+
+  const getRegion = (coords) => {
+    if (!coords) return 'BAC';
+    const lat = coords[0];
+    if (lat >= 19.5) return 'BAC';
+    if (lat >= 14.0) return 'TRUNG';
+    return 'NAM';
+  };
+
+  const senderRegion = modalSenderCoords ? getRegion(modalSenderCoords) : null;
+  const receiverRegion = modalReceiverCoords ? getRegion(modalReceiverCoords) : null;
+
+  const originHub = senderRegion ? HUBS[senderRegion] : null;
+  const destHub = receiverRegion ? HUBS[receiverRegion] : null;
+
+  const plannedHubs = [];
+  const isDirect = orderDetail && orderDetail.distance_km < 10.0;
+  if (!isDirect) {
+    if (originHub) {
+      plannedHubs.push(originHub);
+      if (senderRegion !== receiverRegion && destHub) {
+        plannedHubs.push(destHub);
+      }
+    }
+  }
 
   const geocodeAddress = async (address) => {
     try {
@@ -95,16 +162,27 @@ export default function MerchantOrders() {
       if (res.success && res.data) {
         setOrderDetail(res.data);
         
-        // Geocode dynamic points for modal map
-        const sender = res.data.sender_address;
-        const receiver = res.data.receiver_address;
+        // Prioritize coordinates from database
+        if (res.data.sender_lat !== undefined && res.data.sender_lat !== null &&
+            res.data.sender_lng !== undefined && res.data.sender_lng !== null) {
+          setModalSenderCoords([res.data.sender_lat, res.data.sender_lng]);
+        } else {
+          geocodeAddress(res.data.sender_address).then(coords => {
+            if (coords) setModalSenderCoords(coords);
+          });
+        }
         
-        geocodeAddress(sender).then(coords => {
-          if (coords) setModalSenderCoords(coords);
-        });
-        geocodeAddress(receiver).then(coords => {
-          if (coords) setModalReceiverCoords(coords);
-        });
+        if (res.data.receiver_lat !== undefined && res.data.receiver_lat !== null &&
+            res.data.receiver_lng !== undefined && res.data.receiver_lng !== null) {
+          setModalReceiverCoords([res.data.receiver_lat, res.data.receiver_lng]);
+        } else {
+          // Add a 1200ms delay for geocoding the receiver to satisfy Nominatim's 1 req/sec rate limit
+          setTimeout(() => {
+            geocodeAddress(res.data.receiver_address).then(coords => {
+              if (coords) setModalReceiverCoords(coords);
+            });
+          }, 1200);
+        }
       } else {
         setModalError(res.message || 'Không thể lấy thông tin chi tiết đơn hàng.');
       }
@@ -118,15 +196,27 @@ export default function MerchantOrders() {
 
   // Fetch OSRM real road geometry for the modal map
   useEffect(() => {
-    if (modalSenderCoords && modalReceiverCoords) {
+    if (modalSenderCoords && modalReceiverCoords && senderRegion && receiverRegion) {
       setModalRouteGeometry(null);
-      fetchRouteGeometry([modalSenderCoords, modalReceiverCoords]).then((geometry) => {
+      const waypoints = [modalSenderCoords];
+      plannedHubs.forEach(hub => waypoints.push(hub.coords));
+      waypoints.push(modalReceiverCoords);
+
+      fetchRouteGeometry(waypoints).then((geometry) => {
         if (geometry && geometry.length > 0) {
           setModalRouteGeometry(geometry);
         }
       });
     }
-  }, [modalSenderCoords, modalReceiverCoords]);
+  }, [modalSenderCoords, modalReceiverCoords, senderRegion, receiverRegion]);
+
+  const polylineCoords = modalRouteGeometry || (modalSenderCoords && modalReceiverCoords 
+    ? [
+        modalSenderCoords,
+        ...plannedHubs.map(hub => hub.coords),
+        modalReceiverCoords
+      ]
+    : null);
 
   useEffect(() => {
     async function fetchOrders() {
@@ -209,29 +299,13 @@ export default function MerchantOrders() {
   };
 
   return (
-    <div className="bg-canvas min-h-screen py-10 px-6 lg:px-16 relative overflow-hidden">
-      {/* Background neon glows */}
-      <div className="neon-aurora-blob bg-accent-purple/5 w-[600px] h-[600px] -top-20 -left-20 animate-pulse"></div>
-      <div className="neon-aurora-blob bg-cyan-500/5 w-[500px] h-[500px] bottom-10 right-10 animate-pulse" style={{ animationDuration: '6s' }}></div>
-
-      {/* Header Section */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-6 border-b border-black/10 relative z-10">
-        <div>
-          <span className="text-[10px] font-black text-accent-purple uppercase tracking-widest block mb-1">Database Ledger</span>
-          <h1 className="text-3xl font-black text-black tracking-widest uppercase font-display text-glow">Danh sách vận đơn</h1>
-          <p className="text-mute text-xs font-semibold uppercase tracking-wider mt-1">Tổng cộng {orders.length} đơn hàng</p>
-        </div>
-        <button
-          onClick={() => navigate('/merchant/order/new')}
-          className="btn-primary px-6 py-3 text-xs uppercase tracking-widest font-extrabold flex items-center gap-2 self-start md:self-auto h-12"
-        >
-          <Plus className="w-4 h-4 text-white" /> Tạo vận đơn mới
-        </button>
-      </header>
-
+    <div className="w-full relative animate-fade-in">
       {error && (
-        <div className="bg-red-500/10 text-red-700 text-xs p-4 rounded-xl mb-8 border border-red-500/20 font-bold uppercase tracking-wider relative z-10">
-          {error}
+        <div className="bg-rose-50 border-l-4 border-rose-600 p-4 mb-8 rounded-r-2xl shadow-sm relative z-10">
+          <div className="text-sm font-semibold text-rose-800 flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">error</span>
+            {error}
+          </div>
         </div>
       )}
 
@@ -518,6 +592,48 @@ export default function MerchantOrders() {
 
                   {/* Right Column: Maps & Timeline */}
                   <div className="lg:col-span-5 flex flex-col gap-6">
+                    {/* Holographic 3D Box Visualizer */}
+                    <div className="scene3d neon-glow-grid relative w-full h-36 rounded-2xl border border-black/10 overflow-hidden bg-[#090314]/95 flex items-center justify-center shrink-0">
+                      <div className="absolute inset-0 bg-[radial-gradient(rgba(139,92,246,0.15)_1.5px,transparent_1.5px)] bg-[size:16px_16px] pointer-events-none" />
+                      
+                      <div className="cube3d" style={{
+                        '--w-3d': `${Math.min(130, Math.max(35, (parseInt(orderDetail.length_cm) || 10) * 2.2))}px`,
+                        '--h-3d': `${Math.min(130, Math.max(6, (parseInt(orderDetail.height_cm) || 10) * 2.2))}px`,
+                        '--d-3d': `${Math.min(130, Math.max(35, (parseInt(orderDetail.width_cm) || 10) * 2.2))}px`,
+                      }}>
+                        <div className="face3d face3d-front">
+                          <span className="face3d-label" style={{ fontSize: '7px' }}>FRONT</span>
+                          <span className="text-[8px] font-extrabold text-purple-300 mt-0.5">{orderDetail.length_cm}cm</span>
+                        </div>
+                        <div className="face3d face3d-back">
+                          <span className="face3d-label" style={{ fontSize: '7px' }}>BACK</span>
+                        </div>
+                        <div className="face3d face3d-left">
+                          <span className="face3d-label" style={{ fontSize: '7px' }}>LEFT</span>
+                          <span className="text-[8px] font-extrabold text-purple-300 mt-0.5">{orderDetail.width_cm}cm</span>
+                        </div>
+                        <div className="face3d face3d-right">
+                          <span className="face3d-label" style={{ fontSize: '7px' }}>RIGHT</span>
+                        </div>
+                        <div className="face3d face3d-top">
+                          <span className="face3d-label" style={{ fontSize: '6px' }}>TOP</span>
+                          <span className="text-[7px] font-extrabold text-purple-300">{orderDetail.length_cm}x{orderDetail.width_cm}</span>
+                        </div>
+                        <div className="face3d face3d-bottom">
+                          <span className="face3d-label" style={{ fontSize: '7px' }}>BOTTOM</span>
+                        </div>
+                      </div>
+
+                      <div className="absolute top-3 left-3 flex gap-1 items-center">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                        <span className="text-[8px] font-black text-emerald-400 tracking-wider uppercase">Chi tiết bưu phẩm 3D</span>
+                      </div>
+
+                      <div className="absolute bottom-3 right-3 px-2 py-0.5 bg-white/95 backdrop-blur-md rounded-full text-[8px] font-black tracking-widest text-black border border-black/5 shadow-md">
+                        THỂ TÍCH: {(((parseInt(orderDetail.length_cm) || 10) * (parseInt(orderDetail.width_cm) || 10) * (parseInt(orderDetail.height_cm) || 10)) / 1000).toFixed(1)} Lít
+                      </div>
+                    </div>
+
                     {/* Live Routing Map */}
                     <div className="w-full h-48 border border-black/10 rounded-2xl overflow-hidden relative shadow-inner">
                       <MapContainer 
@@ -527,31 +643,53 @@ export default function MerchantOrders() {
                         zoomControl={false}
                       >
                         <TileLayer
-                          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-                          attribution='&copy; CARTO'
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          attribution='&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        />
+
+                        <ChangeView 
+                          center={modalSenderCoords || [21.0285, 105.8542]} 
+                          bounds={polylineCoords} 
                         />
                         
                         {modalSenderCoords && (
                           <Marker position={modalSenderCoords} icon={purplePulsingIcon}>
                             <Popup>
-                              <div className="text-xs font-bold">Kho gửi: {orderDetail.sender_address}</div>
+                              <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                                <p className="text-accent-purple">📍 ĐIỂM GỬI (KHO LẤY HÀNG)</p>
+                                <p className="text-[10px] text-mute mt-0.5">{orderDetail.sender_address}</p>
+                              </div>
                             </Popup>
                           </Marker>
                         )}
 
+                        {plannedHubs.map((hub, idx) => (
+                          <Marker key={idx} position={hub.coords} icon={hubNeonIcon}>
+                            <Popup>
+                              <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                                <p className="text-amber-500">🏢 TRẠM TRUNG CHUYỂN KHO {getRegion(hub.coords) === 'BAC' ? 'BẮC' : getRegion(hub.coords) === 'TRUNG' ? 'TRUNG' : 'NAM'}</p>
+                                <p className="text-black mt-1 font-semibold">{hub.name}</p>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        ))}
+
                         {modalReceiverCoords && (
                           <Marker position={modalReceiverCoords} icon={destinationNeonIcon}>
                             <Popup>
-                              <div className="text-xs font-bold">Khách nhận: {orderDetail.receiver_address}</div>
+                              <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                                <p className="text-accent-purple">📍 ĐIỂM NHẬN (KHÁCH HÀNG)</p>
+                                <p className="text-[10px] text-mute mt-0.5">{orderDetail.receiver_address}</p>
+                              </div>
                             </Popup>
                           </Marker>
                         )}
                         
-                        {modalSenderCoords && modalReceiverCoords && (
+                        {polylineCoords && (
                           <>
                             {/* Shadow glow layer */}
                             <Polyline 
-                              positions={modalRouteGeometry || [modalSenderCoords, modalReceiverCoords]} 
+                              positions={polylineCoords} 
                               color="#5E0ED7" 
                               weight={8} 
                               opacity={0.12} 
@@ -560,7 +698,7 @@ export default function MerchantOrders() {
                             />
                             {/* Main route line */}
                             <Polyline 
-                              positions={modalRouteGeometry || [modalSenderCoords, modalReceiverCoords]} 
+                              positions={polylineCoords} 
                               color="#5E0ED7" 
                               weight={4} 
                               opacity={0.85} 

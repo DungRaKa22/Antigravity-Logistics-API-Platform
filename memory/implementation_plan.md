@@ -5,14 +5,14 @@
 ---
 
 ## PHASE 1: Nền tảng & Database [HOÀN THÀNH] ✅
-- [x] **Thiết kế 8 Bảng Cốt lõi (Việt hóa)**: `NguoiDung`, `SoDiaChi`, `GoiDichVu`, `DonHang`, `LichSu_TrangThai`, `DoiSoat`, `HoaDonDoiSoat`, `KhoaAPI`.
+- [x] **Thiết kế 14 Bảng Cơ sở Dữ liệu (Việt hóa)**: `TongKho`, `ChiNhanh`, `NguoiDung`, `SoDiaChi`, `GoiDichVu`, `DonHang`, `LichSu_TrangThai`, `DoiSoat`, `HoaDonDoiSoat`, `KhoaAPI`, `TinNhan`, `ChamCong`, `KhieuNai`, `DangKyNhanThongBao`.
 - [x] **Bổ sung trường CSDL nâng cao**:
   - `GioiHanDonNgay` (Hạn ngạch số đơn hàng Shipper được nhận trong ngày - bảng `NguoiDung`).
   - `GhiChuNhanSu` (Ghi chú về nhân viên/shipper - bảng `NguoiDung`).
   - `MaNhanVienGiao` (Liên kết Shipper phụ trách đơn hàng - bảng `DonHang`).
   - Cấu hình thông tin tài khoản ngân hàng của Shipper (`TenNganHang`, `SoTaiKhoan`, `ChuTaiKhoan` - bảng `NguoiDung`).
-- [x] **Cài đặt & Khởi tạo CSDL**: Tích hợp SQL Server 2022 và chạy file khởi tạo `init_database.sql`.
-- [x] **Nạp dữ liệu mẫu**: Chạy `seed_data.sql` để thiết lập ban đầu và `seed_clean_data.py` phục vụ thử nghiệm làm sạch dữ liệu.
+- [x] **Cài đặt & Khởi tạo CSDL**: Tích hợp PostgreSQL 15+ local và chạy file khởi tạo/Models.
+- [x] **Nạp dữ liệu mẫu**: Chạy script `seed_postgres.py` để thiết lập ban đầu (3 tổng kho, chi nhánh vệ tinh và các tài khoản mẫu).
 
 ---
 
@@ -79,3 +79,22 @@
   - Thiết lập thẻ Card nổi bật, căn giữa, bo tròn `rounded-[24px]` trên nền xám điểm chấm radial-gradient sâu.
   - Tích hợp nút **"Quay lại" (Back Button)** với icon `ArrowLeft` thanh lịch cạnh logo thương hiệu để tối ưu hóa điều hướng.
 - [x] Đồng bộ hóa các tài liệu lưu trữ dự án trong thư mục `memory/` và tạo file `README.md` hướng dẫn chạy chi tiết.
+
+---
+
+## PHASE 6: Premium Aesthetics, Cloud & Hotfixes [HOÀN THÀNH] ✅
+- [x] **Mô Phỏng Hộp Hàng 3D Lập Thể (True 3D Volumetric Box)**:
+  - Nhúng mô hình khối hộp lập thể `preserve-3d` neon xoay tự do tại Trang chủ.
+  - Hỗ trợ 3 thanh trượt **Dài - Rộng - Cao** co giãn động và tự động tính cước thể tích tức thì.
+- [x] **Trợ Lý Ảo Quantum Guide & Live Chat Socket Handover**:
+  - Hỗ trợ bot Quantum Guide lơ lửng tối chàm neon, tự phục vụ tra cứu đơn hàng qua mã vận đơn lẻ.
+  - Vẽ timeline hành trình phát sáng neon động trực tuyến ngay trong chat.
+  - Tích hợp nút *"Gặp nhân viên CSKH"* tự động tạo vé `KhieuNai` và chuyển tiếp sang luồng **Double-Pane Chat Socket.io** thời gian thực với nhân viên Admin/CSKH.
+- [x] **Chứng Nhận Thực Địa Shipper (Touch Signature & Proof Photo)**:
+  - Tích hợp bảng vẽ chữ ký tay điện tử **Touch Signature Canvas** tại phân hệ shipper chặng cuối.
+  - Tích hợp máy ảnh giả lập **Proof Photo Camera Simulator** chụp ảnh bưu phẩm thực địa chặng cuối.
+  - Tự động mã hóa và lưu trữ vết chứng nhận an toàn vào CSDL PostgreSQL qua trường `location_info` / `AnhBangChungUrl`.
+- [x] **Nominatim Rate-Limit Sleep Protection (1200ms)**:
+  - Thiết lập cơ chế ngủ trễ `1200ms` giữa các request geocode của Nominatim giúp chống bị chặn dịch vụ từ máy chủ bản đồ OSM công cộng.
+  - Tự động kích hoạt cơ chế fallback 10.5 km khi API địa lý bị lỗi ngắt quãng.
+

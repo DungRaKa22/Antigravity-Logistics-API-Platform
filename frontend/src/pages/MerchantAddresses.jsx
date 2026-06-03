@@ -116,18 +116,9 @@ export default function MerchantAddresses() {
   };
 
   return (
-    <div className="bg-canvas min-h-screen py-10 px-6 lg:px-16 relative overflow-hidden">
-      {/* Advanced Neon Aurora Background Blobs */}
-      <div className="neon-aurora-blob bg-accent-purple/10 w-[600px] h-[600px] -top-20 -left-20 animate-pulse"></div>
-      <div className="neon-aurora-blob bg-cyan-500/5 w-[500px] h-[500px] bottom-10 right-10 animate-pulse" style={{ animationDuration: '6s' }}></div>
-
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10 pb-6 border-b border-black/10 relative z-10">
-        <div>
-          <span className="text-[10px] font-black text-accent-purple uppercase tracking-widest block mb-1">Address Book</span>
-          <h1 className="text-3xl font-black text-black tracking-widest uppercase font-display text-glow-purple">Sổ địa chỉ</h1>
-          <p className="text-mute text-xs font-semibold uppercase tracking-wider mt-1">Lưu giữ thông tin liên hệ và địa chỉ lấy hàng thường dùng</p>
-        </div>
+    <div className="w-full relative animate-fade-in">
+      {/* Header bar actions */}
+      <div className="flex justify-end mb-6 relative z-10">
         <button
           onClick={() => setShowModal(true)}
           className="btn-primary px-6 py-3 text-xs uppercase tracking-widest font-extrabold flex items-center gap-2 h-12"
@@ -137,8 +128,11 @@ export default function MerchantAddresses() {
       </div>
 
       {error && (
-        <div className="bg-rose-50 text-rose-700 text-xs p-4 rounded-xl mb-8 border border-rose-200 font-bold uppercase tracking-wider relative z-10">
-          {error}
+        <div className="bg-rose-50 border-l-4 border-rose-600 p-4 mb-8 rounded-r-2xl shadow-sm relative z-10">
+          <div className="text-sm font-semibold text-rose-800 flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">error</span>
+            {error}
+          </div>
         </div>
       )}
 

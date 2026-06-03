@@ -12,9 +12,17 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
     const fullname = localStorage.getItem('fullname');
+    const branch_id = localStorage.getItem('branch_id');
+    const warehouse_id = localStorage.getItem('warehouse_id');
 
     if (token && role && fullname) {
-      setUser({ token, role, fullname });
+      setUser({ 
+        token, 
+        role, 
+        fullname,
+        branch_id: branch_id ? parseInt(branch_id, 10) : null,
+        warehouse_id: warehouse_id ? parseInt(warehouse_id, 10) : null
+      });
     }
     setLoading(false);
   }, []);
@@ -23,11 +31,21 @@ export function AuthProvider({ children }) {
     try {
       const res = await AuthService.login(username, password);
       if (res.success && res.data) {
-        const { token, role, fullname } = res.data;
+        const { token, role, fullname, branch_id, warehouse_id } = res.data;
         localStorage.setItem('token', token);
         localStorage.setItem('role', role);
         localStorage.setItem('fullname', fullname);
-        setUser({ token, role, fullname });
+        if (branch_id !== undefined && branch_id !== null) {
+          localStorage.setItem('branch_id', branch_id);
+        } else {
+          localStorage.removeItem('branch_id');
+        }
+        if (warehouse_id !== undefined && warehouse_id !== null) {
+          localStorage.setItem('warehouse_id', warehouse_id);
+        } else {
+          localStorage.removeItem('warehouse_id');
+        }
+        setUser({ token, role, fullname, branch_id, warehouse_id });
         return { success: true };
       }
       return { success: false, message: res.message || 'Lỗi không xác định' };
@@ -44,6 +62,8 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     localStorage.removeItem('fullname');
+    localStorage.removeItem('branch_id');
+    localStorage.removeItem('warehouse_id');
     setUser(null);
   };
 

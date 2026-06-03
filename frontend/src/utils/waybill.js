@@ -16,8 +16,8 @@ export const printWaybill = (order) => {
   const senderPhone = order.sender_phone || '0987654321';
   const senderAddress = order.sender_address || 'Địa chỉ kho gửi hàng';
 
-  const cod = order.cod !== undefined ? order.cod : (order.TienThuHoCOD || 0);
-  const fee = order.fee !== undefined ? order.fee : (order.PhiVanChuyen || 0);
+  const cod = order.cod !== undefined ? order.cod : (order.cod_amount !== undefined ? order.cod_amount : (order.TienThuHoCOD || 0));
+  const fee = order.fee !== undefined ? order.fee : (order.shipping_fee !== undefined ? order.shipping_fee : (order.PhiVanChuyen || 0));
   const weight = order.weight_gram || order.TrongLuongGram || 100;
   const cargoDesc = order.description || order.MoTaHangHoa || 'Hàng hóa ký gửi Antigravity';
   
@@ -39,7 +39,7 @@ export const printWaybill = (order) => {
   const barcodeUrl = `https://bwipjs-api.metafloor.com/?bcid=code128&text=${orderId}&scale=3&rotate=N&includetext=false`;
   
   // API sinh mã QR động chứa mã vận đơn để Shipper quét hành trình
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${orderId}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${orderId}`;
 
   // Mở cửa sổ in ấn độc lập chuyên biệt
   const printWindow = window.open('', '_blank', 'width=800,height=1000');
@@ -314,7 +314,7 @@ export const printWaybill = (order) => {
           }
           .sign-area {
             width: 100%;
-            height: 35px;
+            height: 70px;
             border: 1.5px dashed #aaa;
             margin-top: 4px;
             border-radius: 2px;
@@ -414,20 +414,20 @@ export const printWaybill = (order) => {
           </div>
 
           <!-- HÀNG 5: FOOTER INSTRUCTIONS & SIGN BOX -->
-          <div class="section-row" style="border-bottom: none; flex: 1; min-height: 90px;">
-            <div class="footer-instruct">
+          <div class="section-row" style="border-bottom: none; flex: 1; min-height: 200px;">
+            <div class="footer-instruct" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
               <div>
                 <div class="footer-instruct-title">Chỉ dẫn giao hàng</div>
                 <div class="footer-instruct-policy">${getInspectText(inspectPolicy)}</div>
                 <div class="footer-instruct-policy">- Chuyển hoàn sau 3 lần phát</div>
                 <div class="footer-instruct-policy">- Lưu kho tối đa 5 ngày</div>
               </div>
-              <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; border-top: 1px dashed #ccc; padding-top: 4px;">
-                <img src="${qrUrl}" style="width: 28px; height: 28px;" alt="QR Code" />
-                <span style="font-size: 7px; font-weight: 800; line-height: 1.1; color: #555;">Quét mã hành trình bằng app Shipper để cập nhật trạng thái đơn hàng.</span>
+              <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 6px; border-top: 1px dashed #ccc; padding-top: 6px;">
+                <img src="${qrUrl}" style="width: 140px; height: 140px;" alt="QR Code" />
+                <span style="font-size: 7.5px; font-weight: 800; line-height: 1.2; color: #555; text-align: center; max-width: 185px;">Quét mã hành trình bằng app Shipper để cập nhật trạng thái đơn hàng.</span>
               </div>
             </div>
-            <div class="footer-sign-box">
+            <div class="footer-sign-box" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
               <div>
                 <div class="sign-title">Chữ ký người nhận</div>
                 <div class="sign-subtitle">Xác nhận hàng nguyên vẹn, không móp/méo, bể/vỡ</div>

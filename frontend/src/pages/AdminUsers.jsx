@@ -1,9 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import * as XLSX from 'xlsx';
 
+const CORE_BRANCHES = [
+  { id: 1, name: 'Hub Hà Nội' },
+  { id: 2, name: 'Hub Quảng Ngãi' },
+  { id: 3, name: 'Hub Cần Thơ' },
+  { id: 4, name: 'Hub Sài Gòn' }
+];
+
+const CORE_WAREHOUSES = [
+  { id: 1, name: 'Kho Miền Bắc (Bắc Ninh)' },
+  { id: 2, name: 'Kho Miền Trung (Quảng Ngãi)' },
+  { id: 3, name: 'Kho Miền Nam (Bình Dương)' }
+];
+
 export default function AdminUsers() {
+  const { user } = useAuth();
+  const isWarehouse = !!user?.warehouse_id;
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState('');
@@ -29,10 +46,18 @@ export default function AdminUsers() {
   const [role, setRole] = useState('NHANVIEN');
   
   // Modals & Interaction State
-  const [editingShipper, setEditingShipper] = useState(null); // shipper object
+  const [editingShipper, setEditingShipper] = useState(null); // staff object being edited
   const [tempLimit, setTempLimit] = useState(100);
   const [tempNotes, setTempNotes] = useState('');
+  const [tempBranchId, setTempBranchId] = useState('');
+  const [tempWarehouseId, setTempWarehouseId] = useState('');
+  const [tempBasicSalary, setTempBasicSalary] = useState(0);
+  const [tempRole, setTempRole] = useState('NHANVIEN');
+
   const [viewingHoldingOrders, setViewingHoldingOrders] = useState(null); // shipper object
+  const [viewingAttendanceUser, setViewingAttendanceUser] = useState(null); // staff object for attendance view
+  const [attendanceLogs, setAttendanceLogs] = useState([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
   
   const [error, setError] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -62,6 +87,32 @@ export default function AdminUsers() {
     fetchUsers();
   }, [roleFilter, selectedMonth, selectedYear]);
 
+  useEffect(() => {
+    if (isWarehouse) {
+      setRole('KHO');
+    }
+  }, [isWarehouse]);
+
+  // Fetch attendance when viewingAttendanceUser is set
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      if (!viewingAttendanceUser) return;
+      try {
+        setAttendanceLoading(true);
+        const res = await AuthService.getAttendance(viewingAttendanceUser.id);
+        if (res.success) {
+          setAttendanceLogs(res.data);
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Không thể tải lịch sử chấm công.', 'error');
+      } finally {
+        setAttendanceLoading(false);
+      }
+    };
+    fetchAttendance();
+  }, [viewingAttendanceUser]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username || !password || !fullname) {
@@ -84,7 +135,7 @@ export default function AdminUsers() {
     }
   };
 
-  // Update shipper notes & assignment daily limit
+  // Update staff notes, assignments, salary & role
   const handleUpdateShipperConfig = async (e) => {
     e.preventDefault();
     if (!editingShipper) return;
@@ -92,63 +143,81 @@ export default function AdminUsers() {
     try {
       const res = await AuthService.updateShipperConfig(editingShipper.id, {
         daily_limit: tempLimit,
-        notes: tempNotes
+        notes: tempNotes,
+        branch_id: tempBranchId ? Number(tempBranchId) : null,
+        warehouse_id: tempWarehouseId ? Number(tempWarehouseId) : null,
+        basic_salary: Number(tempBasicSalary) || 0,
+        role: tempRole
       });
       if (res.success) {
-        showToast('Cập nhật cấu hình shipper thành công!');
+        showToast('Cập nhật cấu hình nhân sự thành công!');
         setEditingShipper(null);
         fetchUsers();
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Lỗi khi cập nhật cấu hình bưu tá.', 'error');
+      showToast(err.response?.data?.message || 'Lỗi khi cập nhật cấu hình nhân sự.', 'error');
     }
   };
 
   // Client-side Excel (.xlsx) export complying with precise column instructions using SheetJS
   const handleExportExcel = () => {
-    const shippers = users.filter(u => u.role === 'NHANVIEN');
-    if (shippers.length === 0) {
-      showToast('Không có dữ liệu shipper để xuất!', 'error');
+    const staff = users.filter(u => u.role !== 'KHACHHANG' && u.role !== 'DOITAC');
+    if (staff.length === 0) {
+      showToast('Không có dữ liệu nhân sự để xuất!', 'error');
       return;
     }
 
     const startIndex = Math.max(1, parseInt(exportStart) || 1) - 1;
-    const endIndex = Math.min(shippers.length, parseInt(exportEnd) || 100);
+    const endIndex = Math.min(staff.length, parseInt(exportEnd) || 100);
     
-    if (startIndex >= shippers.length || startIndex > endIndex) {
+    if (startIndex >= staff.length || startIndex > endIndex) {
       showToast('Khoảng giới hạn xuất không hợp lệ!', 'error');
       return;
     }
     
-    const targetedShippers = shippers.slice(startIndex, endIndex);
+    const targetedStaff = staff.slice(startIndex, endIndex);
 
     // Get number of days in selected month/year
     const getDaysInMonth = (m, y) => new Date(y, m, 0).getDate();
     const numDays = getDaysInMonth(selectedMonth, selectedYear);
     
-    // Exact column layout: Mã Shipper, Tên Shipper, Ngày 1 ... Ngày N, Đơn Thất Bại, Tổng Số, Tổng Lương
+    // Exact column layout: Mã NV, Tên NV, Vai Trò, Lương Cơ Bản, Ngày 1 ... Ngày N, Số Đơn, Thưởng, Tổng Lương
     const headers = [
-      "Mã Shipper",
-      "Tên Shipper",
+      "Mã NV",
+      "Tên NV",
+      "Vai Trò",
+      "Lương Cơ Bản",
       ...Array.from({ length: numDays }, (_, i) => `Ngày ${i + 1}`),
-      "Đơn Thất Bại",
-      "Tổng Số",
+      "Số Đơn",
+      "Thưởng",
       "Tổng Lương"
     ];
 
-    const rows = targetedShippers.map(s => {
+    const rows = targetedStaff.map(s => {
       const dailyBreakdown = Array.from({ length: numDays }, (_, i) => {
         const dayStr = String(i + 1);
         return s.daily_success?.[dayStr] || 0;
       });
 
+      const basic = Number(s.basic_salary) || 0;
+      const success = Number(s.success_orders_count) || 0;
+      let bonus = 0;
+      if (s.role === 'NHANVIEN' || s.role === 'SHIPPER') {
+        bonus = success * 5000;
+      } else if (s.role === 'KHO') {
+        bonus = success * 2000;
+      }
+      const total = basic + bonus;
+
       return [
         s.id,
         s.fullname,
+        s.role,
+        basic,
         ...dailyBreakdown,
-        s.failed_orders_count || 0,
-        s.success_orders_count || 0,
-        s.success_orders_count * 3000
+        success,
+        bonus,
+        total
       ];
     });
 
@@ -158,39 +227,49 @@ export default function AdminUsers() {
 
     // Dynamic column widths for neat Excel formatting
     const wscols = [
-      { wch: 12 }, // Mã Shipper
-      { wch: 22 }, // Tên Shipper
+      { wch: 10 }, // Mã NV
+      { wch: 22 }, // Tên NV
+      { wch: 12 }, // Vai Trò
+      { wch: 14 }, // Lương Cơ Bản
       ...Array.from({ length: numDays }, () => ({ wch: 8 })), // Ngày 1 -> Ngày 30/31
-      { wch: 14 }, // Đơn Thất Bại
-      { wch: 12 }, // Tổng Số
+      { wch: 10 }, // Số Đơn
+      { wch: 12 }, // Thưởng
       { wch: 16 }  // Tổng Lương
     ];
     worksheet['!cols'] = wscols;
 
     // Build the workbook
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, `Luong_Shipper_T${selectedMonth}`);
+    XLSX.utils.book_append_sheet(workbook, worksheet, `Luong_NhanSu_T${selectedMonth}`);
 
     // Generate filename and trigger download
-    const filename = `Bao_Cao_Luong_Shipper_Thang_${String(selectedMonth).padStart(2, '0')}_${selectedYear}_Dong_${exportStart}_den_${exportEnd}.xlsx`;
+    const filename = `Bao_Cao_Luong_Thang_${String(selectedMonth).padStart(2, '0')}_${selectedYear}_Dong_${exportStart}_den_${exportEnd}.xlsx`;
     XLSX.writeFile(workbook, filename);
 
-    showToast(`Xuất file Excel (.xlsx) thành công cho ${targetedShippers.length} Shipper!`);
+    showToast(`Xuất file Excel (.xlsx) thành công cho ${targetedStaff.length} nhân sự!`);
   };
 
   // Compute stats aggregates inside current selected view
-  const shippersList = users.filter(u => u.role === 'NHANVIEN');
+  const shippersList = users.filter(u => u.role === 'NHANVIEN' || u.role === 'SHIPPER');
   const totalHoldingOrders = shippersList.reduce((acc, curr) => acc + (curr.holding_orders_count || 0), 0);
   const totalSuccessOrders = shippersList.reduce((acc, curr) => acc + (curr.success_orders_count || 0), 0);
   const totalFailedOrders = shippersList.reduce((acc, curr) => acc + (curr.failed_orders_count || 0), 0);
-  const totalPayout = totalSuccessOrders * 3000;
+  
+  const calculateTotalSalary = (s) => {
+    const basic = Number(s.basic_salary) || 0;
+    const success = Number(s.success_orders_count) || 0;
+    if (s.role === 'NHANVIEN' || s.role === 'SHIPPER') {
+      return basic + success * 5000;
+    } else if (s.role === 'KHO') {
+      return basic + success * 2000;
+    }
+    return basic;
+  };
+
+  const totalPayout = users.filter(u => u.role !== 'KHACHHANG' && u.role !== 'DOITAC').reduce((acc, curr) => acc + calculateTotalSalary(curr), 0);
 
   return (
-    <div className="bg-canvas min-h-screen text-black relative overflow-hidden font-sans">
-      {/* Advanced Neon Aurora Background Blobs */}
-      <div className="neon-aurora-blob bg-accent-purple/10 w-[600px] h-[600px] -top-20 -left-20 animate-pulse"></div>
-      <div className="neon-aurora-blob bg-cyan-500/5 w-[500px] h-[500px] bottom-10 right-10 animate-pulse" style={{ animationDuration: '6s' }}></div>
-
+    <div className="w-full relative">
       {/* Toast Alert */}
       {toast.show && (
         <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-3 p-4 rounded-xl shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-xl border border-black/10 text-black shadow-[0_10px_35px_rgba(0,0,0,0.06)] animate-slide-in">
@@ -204,32 +283,14 @@ export default function AdminUsers() {
         </div>
       )}
 
-      {/* Main Page Layout */}
-      <main className="pt-32 pb-16 px-6 md:px-16 max-w-[1440px] mx-auto min-h-screen relative z-10">
-        
-        {/* Header Block */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-black/10 pb-6">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-black font-display uppercase mb-1 text-glow-purple">Personnel Administration</h1>
-            <p className="text-mute text-sm font-medium">Manage employees, view shipper payroll, monitor dynamic quotas, and audit performance metrics.</p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Link 
-              to="/admin" 
-              className="inline-flex items-center gap-2 px-5 py-2.5 border border-accent-purple/30 rounded-full text-xs font-extrabold text-accent-purple bg-transparent hover:bg-[#6e19f1] hover:text-white shadow-[0_2px_8px_rgba(94,14,215,0.1)] hover:shadow-[0_4px_15px_rgba(94,14,215,0.25)] transition-all cursor-pointer font-bold"
-            >
-              <span className="material-symbols-outlined text-xs">arrow_back</span>
-              <span>Back to Dispatch</span>
-            </Link>
+      {error && (
+        <div className="bg-rose-50 border-l-4 border-rose-600 p-4 mb-8 rounded-r-2xl shadow-sm">
+          <div className="text-sm font-semibold text-rose-800 flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">error</span>
+            {error}
           </div>
         </div>
-
-        {error && (
-          <div className="bg-rose-50 border-l-4 border-rose-600 p-4 mb-8 rounded-r-md shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-            <div className="text-sm font-semibold text-rose-800">{error}</div>
-          </div>
-        )}
+      )}
 
         {/* Segmented Main Navigation Tab Bar */}
         <div className="flex p-1 bg-black/[0.03] backdrop-blur-md rounded-xl max-w-lg mb-8 border border-black/10">
@@ -247,20 +308,22 @@ export default function AdminUsers() {
             <span className="material-symbols-outlined text-sm">badge</span>
             <span>Database Nhân Sự</span>
           </button>
-          <button
-            onClick={() => {
-              setActiveView('shippers');
-              setRoleFilter('NHANVIEN'); // Lock to NHANVIEN (shippers) when in Shipper view
-            }}
-            className={`flex-1 py-2.5 rounded-lg text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              activeView === 'shippers'
-                ? 'bg-accent-purple text-white shadow-[0_4px_12px_rgba(94,14,215,0.2)]'
-                : 'text-mute hover:text-black bg-transparent'
-            }`}
-          >
-            <span className="material-symbols-outlined text-sm">local_shipping</span>
-            <span>Quản Lý & Lương Shipper</span>
-          </button>
+          {!isWarehouse && (
+            <button
+              onClick={() => {
+                setActiveView('shippers');
+                setRoleFilter('NHANVIEN'); // Lock to NHANVIEN (shippers) when in Shipper view
+              }}
+              className={`flex-1 py-2.5 rounded-lg text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                activeView === 'shippers'
+                  ? 'bg-accent-purple text-white shadow-[0_4px_12px_rgba(94,14,215,0.2)]'
+                  : 'text-mute hover:text-black bg-transparent'
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">local_shipping</span>
+              <span>Quản Lý & Lương Shipper</span>
+            </button>
+          )}
         </div>
 
         {/* Conditional Content rendering based on active tab state */}
@@ -316,8 +379,23 @@ export default function AdminUsers() {
                       onChange={(e) => setRole(e.target.value)}
                       className="w-full input-neon text-xs font-semibold bg-white text-black focus:outline-none focus:border-accent-purple transition-all"
                     >
-                      <option value="NHANVIEN" className="bg-white text-black">Nhân viên giao nhận (NHANVIEN)</option>
-                      <option value="QUANTRI" className="bg-white text-black">Quản trị viên (QUANTRI)</option>
+                      {isWarehouse ? (
+                        <>
+                          <option value="KHO" className="bg-white text-black">Nhân viên kho trung chuyển (KHO)</option>
+                          <option value="KETOAN" className="bg-white text-black">Hành chính Kế toán Tổng Kho (KETOAN)</option>
+                          <option value="HR" className="bg-white text-black">Quản lý Nhân sự Tổng Kho (HR)</option>
+                          <option value="ADMIN" className="bg-white text-black">Quản lý Tổng Kho (ADMIN)</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="NHANVIEN" className="bg-white text-black">Nhân viên giao nhận / Shipper (NHANVIEN)</option>
+                          <option value="KHO" className="bg-white text-black">Nhân viên kho trung chuyển (KHO)</option>
+                          <option value="CSKH" className="bg-white text-black">Chăm sóc khách hàng (CSKH)</option>
+                          <option value="KETOAN" className="bg-white text-black">Hành chính Kế toán (KETOAN)</option>
+                          <option value="HR" className="bg-white text-black">Quản lý Nhân sự (HR)</option>
+                          <option value="QUANTRI" className="bg-white text-black">Quản trị viên (QUANTRI)</option>
+                        </>
+                      )}
                     </select>
                   </div>
                 </div>
@@ -382,11 +460,13 @@ export default function AdminUsers() {
                         <th className="px-6 py-4 font-bold text-xs text-mute uppercase tracking-wider">ID</th>
                         <th className="px-6 py-4 font-bold text-xs text-mute uppercase tracking-wider">Họ Tên / Username</th>
                         <th className="px-6 py-4 font-bold text-xs text-mute uppercase tracking-wider">Vai Trò</th>
-                        <th className="px-6 py-4 font-bold text-xs text-mute uppercase tracking-wider">Ngày Khởi Tạo</th>
+                        <th className="px-6 py-4 font-bold text-xs text-mute uppercase tracking-wider">Nơi Làm Việc</th>
+                        <th className="px-6 py-4 font-bold text-xs text-mute uppercase tracking-wider">Lương Cơ Bản</th>
+                        <th className="px-6 py-4 font-bold text-xs text-mute uppercase tracking-wider text-center">Hành Động</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-black/5">
-                      {users.map((u) => (
+                      {users.filter(u => u.role !== 'KHACHHANG' && u.role !== 'DOITAC').map((u) => (
                         <tr key={u.id} className="hover:bg-black/[0.01] transition-colors">
                           <td className="px-6 py-5 whitespace-nowrap text-xs font-bold text-mute">
                             #{u.id}
@@ -396,13 +476,17 @@ export default function AdminUsers() {
                             <div className="text-xs text-mute font-medium mt-0.5">@{u.username}</div>
                           </td>
                           <td className="px-6 py-5 whitespace-nowrap">
-                            {u.role === 'QUANTRI' ? (
+                            {u.role === 'QUANTRI' || u.role === 'ADMIN' ? (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-accent-purple/10 text-accent-purple border border-accent-purple/20 shadow-[0_2px_8px_rgba(94,14,215,0.08)]">
-                                Admin Node
+                                Admin Core
                               </span>
-                            ) : u.role === 'NHANVIEN' ? (
+                            ) : u.role === 'NHANVIEN' || u.role === 'SHIPPER' ? (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200 shadow-[0_2px_8px_rgba(99,102,241,0.08)]">
-                                Courier Driver
+                                Courier / Shipper
+                              </span>
+                            ) : u.role === 'KHO' ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                Warehouse Staff
                               </span>
                             ) : (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-black/5 text-black/60 border border-black/10">
@@ -410,8 +494,47 @@ export default function AdminUsers() {
                               </span>
                             )}
                           </td>
-                          <td className="px-6 py-5 whitespace-nowrap text-xs text-mute font-semibold">
-                            {new Date(u.created_at).toLocaleDateString('vi-VN')}
+                          <td className="px-6 py-5 whitespace-nowrap text-xs font-semibold text-black/80">
+                            {u.branch_id ? (
+                              <span className="flex items-center gap-1 text-accent-purple">
+                                <span className="material-symbols-outlined text-[14px]">store</span>
+                                {CORE_BRANCHES.find(b => b.id === u.branch_id)?.name || 'Chi nhánh con'}
+                              </span>
+                            ) : u.warehouse_id ? (
+                              <span className="flex items-center gap-1 text-cyan-600">
+                                <span className="material-symbols-outlined text-[14px]">warehouse</span>
+                                {CORE_WAREHOUSES.find(w => w.id === u.warehouse_id)?.name || 'Tổng kho'}
+                              </span>
+                            ) : (
+                              <span className="text-mute italic">Chưa phân bổ</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-5 whitespace-nowrap text-xs font-bold text-amber-600 font-display">
+                            {(u.basic_salary || 0).toLocaleString('vi-VN')}đ
+                          </td>
+                          <td className="px-6 py-5 whitespace-nowrap text-center flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => {
+                                setEditingShipper(u);
+                                setTempLimit(u.daily_limit || 100);
+                                setTempNotes(u.notes || '');
+                                setTempBranchId(u.branch_id || '');
+                                setTempWarehouseId(u.warehouse_id || '');
+                                setTempBasicSalary(u.basic_salary || 0);
+                                setTempRole(u.role || 'NHANVIEN');
+                              }}
+                              className="w-8 h-8 rounded-full border border-black/10 hover:border-accent-purple/40 hover:text-accent-purple flex items-center justify-center cursor-pointer transition-all hover:bg-accent-purple/5"
+                              title="Cấu hình tài khoản & Phân bổ"
+                            >
+                              <span className="material-symbols-outlined text-sm">settings</span>
+                            </button>
+                            <button
+                              onClick={() => setViewingAttendanceUser(u)}
+                              className="w-8 h-8 rounded-full border border-black/10 hover:border-cyan-500/40 hover:text-cyan-600 flex items-center justify-center cursor-pointer transition-all hover:bg-cyan-50"
+                              title="Bảng chấm công điện tử"
+                            >
+                              <span className="material-symbols-outlined text-sm">event_note</span>
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -473,14 +596,14 @@ export default function AdminUsers() {
                 <div className="absolute top-0 right-0 w-24 h-24 bg-amber-400/10 rounded-full blur-2xl -mr-4 -mt-4"></div>
                 <div className="flex justify-between items-start relative z-10">
                   <div>
-                    <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest">Tổng Quỹ Lương Shipper</p>
+                    <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest">Tổng Quỹ Lương Nhân Sự</p>
                     <p className="text-2xl font-black text-amber-600 mt-2 font-display">{totalPayout.toLocaleString('vi-VN')}đ</p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center border border-amber-200">
                     <span className="material-symbols-outlined text-amber-600 text-lg">payments</span>
                   </div>
                 </div>
-                <p className="text-[10px] text-amber-700 font-bold mt-3 relative z-10">Đơn giá: 3.000đ / đơn hoàn thành</p>
+                <p className="text-[9px] text-amber-700 font-bold mt-3 relative z-10">Lương cứng + Thưởng (Shipper: 5K, Kho: 2K / đơn)</p>
               </div>
             </div>
 
@@ -595,23 +718,27 @@ export default function AdminUsers() {
                             </div>
                             <div>
                               <div className="text-sm font-extrabold text-black">{s.fullname}</div>
-                              <div className="text-xs text-mute font-medium mt-0.5">@{s.username}</div>
+                              <div className="text-xs text-mute font-medium mt-0.5">@{s.username} • <span className="text-accent-purple font-black text-[9px] uppercase">{s.role}</span></div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-5 whitespace-nowrap text-center">
-                          {s.holding_orders_count > 0 ? (
-                            <button
-                              onClick={() => setViewingHoldingOrders(s)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-accent-purple/10 text-accent-purple border border-accent-purple/20 cursor-pointer shadow-sm hover:bg-[#6e19f1] hover:text-white hover:border-[#6e19f1] active:scale-95 transition-all animate-pulse"
-                            >
-                              <span className="material-symbols-outlined text-xs">inventory_2</span>
-                              <span>{s.holding_orders_count} đơn đang ôm</span>
-                            </button>
+                          {s.role !== 'KHO' ? (
+                            s.holding_orders_count > 0 ? (
+                              <button
+                                onClick={() => setViewingHoldingOrders(s)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-accent-purple/10 text-accent-purple border border-accent-purple/20 cursor-pointer shadow-sm hover:bg-[#6e19f1] hover:text-white hover:border-[#6e19f1] active:scale-95 transition-all animate-pulse"
+                              >
+                                <span className="material-symbols-outlined text-xs">inventory_2</span>
+                                <span>{s.holding_orders_count} đơn đang ôm</span>
+                              </button>
+                            ) : (
+                              <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-black/5 text-mute">
+                                Trống xe
+                              </span>
+                            )
                           ) : (
-                            <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-black/5 text-mute">
-                              Trống xe
-                            </span>
+                            <span className="text-mute italic">N/A (Kho)</span>
                           )}
                         </td>
                         <td className="px-6 py-5 whitespace-nowrap text-center text-sm font-black text-emerald-600">
@@ -621,13 +748,13 @@ export default function AdminUsers() {
                           {s.failed_orders_count || 0} đơn
                         </td>
                         <td className="px-6 py-5 whitespace-nowrap text-center text-xs font-black text-black/80">
-                          {s.daily_limit || 100} đơn/ngày
+                          {s.role !== 'KHO' ? `${s.daily_limit || 100} đơn/ngày` : 'N/A'}
                         </td>
                         <td className="px-6 py-5 whitespace-nowrap text-right text-sm font-extrabold text-amber-600 font-display">
-                          {((s.success_orders_count || 0) * 3000).toLocaleString('vi-VN')}đ
+                          {calculateTotalSalary(s).toLocaleString('vi-VN')}đ
                         </td>
                         <td className="px-6 py-5 text-xs text-mute font-semibold max-w-[200px] truncate italic">
-                          {s.notes || <span className="opacity-40 font-normal">Chưa có ghi chú nhân sự...</span>}
+                          {s.notes || <span className="opacity-40 font-normal">Chưa có ghi chú...</span>}
                         </td>
                         <td className="px-6 py-5 whitespace-nowrap text-center">
                           <button
@@ -635,6 +762,10 @@ export default function AdminUsers() {
                               setEditingShipper(s);
                               setTempLimit(s.daily_limit || 100);
                               setTempNotes(s.notes || '');
+                              setTempBranchId(s.branch_id || '');
+                              setTempWarehouseId(s.warehouse_id || '');
+                              setTempBasicSalary(s.basic_salary || 0);
+                              setTempRole(s.role || 'NHANVIEN');
                             }}
                             className="w-8 h-8 rounded-full border border-black/10 hover:border-accent-purple/40 hover:text-accent-purple flex items-center justify-center cursor-pointer transition-all hover:bg-accent-purple/5"
                             title="Cấu hình shipper"
@@ -651,8 +782,6 @@ export default function AdminUsers() {
 
           </div>
         )}
-
-      </main>
 
       {/* MODAL 1: VIEW DETAILS OF ACTIVE ORDERS CURRENTLY HELD BY SHIPPER */}
       {viewingHoldingOrders && (
@@ -729,7 +858,7 @@ export default function AdminUsers() {
         </div>
       )}
 
-      {/* MODAL 2: SHIPPER CONFIGURATION (LIMIT ADJUSTMENT & NOTE DIALOG) */}
+      {/* MODAL 2: STAFF CONFIGURATION (ROLE, BRANCH, WAREHOUSE, SALARY, LIMIT, NOTES) */}
       {editingShipper && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setEditingShipper(null)}></div>
@@ -738,7 +867,7 @@ export default function AdminUsers() {
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-accent-purple text-glow-purple">settings</span>
                 <h3 className="text-md font-extrabold uppercase tracking-tight text-black">
-                  Cấu hình bưu tá - {editingShipper.fullname}
+                  Cấu hình nhân sự - {editingShipper.fullname}
                 </h3>
               </div>
               <button 
@@ -750,53 +879,128 @@ export default function AdminUsers() {
             </div>
 
             <form onSubmit={handleUpdateShipperConfig}>
-              <div className="p-6 space-y-6">
+              <div className="p-6 space-y-5 overflow-y-auto max-h-[500px] custom-scrollbar text-black font-sans">
                 
-                {/* Daily Order Assign Stepper Block */}
+                {/* Role selection dropdown */}
                 <div>
-                  <label className="block text-[10px] font-black text-mute uppercase tracking-widest text-center mb-2">
-                    Hạn Mức Ôm Đơn Trong Ngày (Daily Limit)
+                  <label className="block text-[10px] font-black text-mute uppercase tracking-widest mb-1.5">
+                    Vai Trò Nhân Sự (Role)
                   </label>
-                  <p className="text-[10px] text-mute text-center font-medium italic mb-4">
-                    Số lượng đơn tối đa shipper này được phép nhận trong 1 ngày.
-                  </p>
-                  
-                  {/* Dynamic plus/minus steppers */}
-                  <div className="flex items-center gap-3 justify-center my-4">
-                    <button
-                      type="button"
-                      onClick={() => setTempLimit(Math.max(0, tempLimit - 5))}
-                      className="w-10 h-10 rounded-full border border-black/10 flex items-center justify-center text-lg font-bold hover:bg-black/5 active:scale-95 cursor-pointer select-none text-black"
-                    >
-                      -
-                    </button>
+                  <select
+                    value={tempRole}
+                    onChange={(e) => setTempRole(e.target.value)}
+                    className="w-full input-neon text-xs font-semibold bg-white text-black py-2 px-3 border border-black/10 rounded-xl focus:border-accent-purple"
+                  >
+                    <option value="NHANVIEN">Nhân viên giao nhận / Shipper (NHANVIEN)</option>
+                    <option value="KHO">Nhân viên kho trung chuyển (KHO)</option>
+                    <option value="CSKH">Chăm sóc khách hàng (CSKH)</option>
+                    <option value="KETOAN">Hành chính Kế toán (KETOAN)</option>
+                    <option value="HR">Quản lý Nhân sự (HR)</option>
+                    <option value="QUANTRI">Quản trị viên (QUANTRI)</option>
+                  </select>
+                </div>
+
+                {/* Branch assignment dropdown */}
+                <div>
+                  <label className="block text-[10px] font-black text-mute uppercase tracking-widest mb-1.5">
+                    Phân Phối Chi Nhánh (Branch Assignment)
+                  </label>
+                  <select
+                    value={tempBranchId}
+                    onChange={(e) => {
+                      setTempBranchId(e.target.value);
+                      if (e.target.value) setTempWarehouseId(''); // Clear warehouse if branch selected
+                    }}
+                    className="w-full input-neon text-xs font-semibold bg-white text-black py-2 px-3 border border-black/10 rounded-xl focus:border-accent-purple"
+                  >
+                    <option value="">-- Chưa phân bổ chi nhánh --</option>
+                    {CORE_BRANCHES.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Warehouse assignment dropdown */}
+                <div>
+                  <label className="block text-[10px] font-black text-mute uppercase tracking-widest mb-1.5">
+                    Phân Phối Tổng Kho (Warehouse Assignment)
+                  </label>
+                  <select
+                    value={tempWarehouseId}
+                    onChange={(e) => {
+                      setTempWarehouseId(e.target.value);
+                      if (e.target.value) setTempBranchId(''); // Clear branch if warehouse selected
+                    }}
+                    className="w-full input-neon text-xs font-semibold bg-white text-black py-2 px-3 border border-black/10 rounded-xl focus:border-accent-purple"
+                  >
+                    <option value="">-- Chưa phân bổ tổng kho --</option>
+                    {CORE_WAREHOUSES.map(w => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Basic Salary input */}
+                <div>
+                  <label className="block text-[10px] font-black text-mute uppercase tracking-widest mb-1.5">
+                    Lương Cơ Bản (Basic Salary)
+                  </label>
+                  <div className="relative">
                     <input
                       type="number"
-                      value={tempLimit}
-                      onChange={(e) => setTempLimit(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-24 text-center input-neon font-black text-base py-2"
+                      value={tempBasicSalary}
+                      onChange={(e) => setTempBasicSalary(Number(e.target.value) || 0)}
+                      className="w-full input-neon text-xs font-bold py-2 px-3 border border-black/10 rounded-xl focus:border-accent-purple pr-8 text-black"
+                      placeholder="Ví dụ: 8000000"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setTempLimit(tempLimit + 5)}
-                      className="w-10 h-10 rounded-full border border-black/10 flex items-center justify-center text-lg font-bold hover:bg-black/5 active:scale-95 cursor-pointer select-none text-black"
-                    >
-                      +
-                    </button>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-extrabold text-mute">đ</span>
                   </div>
                 </div>
 
+                {/* Daily Order Assign Stepper Block (Shippers only) */}
+                {(tempRole === 'NHANVIEN' || tempRole === 'SHIPPER') && (
+                  <div>
+                    <label className="block text-[10px] font-black text-mute uppercase tracking-widest text-center mb-1.5">
+                      Hạn Mức Ôm Đơn Trong Ngày (Daily Limit)
+                    </label>
+                    
+                    {/* Dynamic plus/minus steppers */}
+                    <div className="flex items-center gap-3 justify-center my-3">
+                      <button
+                        type="button"
+                        onClick={() => setTempLimit(Math.max(0, tempLimit - 5))}
+                        className="w-10 h-10 rounded-full border border-black/10 flex items-center justify-center text-lg font-bold hover:bg-black/5 active:scale-95 cursor-pointer select-none text-black"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        value={tempLimit}
+                        onChange={(e) => setTempLimit(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-24 text-center input-neon font-black text-base py-2"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setTempLimit(tempLimit + 5)}
+                        className="w-10 h-10 rounded-full border border-black/10 flex items-center justify-center text-lg font-bold hover:bg-black/5 active:scale-95 cursor-pointer select-none text-black"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Notes Textbox Area */}
                 <div>
-                  <label className="block text-[10px] font-black text-mute uppercase tracking-widest mb-2">
+                  <label className="block text-[10px] font-black text-mute uppercase tracking-widest mb-1.5">
                     Ghi Chú Nhân Sự (Staff Notes)
                   </label>
                   <textarea
-                    rows="3"
+                    rows="2.5"
                     value={tempNotes}
                     onChange={(e) => setTempNotes(e.target.value)}
-                    placeholder="Ví dụ: Chuyên tuyến Cầu Giấy, Hỗ trợ tăng ca tối, v.v."
-                    className="w-full input-neon text-xs font-semibold py-2.5 px-3.5 focus:outline-none focus:border-accent-purple"
+                    placeholder="Ví dụ: Hỗ trợ ca tối, Chuyên tuyến Quận 1..."
+                    className="w-full input-neon text-xs font-semibold py-2 px-3 border border-black/10 rounded-xl focus:border-accent-purple"
                   ></textarea>
                 </div>
 
@@ -818,6 +1022,109 @@ export default function AdminUsers() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: VIEW DETAILED ELECTRONIC TIMEKEEPING LOGS (ChamCong) */}
+      {viewingAttendanceUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setViewingAttendanceUser(null)}></div>
+          <div className="bg-white/95 border border-black/10 w-full max-w-2xl rounded-3xl shadow-2xl relative z-10 overflow-hidden backdrop-blur-xl animate-scale-in text-black">
+            <div className="px-6 py-5 border-b border-black/10 flex items-center justify-between bg-black/[0.01]">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-cyan-500">event_note</span>
+                <h3 className="text-md font-extrabold uppercase tracking-tight text-black">
+                  Bảng Chấm Công Điện Tử - {viewingAttendanceUser.fullname}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setViewingAttendanceUser(null)}
+                className="w-8 h-8 rounded-full border border-black/10 hover:bg-black/5 active:scale-90 flex items-center justify-center cursor-pointer transition-all"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[450px] custom-scrollbar space-y-6">
+              
+              {attendanceLoading ? (
+                <div className="flex justify-center items-center py-20">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500"></div>
+                </div>
+              ) : attendanceLogs.length === 0 ? (
+                <div className="text-center py-16 text-mute">
+                  <span className="material-symbols-outlined text-4xl text-black/10 mb-2">calendar_today</span>
+                  <p className="text-xs font-semibold">Chưa có lịch sử chấm công ghi nhận.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto border border-black/5 rounded-2xl bg-black/[0.01]">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-black/2 border-b border-black/5">
+                        <th className="px-4 py-3 font-bold text-mute uppercase">Ngày Làm Việc</th>
+                        <th className="px-4 py-3 font-bold text-mute uppercase">Giờ Vào Ca</th>
+                        <th className="px-4 py-3 font-bold text-mute uppercase">Giờ Tan Ca</th>
+                        <th className="px-4 py-3 font-bold text-mute uppercase text-center">Trạng Thái</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/5 font-semibold">
+                      {attendanceLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-black/2 transition-colors">
+                          <td className="px-4 py-3.5 text-black/80 font-semibold">
+                            {new Date(log.date).toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric' })}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            {log.clock_in ? (
+                              <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                                {new Date(log.clock_in).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            ) : (
+                              <span className="text-mute font-normal opacity-50">--:--</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            {log.clock_out ? (
+                              <span className="inline-flex items-center gap-1 text-rose-700 font-bold">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block"></span>
+                                {new Date(log.clock_out).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            ) : (
+                              <span className="text-mute font-normal opacity-50">--:--</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5 text-center">
+                            {log.status === 'TAN_CA' ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                Đã hoàn thành
+                              </span>
+                            ) : log.status === 'VAO_CA' ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-cyan-50 text-cyan-700 border border-cyan-100 animate-pulse">
+                                Đang trực
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-600 border border-rose-100">
+                                Nghỉ phép
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 bg-black/[0.02] border-t border-black/10 flex justify-end">
+              <button
+                onClick={() => setViewingAttendanceUser(null)}
+                className="px-5 py-2 border border-black/15 text-black hover:bg-black/5 active:scale-95 cursor-pointer rounded-full text-xs font-bold transition-all"
+              >
+                Đóng lại
+              </button>
+            </div>
           </div>
         </div>
       )}

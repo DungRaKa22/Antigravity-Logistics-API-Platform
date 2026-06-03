@@ -1,6 +1,6 @@
 # 🎯 Mục tiêu dự án - Logistics API Platform
 
-> Tài liệu mô tả chi tiết mục tiêu từng giai đoạn và tiêu chí nghiệm thu các nghiệp vụ cốt lõi theo hệ thống 7 bảng Việt hóa.
+> Tài liệu mô tả chi tiết mục tiêu từng giai đoạn và tiêu chí nghiệm thu các nghiệp vụ cốt lõi theo hệ thống 14 bảng PostgreSQL Việt hóa.
 
 ---
 
@@ -50,6 +50,16 @@
   - Quản trị viên cấp API Key dài 64 ký tự bảo mật (`AG_PARTNER_...`) cho đối tác.
   - Đối tác tích hợp đẩy đơn hàng qua API bằng header `X-API-Key` mà không cần duy trì token JWT.
 
+### 5. Phân Hệ Triển Khai & Báo Cáo (PHASE 7) ✅
+- [x] **Dọn dẹp & Khởi tạo 63 Tỉnh Thành**:
+  - Tạo 63 Hub bưu cục vệ tinh tương ứng với 63 tỉnh/thành Việt Nam, tự động liên kết với 3 Tổng kho vùng miền gần nhất.
+  - Tạo 315 tài khoản nhân sự tự động phân quyền (ADMIN, KETOAN, HR, SHIPPER, KHO) theo đúng cấu trúc `Quanly-HN`, `Ketoan-HN`, `Hr-HN`, `Shipper-HN`, `Kho-HN` phục vụ hội đồng chấm đồ án.
+- [x] **Cấu hình môi trường Cloud Deploy**:
+  - Tạo `vercel.json` định tuyến SPA frontend React tránh lỗi 404 reload.
+  - Tối ưu `Dockerfile` backend tích hợp đầy đủ thư viện Postgres.
+- [x] **Tài liệu Báo Cáo Đồ Án Tốt Nghiệp**:
+  - Biên soạn báo cáo hoàn chỉnh `BaoCao_Antigravity_Logistics.md` dựa trên cấu trúc mẫu của giảng viên, chuyển đổi nghiệp vụ logistics thông minh.
+
 ---
 
 ## ⚡ Tiêu chí Kỹ thuật Đạt được
@@ -58,3 +68,5 @@
 2. **Trải nghiệm người dùng (UX/UI)**: Đạt tiêu chuẩn tối giản sang trọng phong cách Uber kết hợp các hiệu ứng Neon Glow, Glassmorphism, Stepper hiện đại và mượt mà.
 3. **Bảo mật**: Cơ chế phân quyền nghiêm ngặt cả ở Client (Route guards `ProtectedRoute`) và Server (Decorators `@require_auth` và `@require_role`).
 4. **Tương thích Microsoft Excel**: Xuất báo cáo dạng `.xlsx` nguyên bản qua SheetJS, căn chỉnh độ rộng tự động và tương thích 100% tiếng Việt có dấu.
+5. **Khả năng phân tỷ lệ (Scalability)**: Cơ sở dữ liệu hỗ trợ 63 bưu cục toàn quốc với hàng trăm tài khoản phân vai trò nghiệp vụ chạy hiệu năng mượt mà.
+

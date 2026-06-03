@@ -47,42 +47,64 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 md:p-8 bg-canvas relative overflow-hidden text-black">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 md:p-8 bg-[#0d061c] relative overflow-hidden text-white font-sans">
       {/* Background neon mesh glow */}
-      <div className="neon-aurora-blob bg-accent-purple/5 w-[600px] h-[600px] top-1/4 left-1/4 animate-pulse"></div>
-      <div className="neon-aurora-blob bg-cyan-500/5 w-[500px] h-[500px] bottom-1/4 right-1/4 animate-pulse" style={{ animationDuration: '8s' }}></div>
+      <div className="neon-aurora-blob bg-accent-purple/20 w-[600px] h-[600px] top-1/4 left-1/4 animate-pulse"></div>
+      <div className="neon-aurora-blob bg-cyan-500/10 w-[500px] h-[500px] bottom-1/4 right-1/4 animate-pulse" style={{ animationDuration: '8s' }}></div>
+      <div className="absolute inset-0 bg-[radial-gradient(rgba(168,85,247,0.03)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none z-0" />
 
       {/* Centered Register Card */}
-      <div className="bg-white/70 backdrop-blur-2xl border border-black/10 shadow-[0_15px_50px_rgba(0,0,0,0.06)] transition-all duration-500 w-full max-w-[1000px] min-h-[600px] flex flex-col md:flex-row overflow-hidden rounded-[24px] z-10">
+      <div className="bg-[#150d2a]/70 backdrop-blur-3xl border border-purple-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.6)] transition-all duration-500 w-full max-w-[1000px] min-h-[600px] flex flex-col md:flex-row overflow-hidden rounded-[32px] z-10 relative">
         
-        {/* Left Side: Editorial Illustration Container */}
-        <div className="hidden md:block w-1/2 relative bg-black border-r border-black/10">
-          <img
-            alt="Antigravity Express Editorial Illustration"
-            className="w-full h-full object-cover grayscale opacity-45 mix-blend-luminosity filter brightness-75 contrast-125"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYFHaB398EMFNftmcwziG_9I6C_iICJoBngBS8L1uTvJ9P6bBU4wDQXQ-_gun9KzQO2h4RLO91TAo33uy-5LVmtuDHrVfwehSarVBwUM04WLcCNKVnL_sGwT5Tx4KsXEzaWfbjvnU_b6355KkxqUyrma3hVipyaNn6tCzyNnJl48DHmERPKBQh6Dn3ILvS5-slkgcNGqCSm3KT6jKo8GwGEP0onyLOA_qyV85SjKnv1SptSR-oeLfnN0VCjs8mpwnoBw_-VUNCJHVB"
-          />
-          {/* Subtle overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+        {/* Left Side: Holographic Orbits Container */}
+        <div className="hidden md:flex w-1/2 relative bg-gradient-to-br from-[#1c0f3a] to-[#0d061c] flex-col justify-between p-12 border-r border-white/5 overflow-hidden">
+          {/* Animated holographic orbits */}
+          <div className="absolute inset-0 opacity-[0.12] pointer-events-none z-0">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] rounded-full border border-purple-500 animate-spin" style={{ animationDuration: '24s' }}></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[240px] h-[240px] rounded-full border border-dashed border-cyan-400 animate-spin" style={{ animationDuration: '12s', animationDirection: 'reverse' }}></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120px] h-[120px] rounded-full border border-double border-purple-400 animate-pulse"></div>
+          </div>
+          
+          {/* Dynamic mesh dots */}
+          <div className="absolute inset-0 bg-[radial-gradient(rgba(6,182,212,0.05)_1.5px,transparent_1.5px)] bg-[size:24px_24px] pointer-events-none z-0" />
+
           {/* Pulsing overlay branding mark */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-accent-purple/10 to-black/70">
-            <div className="w-16 h-16 rounded-full border-2 border-accent-purple flex items-center justify-center mb-4 neon-pulse-purple">
-              <div className="w-4 h-4 bg-accent-purple rounded-full animate-ping"></div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-transparent via-black/20 to-black/70 z-10">
+            <div className="w-20 h-20 rounded-full border-2 border-accent-purple/50 flex items-center justify-center mb-6 neon-pulse-purple relative">
+              <div className="w-6 h-6 bg-accent-purple/30 rounded-full absolute animate-ping"></div>
+              <svg viewBox="0 0 32 32" className="w-10 h-10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 3L4 25C4 25 9 22 16 22C23 22 28 25 28 25L16 3Z" fill="url(#panelLogoGrad)" />
+                <path d="M16 10L10 20H22L16 10Z" fill="white" />
+                <circle cx="16" cy="15" r="2.5" fill="#30195C" />
+                <defs>
+                   <linearGradient id="panelLogoGrad" x1="4" y1="3" x2="28" y2="25" gradientUnits="userSpaceOnUse">
+                     <stop offset="0%" stopColor="#a855f7" />
+                     <stop offset="100%" stopColor="#5E0ED7" />
+                   </linearGradient>
+                </defs>
+              </svg>
             </div>
-            <h2 className="text-xl font-black uppercase tracking-widest text-white text-glow font-display">Zero Gravity</h2>
-            <p className="text-[10px] uppercase text-white/50 tracking-widest font-extrabold mt-1">Autonomous Logistics Core</p>
+            <h2 className="text-2xl font-black uppercase tracking-widest text-white text-glow font-display">Zero Gravity</h2>
+            <p className="text-[10px] uppercase text-cyan-400 tracking-widest font-black mt-2 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-400/25">
+              Logistics Core Portal
+            </p>
+          </div>
+
+          {/* Footnote lockup inside panel */}
+          <div className="mt-auto relative z-20 text-center w-full">
+            <span className="text-[8px] font-black text-white/30 uppercase tracking-widest font-mono">Quantum Transmission Secure</span>
           </div>
         </div>
 
         {/* Right Side: Register Form Canvas */}
-        <div className="w-full md:w-1/2 flex flex-col justify-between p-8 md:p-12 lg:p-16 bg-white/80 backdrop-blur-xl overflow-y-auto min-h-[600px]">
+        <div className="w-full md:w-1/2 flex flex-col justify-between p-8 md:p-12 bg-transparent overflow-y-auto min-h-[600px] relative z-10">
           {/* Brand Anchor & Back Button */}
           <div className="flex justify-between items-center mb-6 md:mb-0">
             <Link 
               to="/" 
-              className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-mute hover:text-black hover:text-glow transition-all duration-300"
+              className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white hover:text-glow transition-all duration-300"
             >
-              <ArrowLeft className="w-3.5 h-3.5 text-accent-purple" />
+              <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
               <span>Quay lại</span>
             </Link>
             <Link to="/" className="flex flex-col items-end group transition-all duration-300">
@@ -93,17 +115,17 @@ export default function Register() {
                   <circle cx="16" cy="15" r="2.5" fill="#30195C" />
                   <defs>
                      <linearGradient id="regLogoGrad" x1="4" y1="3" x2="28" y2="25" gradientUnits="userSpaceOnUse">
-                       <stop offset="0%" stop-color="#5E0ED7" />
-                       <stop offset="100%" stop-color="#30195C" />
+                       <stop offset="0%" stopColor="#a855f7" />
+                       <stop offset="100%" stopColor="#5E0ED7" />
                      </linearGradient>
                   </defs>
                 </svg>
                 <div className="flex items-center font-display">
-                  <span className="font-medium text-[11px] tracking-[0.3px] text-[#30195C] uppercase">ANTIGRAVITY</span>
-                  <span className="bg-[#30195C] text-white font-extrabold text-[9.5px] px-1 py-0.2 ml-0.8 rounded-[1px] tracking-[0.3px] uppercase">EXPRESS</span>
+                  <span className="font-extrabold text-[11px] tracking-[0.3px] text-white uppercase">ANTIGRAVITY</span>
+                  <span className="bg-purple-600 text-white font-extrabold text-[9.5px] px-1 py-0.2 ml-0.8 rounded-[1px] tracking-[0.3px] uppercase shadow-[0_0_10px_rgba(168,85,247,0.4)]">EXPRESS</span>
                 </div>
               </div>
-              <span className="text-[4.5px] font-bold text-[#30195C]/80 tracking-[1.5px] mt-0.5 uppercase font-sans">NHANH VÀ ĐÁNG TIN CẬY</span>
+              <span className="text-[4.5px] font-black text-purple-300/80 tracking-[1.5px] mt-0.5 uppercase font-sans">NHANH VÀ ĐÁNG TIN CẬY</span>
             </Link>
           </div>
 
@@ -111,19 +133,19 @@ export default function Register() {
           <div className="w-full max-w-md mx-auto my-auto py-6 space-y-6">
             {/* Header */}
             <div className="space-y-1.5">
-              <h1 className="text-3xl font-black tracking-tight text-black font-display text-glow-purple uppercase">TẠO TÀI KHOẢN</h1>
-              <p className="text-mute text-xs font-bold uppercase tracking-wider">Trở thành đối tác gửi hàng chuyên nghiệp của Antigravity.</p>
+              <h1 className="text-3xl font-black tracking-tight text-white font-display text-glow-purple uppercase">TẠO TÀI KHOẢN</h1>
+              <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Trở thành đối tác gửi hàng chuyên nghiệp của Antigravity.</p>
             </div>
 
             {/* Messages */}
             {error && (
-              <div className="bg-red-500/10 text-red-700 text-xs p-3 border border-red-500/20 font-bold rounded-lg uppercase tracking-wide">
+              <div className="bg-rose-500/10 text-rose-300 text-xs p-3 border border-rose-500/20 font-bold rounded-xl uppercase tracking-wider">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="bg-green-500/10 text-green-700 text-xs p-3 border border-green-500/20 font-bold rounded-lg uppercase tracking-wide">
+              <div className="bg-emerald-500/10 text-emerald-350 text-xs p-3 border border-emerald-500/20 font-bold rounded-xl uppercase tracking-wider">
                 {success}
               </div>
             )}
@@ -132,11 +154,11 @@ export default function Register() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Input Group: Fullname */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-extrabold text-mute uppercase tracking-widest" htmlFor="fullname">
+                <label className="block text-[10px] font-extrabold text-white/40 uppercase tracking-widest" htmlFor="fullname">
                   Họ và tên
                 </label>
                 <input
-                  className="w-full input-neon py-3 placeholder-mute font-semibold"
+                  className="w-full bg-[#07030e]/60 border border-white/10 text-white placeholder-white/20 rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/25 transition-all duration-300 font-semibold shadow-[inset_0_1px_3px_rgba(0,0,0,0.6)] focus:shadow-[0_0_15px_rgba(6,182,212,0.15)]"
                   id="fullname"
                   type="text"
                   placeholder="Ví dụ: Nguyễn Văn A"
@@ -148,11 +170,11 @@ export default function Register() {
 
               {/* Input Group: Username */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-extrabold text-mute uppercase tracking-widest" htmlFor="username">
+                <label className="block text-[10px] font-extrabold text-white/40 uppercase tracking-widest" htmlFor="username">
                   Tên đăng nhập
                 </label>
                 <input
-                  className="w-full input-neon py-3 placeholder-mute font-semibold"
+                  className="w-full bg-[#07030e]/60 border border-white/10 text-white placeholder-white/20 rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/25 transition-all duration-300 font-semibold shadow-[inset_0_1px_3px_rgba(0,0,0,0.6)] focus:shadow-[0_0_15px_rgba(6,182,212,0.15)]"
                   id="username"
                   type="text"
                   placeholder="Ví dụ: shop_sneaker"
@@ -164,12 +186,12 @@ export default function Register() {
 
               {/* Input Group: Password */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-extrabold text-mute uppercase tracking-widest" htmlFor="password">
+                <label className="block text-[10px] font-extrabold text-white/40 uppercase tracking-widest" htmlFor="password">
                   Mật khẩu
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full input-neon py-3 placeholder-mute font-semibold pr-12"
+                    className="w-full bg-[#07030e]/60 border border-white/10 text-white placeholder-white/20 rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/25 transition-all duration-300 font-semibold shadow-[inset_0_1px_3px_rgba(0,0,0,0.6)] focus:shadow-[0_0_15px_rgba(6,182,212,0.15)] pr-12"
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Nhập mật khẩu"
@@ -180,7 +202,7 @@ export default function Register() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-mute hover:text-black transition-colors p-2"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors p-2 cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -189,12 +211,12 @@ export default function Register() {
 
               {/* Input Group: Confirm Password */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-extrabold text-mute uppercase tracking-widest" htmlFor="confirmPassword">
+                <label className="block text-[10px] font-extrabold text-white/40 uppercase tracking-widest" htmlFor="confirmPassword">
                   Xác nhận mật khẩu
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full input-neon py-3 placeholder-mute font-semibold pr-12"
+                    className="w-full bg-[#07030e]/60 border border-white/10 text-white placeholder-white/20 rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/25 transition-all duration-300 font-semibold shadow-[inset_0_1px_3px_rgba(0,0,0,0.6)] focus:shadow-[0_0_15px_rgba(6,182,212,0.15)] pr-12"
                     id="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
                     placeholder="Nhập lại mật khẩu"
@@ -205,7 +227,7 @@ export default function Register() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-mute hover:text-black transition-colors p-2"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors p-2 cursor-pointer"
                   >
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -216,7 +238,7 @@ export default function Register() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full btn-primary py-3.5 text-xs font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 mt-6 cursor-pointer"
+                className="w-full bg-gradient-to-r from-accent-purple to-purple-600 hover:from-purple-600 hover:to-indigo-600 text-white text-xs font-black uppercase tracking-widest rounded-full py-3.5 flex items-center justify-center gap-2 mt-6 cursor-pointer transition-all duration-300 shadow-[0_4px_16px_rgba(94,14,215,0.4)] hover:shadow-[0_6px_22px_rgba(94,14,215,0.6)] active:scale-98"
               >
                 {loading ? 'Đang khởi tạo cổng...' : 'Đăng ký tài khoản'}
                 {!loading && <ArrowRight className="w-4 h-4" />}
@@ -224,9 +246,9 @@ export default function Register() {
             </form>
 
             {/* Footer Link */}
-            <div className="text-center pt-4 border-t border-black/5">
-              <span className="text-xs text-mute font-semibold">Đã có tài khoản? </span>
-              <Link to="/login" className="text-xs font-black text-accent-purple hover:underline hover:text-[#7d2ae8] transition-colors uppercase tracking-wider">
+            <div className="text-center pt-4 border-t border-white/5">
+              <span className="text-xs text-white/40 font-semibold">Đã có tài khoản? </span>
+              <Link to="/login" className="text-xs font-black text-cyan-400 hover:text-cyan-300 hover:underline transition-colors uppercase tracking-wider">
                 Đăng nhập ngay
               </Link>
             </div>

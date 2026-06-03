@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: antigravity_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-LogisticsDB}
+      POSTGRES_USER: ${DB_USERNAME:-sa}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-your_secure_password_here}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: antigravity_backend
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://${DB_USERNAME:-sa}:${DB_PASSWORD:-your_secure_password_here}@db:5432/${DB_NAME:-LogisticsDB}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      PORT: 5000
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "5000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=/
+    container_name: antigravity_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

@@ -51,23 +51,31 @@
 │                           │                                      │
 │              SERVICE TIER │                                      │
 └───────────────────────────┼──────────────────────────────────────┘
-                            │  SQL Queries (SQLAlchemy ORM / PyODBC)
+                            │  SQL Queries (SQLAlchemy ORM / psycopg2-binary)
                             │
                   ┌─────────▼─────────┐
                   │                   │  
                   │   📦 DATA TIER    │
-                  │   SQL Server 2022 │
+                  │    PostgreSQL     │
+                  │  (LogisticsDB)    │
                   │                   │
                   │  ┌─────────────────┐  │
-                  │  │8 Core Tables    │  │
-                  │  │- NguoiDung      │  │
-                  │  │- SoDiaChi       │  │
-                  │  │- GoiDichVu      │  │
-                  │  │- DonHang        │  │
+                  │  │14 Tables Schema │  │
+                  │  │- TongKho,       │  │
+                  │  │  ChiNhanh,      │  │
+                  │  │  NguoiDung      │  │
+                  │  │- SoDiaChi,      │  │
+                  │  │  GoiDichVu,     │  │
+                  │  │  DonHang        │  │
                   │  │- LichSu_TrangThai│ │
-                  │  │- DoiSoat        │  │
-                  │  │- HoaDonDoiSoat  │  │
-                  │  │- KhoaAPI        │  │
+                  │  │- DoiSoat,       │  │
+                  │  │  HoaDonDoiSoat  │  │
+                  │  │- KhoaAPI,       │  │
+                  │  │  TinNhan,       │  │
+                  │  │  ChamCong       │  │
+                  │  │- KhieuNai       │  │
+                  │  │- DangKyNhan-    │  │
+                  │  │  ThongBao       │  │
                   │  └─────────────────┘  │
                   │                   │
                   └───────────────────┘
@@ -113,7 +121,10 @@
 ## Giải pháp kỹ thuật & Cải tiến
 
 - **Ứng dụng Web Single Page App (SPA)**: Xây dựng bằng React + Vite, tối ưu hóa các linh kiện và state giúp giao diện tải siêu tốc.
+- **True 3D Volumetric Box Visualizer**: Mô hình hộp hàng 3D lập thể (`transform-style: preserve-3d`) sử dụng 3 thanh trượt Dài - Rộng - Cao co giãn động tại Trang chủ giúp khách hàng dễ hình dung bưu phẩm thực tế và tự tính cước thể tích tức thì.
 - **Phong cách thiết kế Premium Dark-Neon Glassmorphism**: Không dùng giao diện trắng đơn điệu, toàn bộ trang web sử dụng tông màu tối sâu, kết hợp các thẻ mờ kính (backdrop-blur), viền neon lam-lục, và hiệu ứng ánh sáng gradient động mang lại trải nghiệm cực kỳ cao cấp.
-- **Xác thực & Phân quyền**: Sử dụng token JWT (JSON Web Tokens) cho phiên làm việc của người dùng trên Web với 3 phân quyền (`KHACHHANG`, `NHANVIEN`, `QUANTRI`), và API Key dài 64 ký tự an toàn cho các tác vụ kết nối B2B M2M của Đối tác.
-- **Tích hợp bản đồ**: Kết hợp dịch vụ địa lý Nominatim Geocoding của OpenStreetMap và dịch vụ OSRM Router để lấy khoảng cách chính xác theo km đường đi thực tế. Có cơ chế fallback tự động để hệ thống không bao giờ bị nghẽn khi API công cộng bị giới hạn băng thông.
+- **Xác thực & Phân quyền**: Sử dụng token JWT (JSON Web Tokens) cho phiên làm việc của người dùng trên Web với cơ chế phân quyền nghiêm ngặt 8 vai trò.
+- **Tương tác Option-based Chatbot & Socket.io CSKH Handover**: Khách hàng trò chuyện với **Quantum Guide Chatbot** lơ lửng tối chàm neon, hỗ trợ cây quyết định đa chặng, xem timeline bưu kiện phát sáng trực tuyến, và bấm kết nối Socket.io để CSKH chat trực tiếp Double-Pane.
+- **Chứng nhận thực địa Shipper (Touch Signature & Proof Photo)**: Bưu tá giao đơn hàng thành công có thể cho khách vẽ chữ ký tay trực tiếp lên **Touch Signature Canvas** di động và bật giả lập **Proof Photo Camera** chụp ảnh xác thực bưu phẩm chặng cuối.
+- **Tích hợp bản đồ & Chống chặn IP**: Kết hợp dịch vụ địa lý Nominatim Geocoding của OpenStreetMap và dịch vụ OSRM Router để lấy khoảng cách chính xác theo km đường đi thực tế. Áp dụng cơ chế **rate-limit protection ngủ trễ 1200ms** để chống bị Nominatim chặn từ chối dịch vụ. Có cơ chế fallback tự động về 10.5 km để hệ thống không bao giờ bị nghẽn.
 - **Tem vận đơn thông minh**: In ấn tem nhãn khổ A6 chuẩn e-commerce tự sinh mã vạch trực quan, hỗ trợ thiết bị in nhiệt ngoại vi của chủ shop.

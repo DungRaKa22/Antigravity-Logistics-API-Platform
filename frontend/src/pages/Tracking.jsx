@@ -40,6 +40,19 @@ const destinationNeonIcon = L.divIcon({
   popupAnchor: [0, -16],
 });
 
+const hubNeonIcon = L.divIcon({
+  className: 'custom-leaflet-hub-icon',
+  html: `<div class="relative flex items-center justify-center">
+    <div class="absolute w-8 h-8 bg-amber-500 rounded-full animate-ping opacity-35"></div>
+    <div class="relative w-5 h-5 bg-[#140b27] border-3 border-amber-400 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.8)] flex items-center justify-center">
+      <div class="w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
+    </div>
+  </div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+  popupAnchor: [0, -16],
+});
+
 // ChangeView component to dynamically fit bounds of geocoded markers
 function ChangeView({ center, zoom, bounds }) {
   const map = useMap();
@@ -102,7 +115,7 @@ export default function Tracking() {
     }
   }, [codeParam]);
 
-  // Geocode address changes dynamically with Nominatim (with debouncing rate respect)
+  // Set coordinates from database or geocode address changes dynamically with Nominatim (with debouncing rate respect)
   useEffect(() => {
     if (orderData) {
       const geocode = async (address, setCoords) => {
@@ -120,10 +133,19 @@ export default function Tracking() {
         }
       };
 
-      if (orderData.sender_address) {
+      // 1. Sender Coords
+      if (orderData.sender_lat !== undefined && orderData.sender_lat !== null &&
+          orderData.sender_lng !== undefined && orderData.sender_lng !== null) {
+        setSenderCoords([orderData.sender_lat, orderData.sender_lng]);
+      } else if (orderData.sender_address) {
         geocode(orderData.sender_address, setSenderCoords);
       }
-      if (orderData.receiver_address) {
+
+      // 2. Receiver Coords
+      if (orderData.receiver_lat !== undefined && orderData.receiver_lat !== null &&
+          orderData.receiver_lng !== undefined && orderData.receiver_lng !== null) {
+        setReceiverCoords([orderData.receiver_lat, orderData.receiver_lng]);
+      } else if (orderData.receiver_address) {
         // Sleep 1 second before doing recipient address to avoid overlapping Nominatim API rate limits
         setTimeout(() => {
           geocode(orderData.receiver_address, setReceiverCoords);
@@ -167,20 +189,71 @@ export default function Tracking() {
     }
   };
 
+  // Trạm trung chuyển tọa độ và cấu hình vùng miền
+  const HUBS = {
+    BAC: {
+      name: 'Kho Trung Chuyển Miền Bắc (Từ Sơn, Bắc Ninh)',
+      coords: [21.1155, 105.9964]
+    },
+    TRUNG: {
+      name: 'Kho Trung Chuyển Miền Trung (An Tây, Quảng Ngãi)',
+      coords: [15.1205, 108.7925]
+    },
+    NAM: {
+      name: 'Kho Trung Chuyển Miền Nam (Bình Hòa, TP.HCM)',
+      coords: [10.9325, 106.7215]
+    }
+  };
+
+  const getRegion = (coords) => {
+    if (!coords) return 'BAC';
+    const lat = coords[0];
+    if (lat >= 19.5) return 'BAC';
+    if (lat >= 14.0) return 'TRUNG';
+    return 'NAM';
+  };
+
+  const senderRegion = senderCoords ? getRegion(senderCoords) : null;
+  const receiverRegion = receiverCoords ? getRegion(receiverCoords) : null;
+
+  const originHub = senderRegion ? HUBS[senderRegion] : null;
+  const destHub = receiverRegion ? HUBS[receiverRegion] : null;
+
+  const plannedHubs = [];
+  const isDirect = orderData && orderData.distance_km < 10.0;
+  if (!isDirect) {
+    if (originHub) {
+      plannedHubs.push(originHub);
+      if (senderRegion !== receiverRegion && destHub) {
+        plannedHubs.push(destHub);
+      }
+    }
+  }
+
   // Fetch OSRM real road geometry when both coordinates are ready
   useEffect(() => {
-    if (senderCoords && receiverCoords) {
+    if (senderCoords && receiverCoords && senderRegion && receiverRegion) {
       setRouteGeometry(null); // Reset while fetching
-      fetchRouteGeometry([senderCoords, receiverCoords]).then((geometry) => {
+      const waypoints = [senderCoords];
+      plannedHubs.forEach(hub => waypoints.push(hub.coords));
+      waypoints.push(receiverCoords);
+      
+      fetchRouteGeometry(waypoints).then((geometry) => {
         if (geometry && geometry.length > 0) {
           setRouteGeometry(geometry);
         }
       });
     }
-  }, [senderCoords, receiverCoords]);
+  }, [senderCoords, receiverCoords, senderRegion, receiverRegion]);
 
   // Use OSRM route if available, fallback to straight line
-  const polylineCoords = routeGeometry || (senderCoords && receiverCoords ? [senderCoords, receiverCoords] : null);
+  const polylineCoords = routeGeometry || (senderCoords && receiverCoords 
+    ? [
+        senderCoords,
+        ...plannedHubs.map(hub => hub.coords),
+        receiverCoords
+      ]
+    : null);
 
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col lg:flex-row overflow-hidden bg-canvas text-black">
@@ -423,83 +496,192 @@ export default function Tracking() {
         </div>
       </div>
 
-      {/* Right Column: Dynamic Leaflet Map */}
-      <div className="w-full lg:flex-1 h-[40vh] lg:h-full bg-canvas-soft relative z-10">
+      {/* Right Column: Holographic Maps & 3D projection */}
+      <div className="w-full lg:w-[55%] flex flex-col gap-6 h-full p-6 relative z-10 bg-canvas-soft">
         
-        {/* Map top indicator */}
-        <div className="absolute top-6 left-6 z-[1000] bg-white/85 backdrop-blur-xl px-4 py-2.5 rounded-xl border border-black/10 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-[10px] font-black uppercase tracking-widest text-black flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span>🌐 MẠNG LƯỚI ĐỊNH VỊ LIÊN TỈNH ANTIGRAVITY</span>
+        {/* Top Pane: 3D Holographic box visualizer or Scanner animation */}
+        <div className="hidden lg:flex scene3d neon-glow-grid relative w-full h-[38%] rounded-[24px] border border-black/10 overflow-hidden bg-[#090314]/95 items-center justify-center shrink-0">
+          <div className="absolute inset-0 bg-[radial-gradient(rgba(139,92,246,0.15)_1.5px,transparent_1.5px)] bg-[size:16px_16px] pointer-events-none" />
+          
+          {orderData ? (
+            <>
+              <div className="cube3d" style={{
+                '--w-3d': `${Math.min(180, Math.max(45, (parseInt(orderData.length_cm) || 10) * 2.8))}px`,
+                '--h-3d': `${Math.min(180, Math.max(8, (parseInt(orderData.height_cm) || 10) * 2.8))}px`,
+                '--d-3d': `${Math.min(180, Math.max(45, (parseInt(orderData.width_cm) || 10) * 2.8))}px`,
+              }}>
+                <div className="face3d face3d-front">
+                  <span className="face3d-label">FRONT</span>
+                  <span className="text-[9.5px] font-extrabold text-purple-300 mt-1">{orderData.length_cm}cm</span>
+                </div>
+                <div className="face3d face3d-back">
+                  <span className="face3d-label">BACK</span>
+                </div>
+                <div className="face3d face3d-left">
+                  <span className="face3d-label">LEFT</span>
+                  <span className="text-[9.5px] font-extrabold text-purple-300 mt-1">{orderData.width_cm}cm</span>
+                </div>
+                <div className="face3d face3d-right">
+                  <span className="face3d-label">RIGHT</span>
+                </div>
+                <div className="face3d face3d-top">
+                  <span className="face3d-label">TOP</span>
+                  <span className="text-[8.5px] font-extrabold text-purple-300 mt-1">{orderData.length_cm} x {orderData.width_cm}</span>
+                </div>
+                <div className="face3d face3d-bottom">
+                  <span className="face3d-label">BOTTOM</span>
+                </div>
+              </div>
+
+              <div className="absolute top-4 left-4 flex gap-1.5 items-center">
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                <span className="text-[8px] font-black text-emerald-400 tracking-wider uppercase">3D Spec Projection ({orderData.order_id})</span>
+              </div>
+
+              <div className="absolute bottom-4 right-4 px-3 py-1 bg-white/95 backdrop-blur-md rounded-full text-[9px] font-black tracking-widest text-black border border-black/5 shadow-md">
+                TRỌNG LƯỢNG QUY ĐỔI: {(((parseInt(orderData.length_cm) || 10) * (parseInt(orderData.width_cm) || 10) * (parseInt(orderData.height_cm) || 10)) / 6000).toFixed(2)} kg
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="cube3d" style={{
+                '--w-3d': '100px',
+                '--h-3d': '100px',
+                '--d-3d': '100px',
+              }}>
+                <div className="face3d face3d-front" style={{ borderColor: 'rgba(6,182,212,0.65)', background: 'linear-gradient(135deg, rgba(6,182,212,0.18) 0%, rgba(8,145,178,0.08) 100%)' }}>
+                  <span className="face3d-label" style={{ textShadow: '0 0 8px rgba(6,182,212,0.8)' }}>SCAN</span>
+                </div>
+                <div className="face3d face3d-back" style={{ borderColor: 'rgba(6,182,212,0.65)', background: 'linear-gradient(135deg, rgba(6,182,212,0.18) 0%, rgba(8,145,178,0.08) 100%)' }}>
+                  <span className="face3d-label" style={{ textShadow: '0 0 8px rgba(6,182,212,0.8)' }}>READY</span>
+                </div>
+                <div className="face3d face3d-left" style={{ borderColor: 'rgba(6,182,212,0.65)', background: 'linear-gradient(135deg, rgba(6,182,212,0.18) 0%, rgba(8,145,178,0.08) 100%)' }}>
+                  <span className="face3d-label" style={{ textShadow: '0 0 8px rgba(6,182,212,0.8)' }}>SCAN</span>
+                </div>
+                <div className="face3d face3d-right" style={{ borderColor: 'rgba(6,182,212,0.65)', background: 'linear-gradient(135deg, rgba(6,182,212,0.18) 0%, rgba(8,145,178,0.08) 100%)' }}>
+                  <span className="face3d-label" style={{ textShadow: '0 0 8px rgba(6,182,212,0.8)' }}>READY</span>
+                </div>
+                <div className="face3d face3d-top" style={{ borderColor: 'rgba(6,182,212,0.65)', background: 'linear-gradient(135deg, rgba(6,182,212,0.18) 0%, rgba(8,145,178,0.08) 100%)' }}>
+                  <span className="face3d-label" style={{ textShadow: '0 0 8px rgba(6,182,212,0.8)' }}>SYS</span>
+                </div>
+                <div className="face3d face3d-bottom" style={{ borderColor: 'rgba(6,182,212,0.65)', background: 'linear-gradient(135deg, rgba(6,182,212,0.18) 0%, rgba(8,145,178,0.08) 100%)' }}>
+                  <span className="face3d-label" style={{ textShadow: '0 0 8px rgba(6,182,212,0.8)' }}>SYS</span>
+                </div>
+              </div>
+
+              <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] bg-cyan-500/80 shadow-[0_0_15px_#06b6d4] animate-scanner-line pointer-events-none" />
+
+              <div className="absolute top-4 left-4 flex gap-1.5 items-center">
+                <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-ping"></span>
+                <span className="text-[8px] font-black text-cyan-400 tracking-wider uppercase">RADAR HOẠT ĐỘNG - CHỜ TRA CỨU</span>
+              </div>
+
+              <div className="absolute bottom-4 left-4 right-4 text-center">
+                <p className="text-[9px] font-bold text-cyan-300 uppercase tracking-widest text-shadow-cyan opacity-80 animate-pulse">
+                  SYSTEM RADAR DISCONNECTED - WAITING FOR WAYBILL SEARCH
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
-        <div className="w-full h-full absolute inset-0 z-0">
-          <MapContainer 
-            center={[16.0544, 106.2022]} // Central Vietnam
-            zoom={6} 
-            style={{ height: '100%', width: '100%' }}
-            zoomControl={false}
-          >
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-              attribution='&copy; CARTO'
-            />
+        {/* Bottom Pane: Map */}
+        <div className="w-full flex-1 lg:h-[58%] bg-white/60 border border-black/10 rounded-[24px] shadow-sm overflow-hidden relative backdrop-blur-md min-h-[300px]">
+          
+          {/* Map top indicator */}
+          <div className="absolute top-4 left-4 z-[1000] bg-white/85 backdrop-blur-xl px-4 py-2.5 rounded-xl border border-black/10 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-[10px] font-black uppercase tracking-widest text-black flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            <span>🌐 MẠNG LƯỚI ĐỊNH VỊ LIÊN TỈNH ANTIGRAVITY</span>
+          </div>
 
-            <ChangeView 
-              center={senderCoords || [16.0544, 106.2022]} 
-              bounds={polylineCoords} 
-            />
-
-            {/* Shadow layer for glow effect */}
-            {polylineCoords && (
-              <Polyline 
-                positions={polylineCoords} 
-                color="#5E0ED7" 
-                weight={10} 
-                opacity={0.12} 
-                lineCap="round" 
-                lineJoin="round"
+          <div className="w-full h-full absolute inset-0 z-0">
+            <MapContainer 
+              center={[16.0544, 106.2022]} // Central Vietnam
+              zoom={6} 
+              style={{ height: '100%', width: '100%' }}
+              zoomControl={false}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               />
-            )}
-            {/* Main route line */}
-            {polylineCoords && (
-              <Polyline 
-                positions={polylineCoords} 
-                color="#5E0ED7" 
-                weight={5} 
-                opacity={0.85} 
-                lineCap="round" 
-                lineJoin="round"
+
+              <ChangeView 
+                center={senderCoords || [16.0544, 106.2022]} 
+                bounds={polylineCoords} 
               />
-            )}
 
-            {senderCoords && (
-              <Marker position={senderCoords} icon={purplePulsingIcon}>
-                <Popup>
-                  <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
-                    <p className="text-accent-purple">📍 ĐIỂM GỬI (KHO LẤY HÀNG)</p>
-                    <p className="text-black mt-1 font-semibold">{orderData?.sender_name || 'Chủ hàng'}</p>
-                    <p className="text-[10px] text-mute mt-0.5">{orderData?.sender_address}</p>
-                  </div>
-                </Popup>
-              </Marker>
-            )}
+              {/* Shadow layer for glow effect */}
+              {polylineCoords && (
+                <Polyline 
+                  positions={polylineCoords} 
+                  color="#5E0ED7" 
+                  weight={10} 
+                  opacity={0.12} 
+                  lineCap="round" 
+                  lineJoin="round"
+                />
+              )}
+              {/* Main route line */}
+              {polylineCoords && (
+                <Polyline 
+                  positions={polylineCoords} 
+                  color="#5E0ED7" 
+                  weight={5} 
+                  opacity={0.85} 
+                  lineCap="round" 
+                  lineJoin="round"
+                />
+              )}
 
-            {receiverCoords && (
-              <Marker position={receiverCoords} icon={destinationNeonIcon}>
-                <Popup>
-                  <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
-                    <p className="text-accent-purple">📍 ĐIỂM NHẬN (KHÁCH NHẬN)</p>
-                    <p className="text-black mt-1 font-semibold">{orderData?.receiver_name}</p>
-                    <p className="text-[10px] text-mute mt-0.5">{orderData?.receiver_address}</p>
-                  </div>
-                </Popup>
-              </Marker>
-            )}
+              {senderCoords && (
+                <Marker position={senderCoords} icon={purplePulsingIcon}>
+                  <Popup>
+                    <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                      <p className="text-accent-purple">📍 ĐIỂM GỬI (KHO LẤY HÀNG)</p>
+                      <p className="text-black mt-1 font-semibold">{orderData?.sender_name || 'Chủ hàng'}</p>
+                      <p className="text-[10px] text-mute mt-0.5">{orderData?.sender_address}</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
 
-          </MapContainer>
+              {plannedHubs.map((hub, idx) => (
+                <Marker key={idx} position={hub.coords} icon={hubNeonIcon}>
+                  <Popup>
+                    <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                      <p className="text-amber-500 font-black">🏢 {hub.name.includes('Miền Bắc') ? 'KHO TRUNG CHUYỂN MIỀN BẮC' : hub.name.includes('Miền Trung') ? 'KHO TRUNG CHUYỂN MIỀN TRUNG' : 'KHO TRUNG CHUYỂN MIỀN NAM'}</p>
+                      <p className="text-black mt-1 font-semibold">{hub.name.split(' (')[1]?.replace(')', '') || 'Trạm trung chuyển'}</p>
+                      <p className="text-[10px] text-mute mt-0.5 leading-normal italic">
+                        {plannedHubs.length === 1 
+                          ? 'Trạm trung chuyển chặng nội miền bắt buộc.' 
+                          : idx === 0 
+                            ? 'Trạm trung chuyển đầu nguồn (Xuất phát).' 
+                            : 'Trạm trung chuyển cuối nguồn (Đến miền nhận).'}
+                      </p>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+
+              {receiverCoords && (
+                <Marker position={receiverCoords} icon={destinationNeonIcon}>
+                  <Popup>
+                    <div className="text-black text-xs font-bold uppercase tracking-wider p-1">
+                      <p className="text-accent-purple">📍 ĐIỂM NHẬN (KHÁCH NHẬN)</p>
+                      <p className="text-black mt-1 font-semibold">{orderData?.receiver_name}</p>
+                      <p className="text-[10px] text-mute mt-0.5">{orderData?.receiver_address}</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
+
+            </MapContainer>
+          </div>
         </div>
+
       </div>
-
     </div>
   );
 }
+

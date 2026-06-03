@@ -26,6 +26,14 @@ class Config:
 
     @property
     def DATABASE_URL(self):
+        # Ưu tiên sử dụng DATABASE_URL trực tiếp từ biến môi trường (cho PostgreSQL hoặc deploy Render)
+        env_db_url = os.getenv("DATABASE_URL")
+        if env_db_url:
+            # SQLAlchemy đòi hỏi postgresql:// thay vì postgres://
+            if env_db_url.startswith("postgres://"):
+                env_db_url = env_db_url.replace("postgres://", "postgresql://", 1)
+            return env_db_url
+
         if self.USE_WINDOWS_AUTH:
             return (
                 f"mssql+pyodbc://@{self.DB_SERVER}/{self.DB_NAME}"
