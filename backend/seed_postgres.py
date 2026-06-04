@@ -187,6 +187,56 @@ def seed_database():
         )
         db.session.add_all([u_shop, u_khach_le, u_cskh])
 
+        # Tài khoản quản lý và nhân viên tại 3 Tổng kho lớn
+        print("[*] Đang tạo dữ liệu Tài khoản Quản lý & Nhân viên tại 3 Tổng kho lớn...")
+        tong_kho_users = []
+        # Miền Bắc (MaTongKho = 1)
+        tong_kho_users.append(NguoiDung(
+            TenDangNhap="Quanly-MB",
+            MatKhau=hash_password("quanly123"),
+            HoTen="Quản Lý Tổng Kho Miền Bắc",
+            VaiTro="ADMIN",
+            MaTongKho=1
+        ))
+        tong_kho_users.append(NguoiDung(
+            TenDangNhap="Kho-MB",
+            MatKhau=hash_password("kho123"),
+            HoTen="Nhân Viên Tổng Kho Miền Bắc",
+            VaiTro="KHO",
+            MaTongKho=1
+        ))
+        # Miền Trung (MaTongKho = 2)
+        tong_kho_users.append(NguoiDung(
+            TenDangNhap="Quanly-MT",
+            MatKhau=hash_password("quanly123"),
+            HoTen="Quản Lý Tổng Kho Miền Trung",
+            VaiTro="ADMIN",
+            MaTongKho=2
+        ))
+        tong_kho_users.append(NguoiDung(
+            TenDangNhap="Kho-MT",
+            MatKhau=hash_password("kho123"),
+            HoTen="Nhân Viên Tổng Kho Miền Trung",
+            VaiTro="KHO",
+            MaTongKho=2
+        ))
+        # Miền Nam (MaTongKho = 3)
+        tong_kho_users.append(NguoiDung(
+            TenDangNhap="Quanly-MN",
+            MatKhau=hash_password("quanly123"),
+            HoTen="Quản Lý Tổng Kho Miền Nam",
+            VaiTro="ADMIN",
+            MaTongKho=3
+        ))
+        tong_kho_users.append(NguoiDung(
+            TenDangNhap="Kho-MN",
+            MatKhau=hash_password("kho123"),
+            HoTen="Nhân Viên Tổng Kho Miền Nam",
+            VaiTro="KHO",
+            MaTongKho=3
+        ))
+        db.session.add_all(tong_kho_users)
+
         # Sinh 5 tài khoản nhân sự cho mỗi chi nhánh
         print("[*] Sinh 5 tài khoản nhân sự cho 63 Chi nhánh...")
         for code, info in chi_nhanh_map.items():
