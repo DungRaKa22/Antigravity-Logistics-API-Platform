@@ -227,9 +227,18 @@ def get_profile():
     if not user:
         return jsonify({"success": False, "message": "Không tìm thấy người dùng"}), 404
         
-    workplace_id = user.MaTongKho if user.VaiTro == 'KHO' else (user.MaChiNhanh if user.VaiTro == 'SHIPPER' else None)
-    workplace_name = user.tong_kho.TenTongKho if (user.VaiTro == 'KHO' and user.tong_kho) else (user.chi_nhanh.TenChiNhanh if (user.VaiTro == 'SHIPPER' and user.chi_nhanh) else None)
-    workplace_region = user.tong_kho.VungMien if (user.VaiTro == 'KHO' and user.tong_kho) else None
+    if user.MaTongKho is not None:
+        workplace_id = user.MaTongKho
+        workplace_name = user.tong_kho.TenTongKho if user.tong_kho else None
+        workplace_region = user.tong_kho.VungMien if user.tong_kho else None
+    elif user.MaChiNhanh is not None:
+        workplace_id = user.MaChiNhanh
+        workplace_name = user.chi_nhanh.TenChiNhanh if user.chi_nhanh else None
+        workplace_region = None
+    else:
+        workplace_id = None
+        workplace_name = None
+        workplace_region = None
 
     # Calculate job-specific work statistics
     stats = {}

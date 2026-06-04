@@ -236,7 +236,7 @@ def seed_database():
                 HoTen=f"Nhân Viên Kho {name}",
                 VaiTro="KHO",
                 MaChiNhanh=branch_id,
-                MaTongKho=tong_kho_id
+                MaTongKho=None
             )
             
             db.session.add_all([u_admin, u_ketoan, u_hr, u_shipper, u_kho])
