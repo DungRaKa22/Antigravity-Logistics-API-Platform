@@ -1,10 +1,43 @@
 import requests
 import time
+import math
+
+# Bộ nhớ đệm in-memory tránh gọi trùng lặp API Nominatim/OSRM làm nghẽn cổ chai
+_geocode_cache = {}
+_osrm_cache = {}
+
+def calculate_haversine_helper(lat1, lon1, lat2, lon2):
+    """
+    Tính khoảng cách đường chim bay giữa 2 tọa độ (Haversine Formula).
+    Trả về số Km. Luôn hoạt động offline và phản hồi tức thời (<1ms).
+    """
+    try:
+        R = 6371.0  # Bán kính Trái đất tính bằng km
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c
+    except Exception as e:
+        print(f"Lỗi Haversine helper: {e}")
+        return 10.0
 
 def geocode_address(address: str):
     """
     Sử dụng Nominatim (OpenStreetMap) để lấy Tọa độ từ địa chỉ dạng văn bản.
+    Đã được tối ưu hóa bằng bộ nhớ đệm in-memory.
     """
+    if not address or not isinstance(address, str):
+        return None, None
+        
+    # Chuẩn hóa chuỗi địa chỉ để làm khóa cache
+    clean_addr = " ".join(address.strip().lower().split())
+    if not clean_addr:
+        return None, None
+        
+    if clean_addr in _geocode_cache:
+        return _geocode_cache[clean_addr]
+
     url = "https://nominatim.openstreetmap.org/search"
     params = {
         'q': address,
@@ -12,41 +45,64 @@ def geocode_address(address: str):
         'limit': 1
     }
     headers = {
-        'User-Agent': 'Logistics-API-Platform/1.0' # Quan trọng, Nominatim đòi hỏi header
+        'User-Agent': 'Logistics-API-Platform/1.0'
     }
     try:
-        # Nominatim giới hạn tốc độ 1 request/giây
+        # Giới hạn Nominatim: Chỉ sleep khi thực sự gọi API ngoài
         time.sleep(1)
-        response = requests.get(url, params=params, headers=headers, timeout=5)
+        response = requests.get(url, params=params, headers=headers, timeout=2.0)
         if response.status_code == 200:
             data = response.json()
             if data and len(data) > 0:
-                return float(data[0]['lat']), float(data[0]['lon'])
+                res = (float(data[0]['lat']), float(data[0]['lon']))
+                _geocode_cache[clean_addr] = res
+                return res
     except Exception as e:
         print(f"Lỗi Geocode: {e}")
+        
     return None, None
 
 def calculate_osrm_distance(lat1: float, lon1: float, lat2: float, lon2: float):
     """
-    Geocode -> Tọa độ -> Tính quãng đường bằng OSRM.
-    Trả về số Km (mặc định OSRM trả mét).
+    Tính quãng đường di chuyển thực tế bằng OSRM.
+    Đã được tối ưu hóa bằng cache tọa độ (độ phân giải ~11m) và fallback Haversine tức thì nếu OSRM lỗi hoặc timeout.
     """
-    url = f"http://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=false"
+    if lat1 is None or lon1 is None or lat2 is None or lon2 is None:
+        return None
+        
     try:
-        response = requests.get(url, timeout=5)
+        lat1_f, lon1_f, lat2_f, lon2_f = float(lat1), float(lon1), float(lat2), float(lon2)
+    except Exception as e:
+        print(f"Lỗi định dạng tọa độ: {e}")
+        return None
+
+    # Tạo khóa cache làm tròn đến 4 chữ số thập phân
+    key = (round(lat1_f, 4), round(lon1_f, 4), round(lat2_f, 4), round(lon2_f, 4))
+    if key in _osrm_cache:
+        return _osrm_cache[key]
+
+    url = f"http://router.project-osrm.org/route/v1/driving/{lon1_f},{lat1_f};{lon2_f},{lat2_f}?overview=false"
+    try:
+        # Sử dụng timeout ngắn (1.0s) để tránh treo nghẽn request khi server OSRM quá tải
+        response = requests.get(url, timeout=1.0)
         if response.status_code == 200:
             data = response.json()
             if data.get('code') == 'Ok' and len(data.get('routes', [])) > 0:
                 distance_meters = data['routes'][0]['distance']
-                return round(distance_meters / 1000.0, 2)
+                dist_km = round(distance_meters / 1000.0, 2)
+                _osrm_cache[key] = dist_km
+                return dist_km
     except Exception as e:
-        print(f"Lỗi OSRM: {e}")
-    return None
+        print(f"Lỗi OSRM (Sử dụng Haversine fallback): {e}")
+
+    # Fallback: Tính bằng Haversine * 1.25 (hệ số vòng vèo trung bình của đường bộ Việt Nam)
+    fallback_dist = round(calculate_haversine_helper(lat1_f, lon1_f, lat2_f, lon2_f) * 1.25, 2)
+    _osrm_cache[key] = fallback_dist
+    return fallback_dist
 
 def get_smart_distance(addr_gui: str, addr_nhan: str, lat_gui=None, lon_gui=None, lat_nhan=None, lon_nhan=None):
     """
-    Hàm tổng hợp. Ưu tiên tọa độ truyền vào (từ Sổ địa chỉ), nếu không có thì geocode text.
-    Nếu không tính được về fallback 10km.
+    Hàm tổng hợp tính khoảng cách. Ưu tiên tọa độ truyền vào, tự động geocode nếu khuyết thiếu.
     """
     # 1. Tìm Lat/Lon Điểm Gửi
     if not lat_gui or not lon_gui:
@@ -56,14 +112,14 @@ def get_smart_distance(addr_gui: str, addr_nhan: str, lat_gui=None, lon_gui=None
     if not lat_nhan or not lon_nhan:
         lat_nhan, lon_nhan = geocode_address(addr_nhan)
 
-    # 3. Chạy OSRM
+    # 3. Tính toán khoảng cách di chuyển
     if lat_gui and lon_gui and lat_nhan and lon_nhan:
         dist = calculate_osrm_distance(lat_gui, lon_gui, lat_nhan, lon_nhan)
         if dist is not None:
             return float(dist)
             
-    # Fallback giả định nếu API OSM/OSRM rớt
     return 10.5
+
 
 def optimize_multistop_path(sender_address: str, receiver_addresses: list, sender_coords: tuple = None, receiver_coords: list = None):
     """
