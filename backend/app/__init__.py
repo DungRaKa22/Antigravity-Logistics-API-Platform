@@ -11,6 +11,14 @@ def create_app(config_name="default"):
     app.config['SQLALCHEMY_DATABASE_URI'] = config_obj.DATABASE_URL
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+    # Cấu hình Pool Connection để chống đứt kết nối ngắt quãng với Supabase/PgBouncer
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        "pool_recycle": 280,      # Tái chế kết nối sau 280 giây (tránh Supabase đóng kết nối idle)
+        "pool_pre_ping": True,    # Kiểm tra kết nối trước khi truy vấn (tự reconnect nếu đứt)
+        "pool_size": 10,          # Số lượng kết nối tối đa duy trì trong pool
+        "max_overflow": 20        # Số lượng kết nối vượt mức cho phép khi cao tải
+    }
+
     # Initialize Extensions
     db.init_app(app)
     cors.init_app(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=False)
