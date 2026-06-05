@@ -56,11 +56,13 @@ Dù đã nỗ lực hết mình để hoàn thiện đồ án một cách chỉn
   - 5. Phương pháp nghiên cứu
   - 6. Ý nghĩa khoa học và thực tiễn của đồ án
   - 7. Kết cấu của đồ án
-- **CHƯƠNG 1: CƠ SỞ LÝ THUYẾT**
-  - 1.1. Tổng quan về nghiệp vụ giao nhận bưu phẩm và đối soát COD
-  - 1.2. Các nền tảng công nghệ áp dụng
-  - 1.3. Tổng quan các hệ thống vận chuyển tương tự tại Việt Nam
-  - 1.4. Đề xuất giải pháp kiến trúc hệ thống Antigravity Express
+- **CHƯƠNG 1: CƠ SỞ LÝ THUYẾT VÀ KIẾN TRÚC HỆ THỐNG**
+  - 1.1. Nghiệp vụ Giao nhận Bưu chính Chặng cuối và Tự động hóa Đối soát Tài chính
+  - 1.2. Kiến trúc Client-Server và Mô hình phân tán API-First
+  - 1.3. Giao diện lập trình ứng dụng (API) và Chuẩn RESTful
+  - 1.4. Hệ quản trị cơ sở dữ liệu quan hệ PostgreSQL và SQLAlchemy ORM
+  - 1.5. Công nghệ phát triển các phân hệ (Tech Stack)
+  - 1.6. Đánh giá các hệ thống vận chuyển thực tế tại Việt Nam
 - **CHƯƠNG 2: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG**
   - 2.1. Khảo sát nghiệp vụ bưu cục và mô tả bài toán thực tế
   - 2.2. Sơ đồ phân cấp chức năng (BFD)
@@ -214,11 +216,11 @@ Nhận thức rõ các yêu cầu thực tiễn và những khoảng trống cô
 ---
 ---
 
-## CHƯƠNG 1: CƠ SỞ LÝ THUYẾT
+## CHƯƠNG 1: CƠ SỞ LÝ THUYẾT VÀ KIẾN TRÚC HỆ THỐNG
 
-### 1.1. Tổng quan về nghiệp vụ giao nhận bưu phẩm và đối soát COD
+### 1.1. Nghiệp vụ Giao nhận Bưu chính Chặng cuối và Tự động hóa Đối soát Tài chính
 
-#### 1.1.1. Quy trình giao nhận chặng cuối (Last-mile delivery) và mạng lưới trung chuyển
+#### 1.1.1. Quy trình giao nhận chặng cuối (Last-mile delivery) truyền thống và mạng lưới trung chuyển
 Trong lĩnh vực logistics và chuỗi cung ứng, giao hàng chặng cuối (last-mile delivery) là thuật ngữ mô tả chặng cuối cùng của quá trình vận chuyển bưu phẩm: từ bưu cục phân phối cuối cùng đến tay người tiêu dùng. Mặc dù đây là chặng ngắn nhất về khoảng cách địa lý, nhưng nó lại là khâu phức tạp, tốn kém và kém hiệu quả nhất, chiếm tới 53% tổng chi phí vận tải của toàn bộ chuỗi cung ứng. Quy trình giao nhận last-mile truyền thống thường bao gồm 5 bước cốt lõi:
 1.  **Gom hàng (First-mile collection):** Bưu tá đến địa chỉ của người gửi (Merchant) để thu gom bưu phẩm hoặc người gửi tự mang hàng ra bưu cục vệ tinh gần nhất (Origin Hub).
 2.  **Nhập kho bưu cục gửi (Inbound Origin):** Hàng hóa được phân loại sơ bộ tại bưu cục vệ tinh theo vùng miền nhận.
@@ -226,7 +228,7 @@ Trong lĩnh vực logistics và chuỗi cung ứng, giao hàng chặng cuối (l
 4.  **Nhập kho phát (Inbound Destination):** Hàng hóa đến bưu cục vệ tinh đích, nhân viên quét nhận vào kho phát và thực hiện phân vùng bưu phẩm cho từng bưu tá (Shipper).
 5.  **Giao chặng cuối (Last-mile delivery):** Bưu tá gán đơn lên xe, đi giao đến địa chỉ người nhận và ghi nhận kết quả (thành công hoặc thất bại).
 
-#### 1.1.2. Giải pháp tối ưu hóa định tuyến chặng ngắn (Direct Delivery < 10km)
+#### 1.1.2. Giải pháp giao hàng chặng ngắn dưới 10km (Direct Delivery) tối ưu hóa tài nguyên
 Trong thực tế đô thị Việt Nam, một tỷ lệ lớn đơn hàng thương mại điện tử phát sinh giao nhận trong cùng một quận/huyện hoặc giữa các quận giáp ranh có khoảng cách địa lý rất gần (dưới 10km). Đối với nhóm đơn hàng chặng ngắn này, quy trình vận tải truyền thống (phải gom về bưu cục -> chuyển về kho tổng phân loại -> chuyển ngược lại bưu cục đích -> gán shipper giao) bộc lộ sự bất hợp lý nghiêm trọng:
 *   **Kéo dài thời gian giao hàng:** Đơn hàng phát sinh lúc sáng nhưng phải đến chiều tối hoặc ngày hôm sau mới tới tay người nhận do phải chờ lịch gom xe tải định kỳ.
 *   **Gây tắc nghẽn kho bãi:** Các tổng kho phân loại trung tâm phải xử lý lượng bưu phẩm tồn kho ngắn chặng không cần thiết, làm giảm hiệu suất xử lý đơn liên tỉnh.
@@ -256,7 +258,7 @@ graph LR
 ##### Hình 1.1: Mô tả luồng vận chuyển chặng ngắn giao trực tiếp dưới 10km
 
 
-#### 1.1.3. Nghiệp vụ thu tiền hộ (COD) và cơ chế khấu trừ tài chính kế toán bưu chính
+#### 1.1.3. Nghiệp vụ thu tiền hộ (COD) và cơ chế tự động hóa đối soát kế toán bưu chính
 Thu tiền hộ (COD - Cash on Delivery) là nghiệp vụ trong đó đơn vị bưu chính đóng vai trò trung gian tài chính: vừa giao hàng vừa thu hộ tiền giá trị hàng hóa từ người nhận, sau đó hoàn trả lại cho người gửi (Merchant). Tại Việt Nam, do lòng tin vào giao dịch trực tuyến chưa cao, COD vẫn là phương thức thanh toán phổ biến nhất. Quy trình quản lý COD đòi hỏi tính chính xác, bảo mật và tức thời nhằm tránh rủi ro thất thoát dòng tiền. Các thành phần dòng tiền trong một vận đơn COD bao gồm:
 *   **Tiền thu hộ COD ($T_{COD}$):** Số tiền ghi trên vận đơn mà shipper phải thu từ người nhận khi giao hàng thành công.
 *   **Cước phí vận chuyển ($C_{ship}$):** Phí dịch vụ giao nhận tính dựa trên khoảng cách di chuyển thực tế ($Km$) và trọng lượng tính cước của bưu phẩm ($G$). Trọng lượng tính cước được xác định theo tiêu chuẩn logistics quốc tế: chọn giá trị lớn nhất giữa trọng lượng cân thực tế ($W_{real}$) và trọng lượng quy đổi thể tích cồng kềnh ($W_{vol}$). Công thức quy đổi thể tích cồng kềnh tiêu chuẩn là:
@@ -270,50 +272,109 @@ Quy trình đối soát COD truyền thống thường có chu kỳ dài (theo t
 
 ---
 
-### 1.2. Các nền tảng công nghệ áp dụng
+### 1.2. Kiến trúc Client-Server và Mô hình phân tán API-First
 
-#### 1.2.1. Thư viện ReactJS và Tailwind CSS v4 phía Client-side
-ReactJS là một thư viện JavaScript mã nguồn mở được phát triển bởi Facebook (nay là Meta) vào năm 2013, chuyên dùng để xây dựng giao diện người dùng (UI) tương tác cho các ứng dụng web đơn trang (SPA - Single Page Application). Các đặc điểm kỹ thuật nổi bật của ReactJS bao gồm:
-*   **Virtual DOM (DOM ảo):** Thay vì cập nhật trực tiếp lên cây DOM thật của trình duyệt (vốn là một thao tác cực kỳ tốn hiệu năng), ReactJS duy trì một bản sao DOM ảo trong bộ nhớ RAM. Khi trạng thái (state) của ứng dụng thay đổi, React tính toán sự khác biệt giữa DOM ảo mới và DOM ảo cũ (thuật toán Diffing) và chỉ cập nhật những phần tử thực sự thay đổi lên DOM thật, giúp tăng tốc độ hiển thị giao diện đáng kể.
-*   **Kiến trúc Component-based (Dựa trên thành phần):** Giao diện ứng dụng được chia nhỏ thành các component độc lập, có thể tái sử dụng và quản lý trạng thái riêng biệt. Điều này giúp mã nguồn dễ bảo trì, mở rộng và kiểm thử độc lập.
-*   **Cơ chế luồng dữ liệu một chiều (One-way data binding):** Giúp kiểm soát luồng truyền dữ liệu từ component cha xuống component con thông qua `props`, hạn chế tối đa các lỗi side-effect khó kiểm soát trong các ứng dụng quy mô lớn.
+#### 1.2.1. Định nghĩa kiến trúc Client-Server truyền thống
+Kiến trúc Client-Server (Khách - Chủ) là mô hình mạng phân tán trong đó các nhiệm vụ hoặc khối lượng công việc được phân chia giữa các nhà cung cấp tài nguyên hoặc dịch vụ (gọi là Server) và những người yêu cầu dịch vụ (gọi là Client). Trong mô hình truyền thống này:
+*   **Client (Phía máy khách):** Thường là một trình duyệt web hoặc ứng dụng người dùng cuối, đóng vai trò nhận yêu cầu từ người dùng, đóng gói dữ liệu và gửi yêu cầu dưới dạng HTTP Request tới máy chủ. Client ở đây ít tham gia vào việc xử lý logic nghiệp vụ hay tính toán phức tạp.
+*   **Server (Phía máy chủ):** Là máy chủ dịch vụ chịu trách nhiệm tiếp nhận, phân tích yêu cầu từ Client, thực hiện các thao tác xử lý logic nghiệp vụ, truy vấn và ghi dữ liệu vào cơ sở dữ liệu (Database), sau đó xây dựng lại mã nguồn giao diện (ví dụ như render trang HTML động ở server - Server-Side Rendering) và trả về cho Client dưới dạng HTTP Response.
 
-Kết hợp với **Tailwind CSS v4** - phiên bản mới nhất của framework CSS hướng tiện ích (utility-first CSS framework). Phiên bản v4 tối ưu hóa hiệu năng biên dịch thông qua engine CSS mới viết bằng Rust, hỗ trợ khai báo biến CSS gốc (native CSS variables) trực tiếp trong file CSS cấu hình chính thay vì file cấu hình JavaScript phức tạp. Việc này cho phép xây dựng một **Design System Premium Dark-Neon** đồng nhất với các hiệu ứng kính mờ (glassmorphism), viền phát sáng neon-pulse động và tối ưu hóa responsive layout trên mọi thiết bị di động của shipper hay màn hình bảng điều khiển của bưu cục quản trị.
+Hạn chế lớn nhất của kiến trúc Client-Server truyền thống phụ thuộc vào kết xuất máy chủ (SSR) là sự ràng buộc chặt chẽ (tight coupling) giữa giao diện hiển thị và logic nghiệp vụ. Khi giao diện hoặc nền tảng Client thay đổi (như xây dựng thêm app di động, hệ thống đối tác liên kết B2B), máy chủ phải được viết lại hoặc bổ sung các luồng xử lý riêng biệt, gây khó khăn lớn cho việc bảo trì, tối ưu hiệu năng và khả năng mở rộng hệ thống.
 
-#### 1.2.2. Python Flask và Flask-SocketIO phía Server-side
-Flask là một micro-framework viết bằng ngôn ngữ Python, được thiết kế theo triết lý tối giản, linh hoạt và dễ mở rộng. Khác với Django đồ sộ, Flask không đi kèm sẵn hệ thống quản trị admin hay ORM tích hợp mà cho phép lập trình viên tự do lựa chọn các thư viện tốt nhất để tích hợp. Các ưu điểm cốt lõi của Flask trong đề tài bao gồm:
-*   **Xây dựng RESTful API chuẩn hóa:** Flask cung cấp cơ chế định tuyến (routing) tường minh, xử lý các request/response định dạng JSON nhanh chóng, rất phù hợp làm backend dịch vụ cho frontend SPA ReactJS và các cổng tích hợp B2B API Key.
-*   **Hệ sinh thái thư viện Python phong phú:** Dễ dàng tích hợp SQLAlchemy (thư viện ORM mạnh mẽ), openpyxl/pandas (phục vụ kết xuất và đọc dữ liệu Excel), reportlab (tạo file PDF hóa đơn đối soát), và bcrypt (mã hóa mật khẩu an toàn).
-*   **Flask-SocketIO (WebSocket Integration):** Hỗ trợ thiết lập giao thức WebSockets - kênh truyền thông hai chiều, song công thời gian thực (realtime duplex communication) trên một kết nối TCP duy nhất giữa trình duyệt và máy chủ. Flask-SocketIO giúp hiện thực hóa tính năng live chat CSKH giữa khách hàng vãng lai và tổng đài viên, đồng thời đẩy thông báo đẩy (Web Push) trực tiếp tới màn hình shipper ngay khi điều phối viên gán đơn hàng mới.
+#### 1.2.2. Xu hướng kiến trúc API-First (Lấy API làm trung tâm) tách biệt hoàn toàn Lớp Dịch vụ (Backend) và Lớp Trình diễn (Frontend)
+Kiến trúc API-First là sự cải tiến vượt bậc dựa trên nền tảng Client-Server hiện đại, đưa API (Application Programming Interface) trở thành thành phần trung tâm cốt lõi của toàn bộ hệ thống ngay từ giai đoạn thiết kế ban đầu. Theo mô hình này, Lớp Dịch vụ (Backend) và Lớp Trình diễn (Frontend) được tách biệt hoàn toàn (Decoupled):
+*   **Decoupled Backend (Lớp Dịch vụ độc lập):** Máy chủ backend chỉ đóng vai trò là một kho cung cấp dịch vụ và xử lý logic nghiệp vụ thông qua các điểm cuối API (API Endpoints). Backend hoàn toàn không quan tâm giao diện hiển thị trông như thế nào, nó chỉ nhận dữ liệu thô và trả về dữ liệu thô dưới định dạng chuẩn hóa (như JSON) sau khi đã xác thực và xử lý.
+*   **Decoupled Frontend (Lớp Trình diễn độc lập):** Các ứng dụng Client (Web Portal dành cho Merchant, ứng dụng di động dành cho Shipper, hay hệ thống đối tác B2B) hoạt động độc lập với nhau. Frontend chịu trách nhiệm quản lý luồng trải nghiệm người dùng, tự gọi các endpoint API backend để lấy dữ liệu thô, sau đó tiến hành render giao diện tại phía Client (Client-Side Rendering) bằng các thư viện hiện đại như ReactJS.
 
-#### 1.2.3. Hệ quản trị cơ sở dữ liệu PostgreSQL và SQLAlchemy ORM
-PostgreSQL là hệ quản trị cơ sở dữ liệu quan hệ đối tượng (ORDBMS) mã nguồn mở tiên tiến nhất hiện nay, nổi tiếng với độ tin cậy, khả năng chịu tải cao và tuân thủ nghiêm ngặt chuẩn SQL cũng như các tính chất ACID:
-*   **Atomicity (Tính nguyên tố):** Đảm bảo một giao dịch (transaction) kế toán như khấu trừ tiền ví shop và chuyển trạng thái đối soát diễn ra thành công trọn vẹn hoặc hoàn trả (rollback) toàn bộ nếu xảy ra lỗi giữa chừng, tránh tình trạng mất mát dữ liệu tài chính.
-*   **Consistency (Tính nhất quán):** Ràng buộc khóa ngoại (Foreign Keys) chặt chẽ giữa các bảng như `DonHang`, `DoiSoat`, `LichSu_TrangThai` đảm bảo tính toàn vẹn tham chiếu.
-*   **Isolation (Tính cô lập):** Các giao dịch đồng thời được xử lý độc lập, không gây ra tình trạng đọc dữ liệu rác (dirty reads) khi nhiều shipper cùng cập nhật đơn đồng thời.
-*   **Durability (Tính bền vững):** Dữ liệu được ghi nhận vào ổ đĩa cứng vĩnh viễn ngay khi giao dịch thành công.
-
-Để tương tác với PostgreSQL từ Flask, đồ án sử dụng **SQLAlchemy ORM** (Object-Relational Mapping). SQLAlchemy cho phép mô hình hóa các bảng CSDL thành các Class Python, giúp lập trình viên thao tác truy vấn dữ liệu dưới dạng hướng đối tượng thay vì viết các câu lệnh SQL thuần phức tạp, đồng thời bảo vệ hệ thống khỏi các lỗ hổng bảo mật nguy hiểm như SQL Injection.
-
-#### 1.2.4. Công cụ bản đồ Leaflet Maps và công cụ định tuyến OSRM / Nominatim APIs
-Hệ thống logistics thông minh yêu cầu tích hợp sâu các dịch vụ dữ liệu địa lý thời gian thực:
-*   **Leaflet Maps:** Là thư viện JavaScript mã nguồn mở siêu nhẹ (khoảng 39KB), chuyên dùng để hiển thị bản đồ số tương tác trên nền web. Leaflet hỗ trợ hiển thị các lớp bản đồ từ OpenStreetMap, đánh dấu các điểm mốc GPS (Marker) bưu cục vệ tinh, kho trung chuyển, vẽ lộ trình và có khả năng tương thích mượt mà trên cả trình duyệt máy tính lẫn di động của bưu tá.
-*   **OSRM (Open Source Routing Machine):** Là một engine định tuyến mã nguồn mở hiệu năng cao, được viết bằng ngôn ngữ C++ và tối ưu hóa cho dữ liệu bản đồ OpenStreetMap. OSRM cung cấp khả năng tìm kiếm đường đi ngắn nhất và nhanh nhất giữa các cặp tọa độ địa lý với độ trễ cực thấp (dưới vài mili-giây) thông qua cấu trúc phân cấp định tuyến (Contraction Hierarchies). Trong hệ thống Antigravity Express, OSRM được tích hợp để tính toán quãng đường di chuyển thực tế của bưu phẩm qua mạng lưới đường giao thông, làm cơ sở để tính cước phí chính xác thay vì khoảng cách đường chim bay.
-*   **Nominatim Geocoding API:** Là công cụ tìm kiếm và giải mã địa chỉ của OpenStreetMap. Nominatim chịu trách nhiệm chuyển đổi địa chỉ văn bản của khách hàng nhập vào (ví dụ: "144 Xuân Thủy, Cầu Giấy, Hà Nội") thành tọa độ địa lý kinh độ/vĩ độ (Geocoding) phục vụ việc hiển thị marker trên bản đồ Leaflet và cung cấp đầu vào tọa độ cho OSRM định tuyến. Ngược lại, Nominatim cũng hỗ trợ giải mã tọa độ thành địa chỉ (Reverse Geocoding) giúp shipper xác định vị trí giao nhận nhanh chóng.
+Mô hình phân tán API-First mang lại nhiều lợi thế vượt trội cho hệ thống logistics Antigravity Express:
+1.  **Tính tái sử dụng cao:** Cùng một tập hợp API nghiệp vụ (như tạo đơn, tính cước, đổi trạng thái) có thể phục vụ song song cả giao diện Web, App di động của Shipper, và hệ thống ERP của khách hàng B2B.
+2.  **Phát triển song song (Parallel Development):** Đội ngũ frontend và backend có thể làm việc độc lập dựa trên tài liệu giao diện API (API contract) đã cam kết trước, rút ngắn thời gian hoàn thành dự án.
+3.  **Dễ bảo trì và nâng cấp:** Thay đổi cấu trúc cơ sở dữ liệu hoặc logic nghiệp vụ ở backend không làm ảnh hưởng đến mã nguồn hiển thị của frontend, miễn là cấu trúc dữ liệu đầu ra của API được giữ nguyên.
 
 ---
 
-### 1.3. Tổng quan các hệ thống vận chuyển tương tự tại Việt Nam
+### 1.3. Giao diện lập trình ứng dụng (API) và Chuẩn RESTful
+
+#### 1.3.1. Khái niệm về API và giao tiếp liên máy chủ (Machine-to-Machine)
+Giao diện lập trình ứng dụng (API - Application Programming Interface) là một tập hợp các quy tắc, giao thức và công cụ định nghĩa cách thức tương tác và truyền thông tin giữa các thành phần phần mềm khác nhau. API đóng vai trò như một cầu nối trung gian, cho phép một ứng dụng truy xuất dữ liệu hoặc kích hoạt tính năng của một ứng dụng khác mà không cần hiểu rõ cấu trúc mã nguồn bên trong của đối phương.
+
+Trong hệ thống logistics hiện đại, **giao tiếp liên máy chủ (Machine-to-Machine - M2M)** thông qua API đóng vai trò quyết định trong việc tự động hóa chuỗi cung ứng:
+*   Các đối tác bán lẻ (Merchants) quy mô lớn thường sử dụng hệ thống quản lý kho và bán hàng riêng biệt (ERP, CRM). Việc tạo thủ công hàng trăm đơn hàng mỗi ngày trên giao diện Web là điều không khả thi.
+*   Thông qua cơ chế xác thực an toàn bằng B2B API Key (khóa API có độ bảo mật cao, định dạng 64 ký tự ngẫu nhiên), hệ thống ERP của đối tác có thể trực tiếp gửi yêu cầu tạo vận đơn, lấy thông tin định tuyến và in nhãn nhiệt A6 tự động theo thời gian thực (Real-time M2M). Quá trình này diễn ra hoàn toàn chặng ngầm giữa hai hệ thống máy chủ mà không cần bất kỳ sự can thiệp thủ công nào của con người, giúp tăng tốc tối đa tốc độ xử lý đơn hàng.
+
+#### 1.3.2. Tiêu chuẩn thiết kế RESTful API dựa trên các phương thức HTTP (GET, POST, PUT, DELETE) và định dạng dữ liệu trao đổi JSON
+REST (Representational State Transfer) là một kiểu kiến trúc phần mềm định nghĩa các ràng buộc thiết kế cho các hệ thống phân tán trên mạng Internet. Một API tuân thủ các nguyên tắc của REST được gọi là RESTful API. Hệ thống Antigravity Express thiết kế các điểm cuối API theo chuẩn RESTful chặt chẽ dựa trên các thành phần tiêu chuẩn của giao thức HTTP:
+*   **Resource-Oriented URIs (URI hướng tài nguyên):** Các tài nguyên trong hệ thống được định nghĩa bằng danh từ số nhiều rõ ràng (ví dụ: `/api/orders` cho đơn hàng, `/api/users` cho người dùng, `/api/reconciles` cho các đợt đối soát).
+*   **HTTP Methods (Các phương thức HTTP nghiệp vụ):**
+    *   `GET`: Truy xuất dữ liệu của tài nguyên (ví dụ: `GET /api/orders` để lấy danh sách đơn, `GET /api/orders/1` để lấy chi tiết một đơn).
+    *   `POST`: Khởi tạo một tài nguyên mới (ví dụ: `POST /api/orders` để tạo vận đơn mới).
+    *   `PUT` / `PATCH`: Cập nhật thông tin của tài nguyên đã có (ví dụ: `PATCH /api/orders/1` để cập nhật trạng thái đơn).
+    *   `DELETE`: Xóa tài nguyên khỏi hệ thống (ví dụ: `DELETE /api/address-book/1` để xóa địa chỉ lưu trữ).
+*   **HTTP Status Codes (Các mã trạng thái phản hồi):** Hệ thống phản hồi kết quả trực quan thông qua các mã trạng thái chuẩn hóa:
+    *   `200 OK`: Yêu cầu xử lý thành công.
+    *   `201 Created`: Tạo tài nguyên mới thành công.
+    *   `400 Bad Request`: Dữ liệu đầu vào không hợp lệ hoặc thiếu trường bắt buộc.
+    *   `401 Unauthorized`: Lỗi xác thực (chưa đăng nhập hoặc JWT hết hạn).
+    *   `403 Forbidden`: Không có quyền truy cập tài nguyên.
+    *   `404 Not Found`: Tài nguyên yêu cầu không tồn tại.
+    *   `500 Internal Server Error`: Lỗi phát sinh từ phía máy chủ hệ thống.
+*   **JSON Format (Định dạng dữ liệu trao đổi JSON):** JSON (JavaScript Object Notation) được chọn làm định dạng trao đổi dữ liệu duy nhất giữa client và server nhờ tính gọn nhẹ, dễ đọc đối với con người và dễ dàng phân tích cú pháp đối với mọi ngôn ngữ lập trình hiện đại.
+
+---
+
+### 1.4. Hệ quản trị cơ sở dữ liệu quan hệ PostgreSQL và SQLAlchemy ORM
+
+#### 1.4.1. Giới thiệu PostgreSQL và tính nhất quán dữ liệu qua bộ tiêu chuẩn ACID
+PostgreSQL là hệ quản trị cơ sở dữ liệu quan hệ đối tượng (ORDBMS) mã nguồn mở tiên tiến và mạnh mẽ nhất hiện nay. Trong đề tài nghiên cứu hệ thống quản lý logistics và tài chính đối soát COD như Antigravity Express, PostgreSQL được lựa chọn nhờ khả năng xử lý dữ liệu phức tạp, độ tin cậy tuyệt đối và tuân thủ nghiêm ngặt chuẩn SQL kết hợp với bộ tiêu chuẩn giao dịch **ACID**:
+*   **Atomicity (Tính nguyên tố):** Đảm bảo một giao dịch (transaction) tài chính diễn ra trọn vẹn hoặc không diễn ra gì cả. Ví dụ, trong nghiệp vụ kế toán bưu cục xác nhận đối soát COD cho shop: quá trình trừ số dư ví thu hộ, cộng số dư ví khả dụng của shop, ghi nhận lịch sử giao dịch và chuyển trạng thái đơn hàng sang `DA_DOI_SOAT` phải được bó chung vào một transaction. Nếu có bất kỳ lỗi kết nối mạng hoặc lỗi hệ thống xảy ra ở bước cuối cùng, toàn bộ quá trình trước đó sẽ được tự động khôi phục (rollback) lại trạng thái ban đầu, tránh tình trạng thất thoát tài chính rác.
+*   **Consistency (Tính nhất quán):** Dữ liệu luôn tuân thủ các ràng buộc nghiệp vụ (Constraints) và khóa ngoại (Foreign Keys). Không thể tồn tại một đơn hàng liên kết tới một bưu cục không có thực trong bảng `ChiNhanh`.
+*   **Isolation (Tính cô lập):** Các giao dịch đồng thời (concurrency transactions) diễn ra độc lập, không xâm phạm dữ liệu của nhau. Khi hàng chục shipper đồng thời cập nhật trạng thái đơn hàng của họ, PostgreSQL cô lập các phiên ghi, tránh tình trạng đọc rác (dirty read) hay xung đột ghi đè dữ liệu.
+*   **Durability (Tính bền vững):** Một khi giao dịch đã được xác nhận (commit), dữ liệu sẽ được lưu trữ vĩnh viễn trên đĩa cứng và không bị mất đi ngay cả khi máy chủ gặp sự cố mất điện đột ngột.
+
+Để đáp ứng nhu cầu tải thực tế và tối ưu tài nguyên đám mây, cơ sở dữ liệu PostgreSQL của hệ thống được triển khai trên nền tảng Supabase, kết hợp với bộ điều phối kết nối **PgBouncer connection pooler** hoạt động ở chế độ *Transaction Mode*, giúp hệ thống duy trì hàng nghìn kết nối đồng thời từ backend mà không làm nghẽn RAM của máy chủ cơ sở dữ liệu.
+
+#### 1.4.2. Vai trò "Single Source of Truth" (Nguồn chân lý duy nhất) trong kiến trúc phân tán
+Trong một hệ thống phân tán gồm nhiều phân hệ độc lập (Merchant Portal, Shipper App, B2B Clients, Admin Dashboard) cùng hoạt động đồng thời, việc đồng bộ hóa dữ liệu là thách thức rất lớn. Vai trò của cơ sở dữ liệu PostgreSQL trung tâm được thiết lập làm **Single Source of Truth (SSOT - Nguồn chân lý duy nhất)**:
+*   Mọi thông tin về trạng thái vận đơn (nhập kho, xuất kho, đang giao, giao thành công), lịch sử vị trí quét, số dư ví tài chính của shop, và thông tin điều phối bưu cục đều được lưu trữ tập trung tại PostgreSQL.
+*   Các ứng dụng client hoặc các worker nghiệp vụ không được tự ý lưu trữ trạng thái riêng lẻ (local state) kéo dài mà bắt buộc phải truy vấn hoặc cập nhật trực tiếp về cơ sở dữ liệu trung tâm thông qua API Backend. Điều này loại bỏ hoàn toàn các lỗi mâu thuẫn dữ liệu (ví dụ: bưu tá báo giao thành công nhưng trên màn hình chủ shop vẫn hiện đang giao hàng) và đảm bảo tính minh bạch tài chính.
+
+#### 1.4.3. SQLAlchemy ORM - Ánh xạ quan hệ đối tượng và ngăn chặn SQL Injection
+Để tương tác với PostgreSQL từ backend Python Flask, đề tài sử dụng thư viện **SQLAlchemy ORM** (Object-Relational Mapping). ORM là kỹ thuật lập trình giúp ánh xạ các bảng trong cơ sở dữ liệu quan hệ thành các lớp đối tượng (Classes) trong ngôn ngữ lập trình Python:
+*   Thay vì phải viết các câu truy vấn SQL thuần phức tạp dưới dạng chuỗi văn bản (dễ xảy ra lỗi cú pháp và khó bảo trì), lập trình viên có thể tương tác với cơ sở dữ liệu thông qua các phương thức hướng đối tượng của Python (ví dụ: `db.session.add(don_hang)` hoặc `DonHang.query.filter_by(MaDonHang=id).first()`).
+*   **Ngăn chặn lỗ hổng SQL Injection:** Đây là một trong những lỗ hổng bảo mật web nguy hiểm nhất, xảy ra khi kẻ tấn công chèn các câu lệnh SQL độc hại vào các ô nhập liệu. SQLAlchemy ORM tự động thực hiện cơ chế tham số hóa câu lệnh (Parameterized Queries) và làm sạch dữ liệu đầu vào (Input Sanitization) chặng ngầm cho mọi truy vấn, vô hiệu hóa hoàn toàn khả năng chèn mã SQL độc hại từ bên ngoài, bảo đảm an toàn thông tin tối đa cho hệ thống bưu chính.
+
+---
+
+### 1.5. Công nghệ phát triển các phân hệ (Tech Stack)
+
+#### 1.5.1. Khối Backend API: Ngôn ngữ Python và Micro-framework Flask kết hợp Flask-SocketIO (Realtime WebSockets)
+Bộ não xử lý logic của Antigravity Express được phát triển dựa trên ngôn ngữ lập trình **Python** và micro-framework **Flask**:
+*   **Python:** Được lựa chọn nhờ cú pháp rõ ràng, hiệu năng xử lý logic tốt và sở hữu hệ sinh thái thư viện toán học, xử lý dữ liệu cực kỳ mạnh mẽ phục vụ bài toán tối ưu hóa logistics.
+*   **Flask:** Là một micro-framework tối giản, linh hoạt. Flask cung cấp hệ thống định tuyến (routing) nhanh chóng, cho phép lập trình viên tự do tích hợp các thư viện bổ sung như SQLAlchemy, PyJWT (bảo mật xác thực phân quyền Token), openpyxl (đọc và ghi file Excel), reportlab (xuất file PDF hóa đơn đối soát).
+*   **Flask-SocketIO (Realtime WebSockets):** Giao thức HTTP truyền thống chỉ cho phép Client gửi yêu cầu và Server phản hồi (One-way). Để thực hiện các tính năng thời gian thực như đẩy thông báo gán đơn ngay lập tức tới màn hình shipper, cập nhật tọa độ bưu tá trên bản đồ điều phối, và hỗ trợ tính năng Live Chat hỗ trợ khách hàng tức thời, hệ thống tích hợp **Flask-SocketIO**. Công nghệ này thiết lập một kênh truyền thông song công, hai chiều (Full-Duplex) chạy trên giao thức WebSockets qua một kết nối TCP duy nhất, cho phép Server chủ động đẩy dữ liệu xuống Client mà không cần Client phải thực hiện cơ chế gửi yêu cầu liên tục (Polling) tốn tài nguyên.
+
+#### 1.5.2. Khối Frontend Client Web: Thư viện ReactJS, Vite và Tailwind CSS v4 phía Client-side
+Giao diện người dùng được xây dựng bằng kiến trúc SPA hiện đại trên trình duyệt máy khách:
+*   **ReactJS:** Thư viện JavaScript hàng đầu để phát triển UI động. ReactJS tối ưu hóa hiệu năng hiển thị nhờ cơ chế **Virtual DOM** (DOM ảo) kết hợp với thuật toán so khớp (Diffing Algorithm), chỉ cập nhật các phần tử thực sự thay đổi lên cây DOM thật của trình duyệt. Kiến trúc Component-based của React giúp tái sử dụng các thành phần giao diện phức tạp (như bảng đối soát đơn, thẻ timeline trạng thái, khung vẽ chữ ký điện tử HTML5 Canvas).
+*   **Vite:** Công cụ build frontend thế hệ mới, thay thế Webpack cũ kỹ. Vite tận dụng cơ chế ES Modules gốc của trình duyệt để cung cấp tốc độ khởi động máy chủ lập trình (Dev Server) gần như tức thời và tính năng Hot Module Replacement (HMR) cực nhanh. Quá trình biên dịch sản phẩm (Production Build) được Vite tối ưu hóa thông qua Rollup để tạo ra các gói mã nguồn nhỏ gọn, tải trang nhanh.
+*   **Tailwind CSS v4:** Framework CSS tiện ích (Utility-first) thế hệ mới nhất, biên dịch cực nhanh bằng engine viết bằng ngôn ngữ Rust. Phiên bản v4 hỗ trợ biến CSS gốc trực tiếp và cải tiến hiệu ứng đồ họa, giúp xây dựng giao diện **Obsidian Dark-Neon** cao cấp, trực quan với hiệu ứng kính mờ (glassmorphism), viền phát sáng nhịp thở (neon-pulse) và khả năng đáp ứng responsive tự động trên mọi độ phân giải màn hình từ máy tính của kế toán bưu cục đến điện thoại của shipper.
+
+#### 1.5.3. Dịch vụ Bản đồ số: Open Source Routing Machine (OSRM) kết hợp Geocoding Nominatim của OpenStreetMap để định tuyến kilomet thực tế
+Bài toán cốt lõi của logistics thông minh là hiển thị trực quan và tính cước dựa trên đường đi thực tế thay vì khoảng cách đường chim bay:
+*   **Leaflet Maps:** Thư viện bản đồ số mã nguồn mở siêu nhẹ (39KB), chịu trách nhiệm hiển thị bản đồ trực quan lên màn hình Web, vẽ lộ trình và thả các Marker (ghim vị trí bưu cục, tổng kho, shipper, khách hàng) với hiệu ứng Neon đồng bộ.
+*   **OSRM (Open Source Routing Machine):** Engine định tuyến mã nguồn mở hiệu năng cao viết bằng C++. OSRM sử dụng dữ liệu địa đồ của OpenStreetMap và áp dụng thuật toán phân cấp định tuyến (Contraction Hierarchies) để tính toán quãng đường đi ngắn nhất giữa các tọa độ GPS qua mạng lưới giao thông đường bộ với tốc độ dưới 1 mili-giây. Kết quả khoảng cách kilomet thực tế từ OSRM được backend sử dụng trực tiếp để áp bảng giá tính cước đơn hàng, đảm bảo tính công bằng và chính xác cho cả khách hàng và bưu cục.
+*   **Nominatim API:** Dịch vụ geocoding của OpenStreetMap, hỗ trợ dịch chuyển các chuỗi địa chỉ chữ viết của người dùng nhập vào thành tọa độ Lat/Lng địa lý (Geocoding) để Leaflet hiển thị và OSRM định tuyến. Đồng thời hỗ trợ dịch ngược tọa độ GPS thành địa chỉ chữ viết (Reverse Geocoding) giúp bưu tá dễ dàng định vị thực địa.
+
+---
+
+### 1.6. Đánh giá các hệ thống vận chuyển thực tế tại Việt Nam
 
 Để có cơ sở thực tiễn vững chắc trong việc thiết kế và xây dựng hệ thống Antigravity Express, đồ án tiến hành khảo sát và đánh giá 3 đơn vị bưu chính chuyển phát nhanh chặng cuối có thị phần chi phối tại Việt Nam hiện nay bao gồm: SPX Express, Giao Hàng Nhanh (GHN) và Giao Hàng Tiết Kiệm (GHTK).
 
-#### 1.3.1. Phân tích chi tiết các hệ thống hiện tại
+#### 1.6.1. Khảo sát thực tế nghiệp vụ của SPX Express, Giao Hàng Nhanh (GHN), Giao Hàng Tiết Kiệm (GHTK)
 1.  **SPX Express:** Là đơn vị vận chuyển liên kết trực tiếp với sàn thương mại điện tử Shopee. SPX sở hữu hạ tầng tổng kho phân loại tự động quy mô cực lớn (sorting hub) tại Bắc Ninh và Bình Dương, ứng dụng trí tuệ nhân tạo và cánh tay robot phân loại hàng hóa công suất hàng chục vạn đơn mỗi giờ. Tuy nhiên, SPX chủ yếu phục vụ các đơn hàng phát sinh trên sàn Shopee, khả năng mở rộng tích hợp API B2B tự phục vụ cho các shop nhỏ lẻ ngoài sàn còn chưa tối ưu hóa về mặt giao diện và tài liệu lập trình.
 2.  **Giao Hàng Nhanh (GHN):** Là đơn vị bưu chính tư nhân đầu tiên tại Việt Nam số hóa quy trình logistics chặng cuối. GHN sở hữu mạng lưới bưu cục vệ tinh dày đặc phủ rộng 100% xã/phường trên toàn quốc, tích hợp hệ thống băng tải phân loại tự động tại các kho trung chuyển vùng lớn. Quy trình đối soát COD của GHN được thực hiện thông qua hệ thống ví và tài khoản ngân hàng liên kết, tuy nhiên chu kỳ đối soát cố định theo tuần vẫn làm chậm chu kỳ xoay vòng vốn của Merchant nhỏ lẻ.
 3.  **Giao Hàng Tiết Kiệm (GHTK):** Nổi tiếng với tốc độ giao hàng nội đô cực nhanh và ứng dụng di động cho shipper tối ưu hóa tốt. GHTK có thế mạnh về mạng lưới bưu tá am hiểu địa bàn cấp huyện xã và hệ thống quản trị hạn mức đơn gán cho shipper chặt chẽ. Tuy nhiên, quy trình trung chuyển bưu gửi của GHTK vẫn bắt buộc đi qua bưu cục gom và kho phân loại kể cả với các đơn hàng chặng ngắn trong cùng một đô thị nhỏ, gây lãng phí tài nguyên vận tải chặng trung gian.
-
-#### 1.3.2. Bảng so sánh các hệ thống vận chuyển tương tự tại Việt Nam
-Dưới đây là bảng phân tích so sánh chi tiết các tiêu chí kỹ thuật và nghiệp vụ bưu chính giữa các hệ thống tương tự và Antigravity Express:
 
 ##### Bảng 1.1: So sánh đặc điểm nghiệp vụ các hệ thống logistics tại Việt Nam
 
@@ -326,9 +387,7 @@ Dưới đây là bảng phân tích so sánh chi tiết các tiêu chí kỹ th
 | **Tích hợp API B2B** | Giới hạn đối tác lớn, tài liệu tích hợp API bảo mật cao nhưng khó kết nối. | Cung cấp API Key công cộng, tài liệu REST API chuẩn hóa cao. | Cung cấp cổng API riêng biệt cho các sàn thương mại điện tử lớn. | **Cấp API Key 64 ký tự tự phục vụ trực quan, hiển thị code mẫu cURL/Node.js/Python**. |
 | **Trợ lý hỗ trợ CSKH** | Chatbot tự động dạng cây phân cấp đơn giản, trả lời tự động. | Tổng đài CSKH truyền thống và chatbot trên ứng dụng di động. | Ticket hỗ trợ trên app và chatbot trả lời tự động chặng ngắn. | **Chatbot Quantum Guide tra cứu neon timeline, tự động handover CSKH qua WebSockets**. |
 
----
-
-### 1.4. Đề xuất giải pháp kiến trúc hệ thống Antigravity Express
+#### 1.6.2. Đề xuất giải pháp kiến trúc hệ thống Antigravity Express
 
 Để giải quyết triệt để các hạn chế của hệ thống truyền thống và đáp ứng tối đa tính linh hoạt, tốc độ của nghiệp vụ logistics thông minh, đồ án đề xuất giải pháp kiến trúc hệ thống **Antigravity Express** xây dựng theo mô hình kiến trúc 3 lớp (3-Tier Architecture) phân tách rõ nét:
 
@@ -362,8 +421,6 @@ graph TD
 *   **Tầng hiển thị (Presentation Tier):** Được xây dựng hoàn toàn bằng ReactJS (Single Page Application) kết hợp Tailwind CSS v4, cung cấp giao diện Premium Dark-Neon trực quan, đồng bộ trên cả máy tính của Merchant/Kế toán (dashboard Obsidian Cyberpunk) và thiết bị di động của Shipper/Thủ kho (Web App phản hồi responsive).
 *   **Tầng logic ứng dụng (Application Tier):** Được viết bằng ngôn ngữ Python sử dụng micro-framework Flask làm máy chủ API Gateway xử lý toàn bộ các yêu cầu. Tầng này tích hợp các middleware bảo mật xác thực JWT, middleware kiểm duyệt API Key B2B chặng ngầm, thư viện truyền thông song công thời gian thực Flask-SocketIO (WebSockets), giải thuật định tuyến trực tiếp chặng ngắn chèn bỏ các kho trung chuyển và giải thuật tính cước động theo khoảng cách KM bám đường của OSRM.
 *   **Tầng dữ liệu (Data Tier):** Hệ quản trị cơ sở dữ liệu quan hệ PostgreSQL chịu trách nhiệm lưu trữ và bảo đảm tính toàn vẹn ACID cho 15 bảng quan hệ nghiệp vụ, tương tác thông qua SQLAlchemy ORM để ngăn chặn SQL Injection. Bên cạnh đó, OSRM Server chạy dữ liệu địa đồ OpenStreetMap cung cấp dữ liệu định tuyến thời gian thực.
-
----
 ---
 
 ## CHƯƠNG 2: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG

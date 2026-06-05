@@ -12,7 +12,33 @@ Tài liệu này chứa thông tin tài khoản dùng thử và kiểm thử c�
 | `cskh1` | `cskh123` | Nguyễn Hồng Nhung (CSKH) | CSKH | Toàn hệ thống |
 
 ---
-
+1. Tổng kho Miền Bắc (Bắc Ninh)
+Quản lý Tổng kho:
+Tên đăng nhập: Quanly-MB
+Mật khẩu: quanly123
+Vai trò: ADMIN
+Thủ kho (Quét đơn):
+Tên đăng nhập: Kho-MB
+Mật khẩu: kho123
+Vai trò: KHO
+2. Tổng kho Miền Trung (Quảng Ngãi)
+Quản lý Tổng kho:
+Tên đăng nhập: Quanly-MT
+Mật khẩu: quanly123
+Vai trò: ADMIN
+Thủ kho (Quét đơn):
+Tên đăng nhập: Kho-MT
+Mật khẩu: kho123
+Vai trò: KHO
+3. Tổng kho Miền Nam (Bình Dương / TP.HCM)
+Quản lý Tổng kho:
+Tên đăng nhập: Quanly-MN
+Mật khẩu: quanly123
+Vai trò: ADMIN
+Thủ kho (Quét đơn):
+Tên đăng nhập: Kho-MN
+Mật khẩu: kho123
+Vai trò: KHO
 ## 🏢 Danh sách Tài khoản theo từng Chi nhánh (63 Tỉnh/Thành)
 
 Mỗi chi nhánh có 5 tài khoản nhân viên được tự động sinh. Dưới đây là danh sách phân nhóm:
