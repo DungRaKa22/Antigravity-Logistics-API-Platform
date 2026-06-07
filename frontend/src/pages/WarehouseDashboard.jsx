@@ -73,17 +73,8 @@ export default function WarehouseDashboard() {
       await scanner.start(
         initialCamId,
         {
-          fps: 24,
-          disableFlip: false,
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true
-          },
-          qrbox: (width, height) => {
-            // Optimized barcode rectangle frame
-            const boxWidth = Math.min(width * 0.85, 290);
-            const boxHeight = Math.min(height * 0.45, 130);
-            return { width: boxWidth, height: boxHeight };
-          }
+          fps: 15,
+          disableFlip: false
         },
         (decodedText) => {
           handleCameraDecoded(decodedText);
@@ -110,16 +101,8 @@ export default function WarehouseDashboard() {
       await html5QrcodeRef.current.start(
         camId,
         {
-          fps: 24,
-          disableFlip: false,
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true
-          },
-          qrbox: (width, height) => {
-            const boxWidth = Math.min(width * 0.85, 290);
-            const boxHeight = Math.min(height * 0.45, 130);
-            return { width: boxWidth, height: boxHeight };
-          }
+          fps: 15,
+          disableFlip: false
         },
         (decodedText) => {
           handleCameraDecoded(decodedText);
