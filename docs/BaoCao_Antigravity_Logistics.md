@@ -139,11 +139,14 @@ Dù đã nỗ lực hết mình để hoàn thiện đồ án một cách chỉn
 *   Hình 3.1: Giao diện tra cứu bưu gửi public và radar quét 3D pha lê
 *   Hình 3.2: Giao diện Tạo đơn hàng lẻ B2C có hộp 3D trực quan co giãn
 *   Hình 3.3: Giao diện cổng VietQR dynamic MB Bank thanh toán cước phí
-*   Hình 3.4: Giao diện Cổng tích hợp API B2B Keys & Tài liệu SDK
-*   Hình 3.5: Giao diện đối soát COD chi tiết của Kế toán
-*   Hình 3.6: Bản xem trước và in ấn A4 biên bản đối soát COD (đọc chữ số)
-*   Hình 3.7: Dashboard bưu tá (Shipper Portal) và khung vẽ chữ ký điện tử
-*   Hình 3.8: Giao diện Đăng nhập hệ thống (Obsidian Glassmorphism Cyberpunk)
+*   Hình 3.4: Giao diện Đăng nhập hệ thống (Obsidian Glassmorphism Cyberpunk)
+*   Hình 3.5: Giao diện Tạo đơn hàng đối tác (Merchant Order Form) tích hợp chỉ dẫn tuyến đường R2L
+*   Hình 3.6: Bản đồ định tuyến OSRM chi tiết chặng trung chuyển liên miền
+*   Hình 3.7: Giao diện Cổng tích hợp API B2B Keys & Tài liệu SDK
+*   Hình 3.8: Bản mô phỏng kiến trúc kho thông minh Smart Warehouse
+*   Hình 3.9: Giao diện Camera quét barcode PDA trong kho (Webcam PDA Scanner)
+*   Hình 3.10: Dashboard bưu tá (Shipper Portal) và khung vẽ chữ ký điện tử
+
 
 ---
 
@@ -518,6 +521,30 @@ sequenceDiagram
 *   **Phiếu xuất/nhập kho bưu gửi:** Phiếu điện tử ghi nhận thời gian quét mã, ID nhân viên kho quét, danh sách bưu gửi nằm trong sọt hàng trung chuyển.
 *   **Bảng đối soát COD định kỳ:** Xuất bảng đối chiếu chi tiết dạng Accordion chia nhỏ dòng tiền của **Đơn COD** (thu hộ tiền) và **Đơn cước 0đ** (tiền cước shop thanh toán trước qua ví).
 *   **Sao kê lương bưu tá (.xlsx):** File Excel được backend tạo ra tự động qua SheetJS, căn chỉnh tự động kích thước các cột, hiển thị tiếng Việt có dấu hỗ trợ đắc lực cho HR và Kế toán làm quỹ lương.
+
+##### 2.1.4.1. Đặc tả và Cấu trúc Tem Vận Đơn tiêu chuẩn (A6 Shipping Label)
+
+Tem vận đơn (Waybill Label) đóng vai trò là "chứng minh thư" của kiện hàng trong suốt hành trình lưu thông logistics từ lúc gửi đến lúc phát thành công chặng cuối. Hệ thống Antigravity Express thiết kế mẫu in ấn tem vận đơn theo chuẩn khổ A6 dọc (A6 portrait - 105mm × 148mm) chuyên biệt, hỗ trợ in ấn trực tiếp từ trình duyệt web ra máy in nhiệt mà không qua phần mềm trung gian. Cấu trúc tem vận đơn được phân rã thành các phân vùng nghiệp vụ chặt chẽ:
+
+1. **Phân vùng Nhận dạng Thương hiệu & Barcode (Header Area):**
+   - Góc trái hiển thị Logo Antigravity Express dạng đồ họa Vector (SVG) chuyên nghiệp cùng sologan thương hiệu.
+   - Góc phải chứa mã vạch (Barcode) định dạng Code128 chất lượng cao được render tự động qua API, mã hóa trực tiếp ID vận đơn (`order_id`) cùng dòng văn bản hiển thị mã vận đơn để nhân viên có thể nhập thủ công khi camera quét gặp sự cố (mờ nhãn, rách nhãn).
+
+2. **Phân vùng Thông tin Địa chỉ (Sender & Receiver Address Block):**
+   - Phân chia làm 2 cột đối xứng rõ rệt: Cột "Từ" (Người gửi - Shop) và cột "Đến" (Người nhận - Khách hàng).
+   - Mỗi cột hiển thị đầy đủ: Họ tên người gửi/nhận (viết hoa in đậm), số điện thoại liên hệ, địa chỉ chi tiết nơi lấy hàng và giao hàng chặng cuối.
+
+3. **Phân vùng Chỉ dẫn Phân loại & Mô tả Hàng hóa (Routing & Goods Description):**
+   - Góc trái hiển thị chuỗi mã phân loại tuyến đường (Sorting Code) tương ứng với số hiệu vùng gửi/nhận và bưu cục phụ trách, giúp bộ phận phân loại tại các Kho trung chuyển định hướng sọt hàng nhanh chóng bằng mắt thường.
+   - Góc phải hiển thị danh mục nội dung hàng hóa (Mô tả sản phẩm, số lượng thực tế) và chỉ dẫn kiểm hàng (Quyền kiểm tra hàng hóa: Không cho khách xem hàng, Cho khách xem nhưng không cho thử, Cho khách thử hàng thoải mái).
+
+4. **Phân vùng Tài chính & Trọng lượng (Financial & Weight Block):**
+   - Cột COD hiển thị số tiền thu hộ Người nhận bằng chữ số khổ lớn và in đậm cực kỳ nổi bật kèm ký hiệu tiền tệ, giúp bưu tá giao nhận nhanh chóng nhận diện số tiền cần thu khi phát đơn.
+   - Cột Khối lượng hiển thị trọng lượng bưu gửi tối đa (tính bằng Gram), làm cơ sở đối chiếu khi cân đo lại tại kho hoặc tính cước phụ trội.
+
+5. **Phân vùng Hành trình Số & Khung Ký nhận (Footer Instructions & Sign Box):**
+   - Góc trái tích hợp mã phản hồi nhanh QR Code (kích thước hiển thị 140px chuẩn độ phân giải cao). Mã QR này chứa thông tin ID vận đơn, hỗ trợ đắc lực cho bưu tá giao hàng chặng cuối dùng camera trên App Shipper quét định dạng nhanh và tự động cập nhật tiến độ giao hàng lên hệ thống thời gian thực.
+   - Góc phải thiết lập ô "Chữ ký người nhận" làm bằng chứng bàn giao hàng hóa nguyên vẹn vật lý tại thực tế, giúp giải quyết các khiếu nại phát sinh sau giao hàng.
 
 ---
 
@@ -1781,32 +1808,53 @@ Sau khi hoàn tất đăng ký đơn hàng cá nhân, khách lẻ có thể th�
 
 #### 3.3.2. Phân hệ dành cho Cửa hàng / Đối tác liên kết (B2B User - Merchant)
 
-Dành cho các chủ shop kinh doanh chuyên nghiệp hoặc các đối tác thương mại điện tử cần tích hợp dịch vụ vận chuyển của Antigravity Express:
+Dành cho các chủ shop kinh doanh chuyên nghiệp hoặc các đối tác thương mại điện tử cần tạo đơn hàng đối tác và tích hợp dịch vụ vận chuyển của Antigravity Express:
 
-##### 1. Cổng tích hợp API B2B và Tài liệu Developer Portal
+##### 1. Giao diện Đăng nhập hệ thống đối tác
+Giao diện đăng nhập bảo mật dành cho chủ shop và nhân viên vận hành của đối tác. Màn hình đăng nhập sử dụng thiết kế kính mờ Glassmorphism kết hợp hiệu ứng viền phát sáng Cyberpunk cao cấp:
+
+![Hình 3.4: Giao diện Đăng nhập hệ thống (Obsidian Glassmorphism Cyberpunk)](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780328768560.png)
+
+###### Hình 3.4: Giao diện Đăng nhập hệ thống (Obsidian Glassmorphism Cyberpunk)
+
+##### 2. Giao diện Tạo đơn hàng đối tác đa điểm tích hợp sơ đồ tuyến đường R2L
+Trang tạo đơn hàng đa điểm của Merchant cho phép nhập thông tin người nhận và ghim vị trí trực tiếp trên bản đồ Leaflet. Phía chân trang tự động hiển thị sơ đồ văn bản chỉ dẫn tuyến đường định tuyến từ phải qua trái (R2L) dựa trên chuỗi địa chỉ hành chính:
+
+![Hình 3.5: Giao diện Tạo đơn hàng đối tác (Merchant Order Form) tích hợp chỉ dẫn tuyến đường R2L](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780506199637.png)
+
+###### Hình 3.5: Giao diện Tạo đơn hàng đối tác (Merchant Order Form) tích hợp chỉ dẫn tuyến đường R2L
+
+##### 3. Bản đồ định tuyến OSRM chi tiết chặng trung chuyển liên miền
+Khi tạo đơn hàng liên tỉnh/liên miền, hệ thống tự động tính toán lộ trình qua các kho trung chuyển và trực quan hóa toàn bộ chuỗi trạm bằng đường vẽ OSRM thực tế và các ghim (pins) kho trung chuyển lân quang pulsing màu hổ phách:
+
+![Hình 3.6: Bản đồ định tuyến OSRM chi tiết chặng trung chuyển liên miền](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780504747879.png)
+
+###### Hình 3.6: Bản đồ định tuyến OSRM chi tiết chặng trung chuyển liên miền
+
+##### 4. Cổng tích hợp API B2B Keys & Tài liệu SDK Developer Portal
 Trang quản lý API dành cho đối tác liên kết. Cung cấp chức năng cho phép Merchant tự tạo, kích hoạt hoặc thu hồi API Key 64 ký tự bảo mật. Giao diện tích hợp đầy đủ tài liệu đặc tả tham số API và các đoạn mã nguồn lập trình mẫu cURL, Node.js, Python có nhúng API Key thật của cửa hàng để đối tác tích hợp Machine-to-Machine chặng ngầm:
 
-![Hình 3.4: Giao diện Cổng tích hợp API B2B Keys & Tài liệu SDK](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780377348660.png)
+![Hình 3.7: Giao diện Cổng tích hợp API B2B Keys & Tài liệu SDK](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780377348660.png)
 
-###### Hình 3.4: Giao diện Cổng tích hợp API B2B Keys & Tài liệu SDK
+###### Hình 3.7: Giao diện Cổng tích hợp API B2B Keys & Tài liệu SDK
 
-#### 3.3.3. Phân hệ dành cho Nhân viên Kế toán chi nhánh (Branch Accountant)
+#### 3.3.3. Phân hệ dành cho Nhân viên kho / Vận hành (Warehouse Console)
 
-Hỗ trợ quản lý và đối soát dòng tiền thu hộ (COD) 2 chiều nhanh gọn giữa bưu cục vệ tinh và các cửa hàng:
+Hỗ trợ thủ kho vận hành bãi trung chuyển quản lý sọt hàng bưu chính và điều phối xe tải:
 
-##### 1. Giao diện đối soát chi tiết COD tự động
-Giao diện quản lý các đợt đối soát tiền COD và cước phí trích trừ dành cho kế toán bưu cục. Hệ thống tự động gom các đơn giao thành công, tính toán số dư thực nhận và hiển thị mã VietQR chuyển khoản payout tự động cho shop khi thực nhận Net mang giá trị dương:
+##### 1. Bản mô phỏng kiến trúc kho thông minh Smart Warehouse
+Mô hình trực quan hóa sơ đồ tổ chức không gian kho, vị trí các kệ hàng, và cách bố trí khu vực phân loại hàng hóa nhằm tối ưu quy trình xử lý đơn hàng nội khu:
 
-![Hình 3.5: Giao diện đối soát COD chi tiết của Kế toán](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780309238579.png)
+![Hình 3.8: Bản mô phỏng kiến trúc kho thông minh Smart Warehouse](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/smart_warehouse_1779637459144.png)
 
-###### Hình 3.5: Giao diện đối soát COD chi tiết của Kế toán
+###### Hình 3.8: Bản mô phỏng kiến trúc kho thông minh Smart Warehouse
 
-##### 2. Bản xem trước hóa đơn đối soát khổ A4 tiêu chuẩn kế toán
-Khi kế toán nhấn lệnh in hóa đơn đối soát, hệ thống tự động ẩn các thanh công cụ điều hướng và định dạng xem trước hóa đơn khổ A4 tiêu chuẩn, tự động dịch chuyển số tiền cước Net thành chữ viết tiếng Việt chuẩn xác phục vụ việc ký tên, đóng dấu và lưu trữ hồ sơ tài chính:
+##### 2. Giao diện Camera quét barcode PDA trong kho (Webcam PDA Scanner)
+Giao diện điều hành quét mã vạch bằng camera trực tiếp tích hợp trong Warehouse Console, cho phép nhân viên quét nhanh mã vạch bưu gửi trên tem A6 để tự động ghi nhận trạng thái Nhập kho (IN) hoặc Xuất kho (OUT):
 
-![Hình 3.6: Bản xem trước và in ấn A4 biên bản đối soát COD (đọc chữ số)](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780309501617.png)
+![Hình 3.9: Giao diện Camera quét barcode PDA trong kho (Webcam PDA Scanner)](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780330028949.png)
 
-###### Hình 3.6: Bản xem trước và in ấn A4 biên bản đối soát COD (đọc chữ số)
+###### Hình 3.9: Giao diện Camera quét barcode PDA trong kho (Webcam PDA Scanner)
 
 #### 3.3.4. Phân hệ dành cho Bưu tá giao nhận (Shipper Portal)
 
@@ -1815,18 +1863,9 @@ Hỗ trợ nhân viên giao nhận bưu phẩm chặng cuối quản lý luồng
 ##### 1. Dashboard Shipper và Khung ký nhận điện tử Canvas
 Giao diện portal mobile dành cho bưu tá, hiển thị danh sách các đơn hàng được phân công gom/phát chặng cuối, bản đồ số chỉ đường. Đặc biệt, tích hợp khung vẽ chữ ký điện tử HTML5 Canvas cho phép người nhận ký nhận trực tiếp bằng ngón tay để làm bằng chứng giao hàng số:
 
-![Hình 3.7: Dashboard bưu tá (Shipper Portal) và khung vẽ chữ ký điện tử](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780330028949.png)
+![Hình 3.10: Dashboard bưu tá (Shipper Portal) và khung vẽ chữ ký điện tử](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780330028949.png)
 
-###### Hình 3.7: Dashboard bưu tá (Shipper Portal) và khung vẽ chữ ký điện tử
-
-#### 3.3.5. Giao diện Đăng nhập dùng chung cho các nhân viên vận hành nội bộ
-
-##### 1. Giao diện Đăng nhập hệ thống Obsidian Cyberpunk
-Màn hình đăng nhập bảo mật dành cho các tài khoản nội bộ (Kế toán, Bưu tá, Quản trị viên, Thủ kho). Sử dụng ngôn ngữ thiết kế kính mờ Glassmorphism kết hợp hiệu ứng viền phát sáng Cyberpunk nâng cao độ chuyên nghiệp cho sản phẩm:
-
-![Hình 3.8: Giao diện Đăng nhập hệ thống (Obsidian Glassmorphism Cyberpunk)](file:///C:/Users/aovga/.gemini/antigravity/brain/29e31960-85e3-40ff-91b2-1604e5d93d81/media__1780328768560.png)
-
-###### Hình 3.8: Giao diện Đăng nhập hệ thống (Obsidian Glassmorphism Cyberpunk)
+###### Hình 3.10: Dashboard bưu tá (Shipper Portal) và khung vẽ chữ ký điện tử
 
 ---
 

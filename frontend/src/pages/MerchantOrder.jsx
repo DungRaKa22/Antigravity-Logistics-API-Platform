@@ -114,6 +114,7 @@ export default function MerchantOrder() {
   const [senderAddress, setSenderAddress] = useState('');
   
   const [serviceType, setServiceType] = useState('standard');
+  const [showServiceDetail, setShowServiceDetail] = useState(false);
   const [pickupType, setPickupType] = useState('TU_MANG_RA_BUU_CUC');
   const [inspectionPolicy, setInspectionPolicy] = useState('KHONG_XEM');
 
@@ -848,7 +849,16 @@ export default function MerchantOrder() {
 
             {/* Section 5: Service Package */}
             <div className="flex flex-col gap-4 pt-4 border-t border-black/10">
-              <h3 className="text-xs font-black text-black uppercase tracking-widest text-glow">Gói dịch vụ vận chuyển</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black text-black uppercase tracking-widest text-glow">Gói dịch vụ vận chuyển</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowServiceDetail(true)}
+                  className="text-[10px] font-black text-accent-purple hover:text-accent-purple/80 uppercase tracking-widest transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  Xem chi tiết gói
+                </button>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div 
                   onClick={() => setServiceType('standard')}
@@ -1324,6 +1334,144 @@ export default function MerchantOrder() {
         }
         title={`Chọn địa chỉ giao hàng ${receivers.length > 1 ? `#${pickerActiveIndex + 1}` : ''}`}
       />
+
+      {/* Service Package Detail Comparison Modal */}
+      {showServiceDetail && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-md p-4 animate-fadeIn">
+          <div className="bg-white border border-black/10 rounded-3xl p-8 max-w-2xl w-full shadow-[0_20px_50px_rgba(0,0,0,0.15)] relative flex flex-col animate-scale-up-card">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-black/10">
+              <div>
+                <span className="text-[10px] font-black text-accent-purple uppercase tracking-widest block mb-1">
+                  Bảng so sánh chi tiết
+                </span>
+                <h3 className="text-xl font-black text-black uppercase tracking-widest font-display text-glow">
+                  Gói dịch vụ vận chuyển
+                </h3>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowServiceDetail(false)}
+                className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center hover:bg-black/5 hover:border-black/20 transition-all text-black font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              {/* Standard Column */}
+              <div className="bg-black/[0.01] border border-black/5 rounded-2xl p-6 relative flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center">
+                      <Package className="w-5 h-5 text-black" />
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-sm text-black uppercase tracking-wider">Standard</h4>
+                      <p className="text-[9px] text-mute font-bold tracking-widest uppercase">Vận chuyển tiêu chuẩn</p>
+                    </div>
+                  </div>
+                  
+                  <ul className="space-y-3.5 mb-6">
+                    <li className="flex items-start gap-2.5 text-xs text-mute font-semibold">
+                      <span className="text-emerald-500 font-black">✓</span>
+                      <span><strong>Cước cơ bản:</strong> 15,000 VNĐ</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs text-mute font-semibold">
+                      <span className="text-emerald-500 font-black">✓</span>
+                      <span><strong>Thời gian giao nhận:</strong> 2 - 3 ngày làm việc</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs text-mute font-semibold">
+                      <span className="text-emerald-500 font-black">✓</span>
+                      <span><strong>Quy đổi cồng kềnh:</strong> Hệ số 6000 (Dài × Rộng × Cao / 6000)</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs text-mute font-semibold">
+                      <span className="text-emerald-500 font-black">✓</span>
+                      <span>Phù hợp với hàng hóa thông thường, không cần giao gấp.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setServiceType('standard');
+                    setShowServiceDetail(false);
+                  }}
+                  className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                    serviceType === 'standard'
+                      ? 'bg-black text-white'
+                      : 'border border-black/10 hover:border-black/25 text-black'
+                  }`}
+                >
+                  {serviceType === 'standard' ? 'Đang chọn' : 'Chọn gói Standard'}
+                </button>
+              </div>
+
+              {/* Express Column */}
+              <div className="bg-accent-purple/5 border border-accent-purple/20 rounded-2xl p-6 relative flex flex-col justify-between">
+                <div className="absolute top-3 right-3 bg-accent-purple text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-widest animate-pulse">
+                  Hoả Tốc
+                </div>
+                
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-accent-purple/10 flex items-center justify-center">
+                      <Zap className="w-5 h-5 text-accent-purple animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-sm text-black uppercase tracking-wider">Express</h4>
+                      <p className="text-[9px] text-accent-purple font-bold tracking-widest uppercase">Giao hỏa tốc 24H</p>
+                    </div>
+                  </div>
+                  
+                  <ul className="space-y-3.5 mb-6">
+                    <li className="flex items-start gap-2.5 text-xs text-mute font-semibold">
+                      <span className="text-accent-purple font-black">⚡</span>
+                      <span><strong>Cước cơ bản:</strong> 30,000 VNĐ</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs text-mute font-semibold">
+                      <span className="text-accent-purple font-black">⚡</span>
+                      <span><strong>Thời gian giao nhận:</strong> Trong vòng 24H (Nội thành)</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs text-mute font-semibold">
+                      <span className="text-accent-purple font-black">⚡</span>
+                      <span><strong>Quy đổi cồng kềnh:</strong> Hệ số 5000 (Dài × Rộng × Cao / 5000)</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs text-mute font-semibold">
+                      <span className="text-accent-purple font-black">⚡</span>
+                      <span>Ưu tiên bốc xếp và điều phối giao nhận nhanh nhất.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setServiceType('express');
+                    setShowServiceDetail(false);
+                  }}
+                  className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                    serviceType === 'express'
+                      ? 'bg-accent-purple text-white shadow-lg shadow-accent-purple/20'
+                      : 'border border-accent-purple/20 hover:border-accent-purple/40 text-accent-purple'
+                  }`}
+                >
+                  {serviceType === 'express' ? 'Đang chọn' : 'Chọn gói Express'}
+                </button>
+              </div>
+            </div>
+
+            {/* Note text */}
+            <p className="text-[10px] text-mute font-semibold text-center uppercase tracking-wider">
+              * Hệ số quy đổi cồng kềnh được dùng để tính khối lượng quy đổi từ kích thước vật lý của kiện hàng.
+            </p>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );
