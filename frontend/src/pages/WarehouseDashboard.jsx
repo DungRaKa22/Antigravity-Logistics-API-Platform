@@ -73,10 +73,13 @@ export default function WarehouseDashboard() {
       await scanner.start(
         initialCamId,
         {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-          disableFlip: false
+          fps: 15,
+          qrbox: (width, height) => {
+            // Optimized barcode rectangle frame
+            const boxWidth = Math.min(width * 0.85, 290);
+            const boxHeight = Math.min(height * 0.45, 130);
+            return { width: boxWidth, height: boxHeight };
+          }
         },
         (decodedText) => {
           handleCameraDecoded(decodedText);
@@ -103,10 +106,12 @@ export default function WarehouseDashboard() {
       await html5QrcodeRef.current.start(
         camId,
         {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-          disableFlip: false
+          fps: 15,
+          qrbox: (width, height) => {
+            const boxWidth = Math.min(width * 0.85, 290);
+            const boxHeight = Math.min(height * 0.45, 130);
+            return { width: boxWidth, height: boxHeight };
+          }
         },
         (decodedText) => {
           handleCameraDecoded(decodedText);
@@ -124,10 +129,10 @@ export default function WarehouseDashboard() {
     const cleanCode = code.trim().toUpperCase();
     if (!cleanCode) return;
 
-    // Debounce: prevent same code scanning within 2.5s
+    // Debounce: prevent same code scanning within 0.8s
     const now = Date.now();
     const lastScanned = scannedBufferRef.current[cleanCode];
-    if (lastScanned && (now - lastScanned < 2500)) {
+    if (lastScanned && (now - lastScanned < 800)) {
       return;
     }
     
