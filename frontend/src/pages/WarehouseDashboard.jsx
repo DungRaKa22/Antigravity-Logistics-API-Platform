@@ -73,7 +73,9 @@ export default function WarehouseDashboard() {
       await scanner.start(
         initialCamId,
         {
-          fps: 15,
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
           disableFlip: false
         },
         (decodedText) => {
@@ -101,7 +103,9 @@ export default function WarehouseDashboard() {
       await html5QrcodeRef.current.start(
         camId,
         {
-          fps: 15,
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
           disableFlip: false
         },
         (decodedText) => {
