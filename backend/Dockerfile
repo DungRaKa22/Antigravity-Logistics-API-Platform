@@ -12,7 +12,7 @@ WORKDIR /app
 # Sao chép và cài đặt các thư viện Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install gunicorn
+    && pip install gunicorn==21.2.0
 
 # Sao chép mã nguồn ứng dụng vào container
 COPY . .
