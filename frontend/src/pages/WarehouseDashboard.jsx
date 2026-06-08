@@ -910,7 +910,6 @@ export default function WarehouseDashboard() {
                       disabled={
                         hubActionLoading || 
                         hubOrderData.current_status === 'DEN_KHO_TRUNG_CHUYEN' || 
-                        hubOrderData.current_status === 'ROI_KHO_TRUNG_CHUYEN' || 
                         hubOrderData.current_status === 'GIAO_THANH_CONG'
                       }
                       className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-teal-600 disabled:from-white/5 disabled:to-white/5 disabled:text-white/20 hover:from-teal-600 hover:to-cyan-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-[0_4px_12px_rgba(6,182,212,0.25)] flex items-center justify-center gap-2 active:scale-95 disabled:scale-100 disabled:shadow-none border border-white/5"
