@@ -21,5 +21,5 @@ COPY . .
 ENV PORT=5000
 EXPOSE 5000
 
-# Chạy ứng dụng Flask bằng Gunicorn Server tối ưu hiệu năng và đa luồng (gthread) tránh nghẽn luồng
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 --worker-class gthread --timeout 120 --keep-alive 5 \"run:app\""]
+# Chạy ứng dụng Flask bằng Gunicorn Server với worker eventlet chuyên dụng cho Flask-SocketIO (chống rớt kết nối và tiết kiệm RAM)
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT --workers 1 --worker-class eventlet --timeout 120 --keep-alive 5 \"run:app\""]
