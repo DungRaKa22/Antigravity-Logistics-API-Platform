@@ -230,9 +230,9 @@ export default function WarehouseDashboard() {
       
       const currentStatus = trackRes.data.current_status;
       
-      if (currentStatus === 'DEN_KHO_TRUNG_CHUYEN' || currentStatus === 'ROI_KHO_TRUNG_CHUYEN') {
+      if (currentStatus === 'DEN_KHO_TRUNG_CHUYEN') {
         playSound('error');
-        showToast(`Đơn ${code} đã được xử lý nhập kho trước đó!`, 'error');
+        showToast(`Đơn ${code} hiện đang nằm trong kho (chưa xuất bến), không thể quét nhập kho lại!`, 'error');
         setHubScanInput('');
         return;
       }
