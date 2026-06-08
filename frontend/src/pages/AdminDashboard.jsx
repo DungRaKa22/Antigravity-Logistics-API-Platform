@@ -979,7 +979,7 @@ export default function AdminDashboard() {
                                   )
                                 ) : (
                                   /* Standard Branch Driver Assign Action */
-                                  o.status === 'CHO_LAY_HANG' ? (
+                                  ['CHO_LAY_HANG', 'DA_LAY_HANG', 'DEN_KHO_TRUNG_CHUYEN', 'ROI_KHO_TRUNG_CHUYEN'].includes(o.status) ? (
                                     assigningOrderId === o.order_id ? (
                                       <div className="inline-flex items-center gap-1.5">
                                         <select
